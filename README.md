@@ -12,7 +12,7 @@ Dự án được thực hiện như một **đồ án sinh viên ngành Công n
 - Nghiên cứu và áp dụng mô hình **Block-based Knowledge Management**
 - Xây dựng hệ thống quản lý tri thức cá nhân hiện đại
 - Rèn luyện kỹ năng phát triển ứng dụng web theo kiến trúc client–server
-- Vận dụng Spring Boot cho backend và Vue.js cho frontend
+- Vận dụng .net cho backend và Vue.js cho frontend
 - Tạo nền tảng có khả năng mở rộng cho các hệ thống quản lý tri thức thông minh trong tương lai
 
 ---
