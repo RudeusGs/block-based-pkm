@@ -2,6 +2,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
+using System;
 using System.Text;
 
 public static class AuthenticationServiceCollection
@@ -10,18 +11,16 @@ public static class AuthenticationServiceCollection
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var jwtSettings = configuration.GetSection("JWT");
-        var secretKey = jwtSettings["Secret"];
-
         services.AddAuthentication(options =>
         {
             options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
             options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
         })
         .AddJwtBearer(options =>
         {
-            options.RequireHttpsMetadata = false;
             options.SaveToken = true;
+            options.RequireHttpsMetadata = false;
 
             options.TokenValidationParameters = new TokenValidationParameters
             {
@@ -29,9 +28,9 @@ public static class AuthenticationServiceCollection
                 ValidateAudience = false,
                 ValidateLifetime = true,
                 ValidateIssuerSigningKey = true,
-                ValidIssuer = jwtSettings["ValidIssuer"],
+                ValidIssuer = configuration["JWT:ValidIssuer"],
                 IssuerSigningKey = new SymmetricSecurityKey(
-                    Encoding.UTF8.GetBytes(secretKey)
+                    Encoding.UTF8.GetBytes(configuration["JWT:Secret"])
                 ),
                 ClockSkew = TimeSpan.Zero
             };

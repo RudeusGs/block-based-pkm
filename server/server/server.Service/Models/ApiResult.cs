@@ -18,7 +18,7 @@
     /// 
     /// KHÔNG nên khởi tạo trực tiếp bằng new ApiResult(...) ở Controller.
     /// </summary>
-    public class ApiResult
+    public class    ApiResult
     {
         /// <summary>
         /// Trạng thái xử lý của request

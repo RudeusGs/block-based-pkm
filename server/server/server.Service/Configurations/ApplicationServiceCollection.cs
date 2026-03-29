@@ -13,16 +13,16 @@ namespace server.Service.Configurations
     public static class ApplicationServiceCollection
     {
         public static IServiceCollection AddApplicationServices(this IServiceCollection services)
-        {
-            #region Common services
+            {
+                services.AddHttpContextAccessor();
 
-            // User Management Service
-            // UserManager and SignInManager are registered by Identity in infrastructure services.
-            services.AddScoped<IUserService, UserService>();
+                #region Common services
 
-            #endregion
+                // User Management Service
+                // UserManager and SignInManager are registered by Identity in infrastructure services.
+                services.AddScoped<IUserService, UserService>();
 
-            services.AddHttpContextAccessor();
+                #endregion
 
             #region Authentication services
             services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -31,7 +31,7 @@ namespace server.Service.Configurations
             #endregion
 
             #region Business services
-
+            services.AddScoped<IWorkspaceService, WorkspaceService>();
             #endregion
 
             return services;

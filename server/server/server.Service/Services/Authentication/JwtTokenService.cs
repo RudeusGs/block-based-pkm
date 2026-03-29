@@ -36,7 +36,7 @@ namespace server.Service.Services.Authentication
             var now = DateTime.UtcNow;
             var expires = now.AddDays(7);
 
-            var claims = BuildClaims(user, roles);
+            var claims = BuildClaims(user, roles, now);
 
             var jwt = new JwtSecurityToken(
                 issuer: _configuration["JWT:ValidIssuer"],
@@ -63,12 +63,13 @@ namespace server.Service.Services.Authentication
         /// <summary>
         /// Build claims cho JWT token.
         /// </summary>
-        private static IEnumerable<Claim> BuildClaims(User user, IEnumerable<string> roles)
+        private static IEnumerable<Claim> BuildClaims(User user, IEnumerable<string> roles, DateTime issuedAtUtc)
         {
             var claims = new List<Claim>
             {
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+                // Use issued at in UTC to match token validation which compares against UTC
+                new(JwtRegisteredClaimNames.Iat, DateTimeOffset.FromUnixTimeSeconds(new DateTimeOffset(issuedAtUtc).ToUnixTimeSeconds()).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new(ClaimTypes.Name, user.UserName ?? string.Empty),
                 new(ClaimTypes.Email, user.Email ?? string.Empty),

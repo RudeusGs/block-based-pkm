@@ -11,6 +11,8 @@
     "type-check": "vue-tsc --build"
   },
   "dependencies": {
+    "bootstrap": "^5.3.8",
+    "bootstrap-icons": "^1.13.1",
     "pinia": "^3.0.4",
     "vue": "^3.5.29",
     "vue-router": "^5.0.3"
@@ -21,7 +23,10 @@
     "@vitejs/plugin-vue": "^6.0.4",
     "@vitejs/plugin-vue-jsx": "^5.1.4",
     "@vue/tsconfig": "^0.8.1",
+    "autoprefixer": "^10.4.27",
     "npm-run-all2": "^8.0.4",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.2",
     "typescript": "~5.9.3",
     "vite": "^7.3.1",
     "vite-plugin-vue-devtools": "^8.0.6",
