@@ -10,7 +10,8 @@ namespace server.Service.Services
 {
     public class WorkspaceService : BaseService, IWorkspaceService
     {
-        public WorkspaceService(DataContext dataContext, IUserService userService) : base(dataContext, userService)
+        public WorkspaceService(DataContext dataContext, IUserService userService)
+            : base(dataContext, userService)
         {
         }
 
@@ -27,12 +28,14 @@ namespace server.Service.Services
                 {
                     return ApiResult.Fail("Tên workspace không được để trống", "VALIDATION_ERROR");
                 }
+
                 var ownerId = _userService.UserId;
 
                 if (ownerId <= 0)
                 {
                     return ApiResult.Fail("Không xác định được người dùng", "USER_INVALID");
                 }
+
                 var workspace = new Workspace
                 {
                     Name = model.Name.Trim(),
@@ -40,8 +43,10 @@ namespace server.Service.Services
                     OwnerId = ownerId,
                     CreatedDate = Now
                 };
+
                 _dataContext.Set<Workspace>().Add(workspace);
                 await SaveChangesAsync();
+
                 return ApiResult.Success(workspace, "Tạo workspace thành công");
             }
             catch (Exception ex)
@@ -59,18 +64,24 @@ namespace server.Service.Services
             try
             {
                 var ownerId = _userService.UserId;
+
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == workspaceId && !x.IsDeleted);
+                    .FirstOrDefaultAsync(x => x.Id == workspaceId);
+
                 if (workspace == null)
                 {
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
                 }
+
                 if (workspace.OwnerId != ownerId)
                 {
                     return ApiResult.Fail("Bạn không có quyền xoá workspace này", "FORBIDDEN");
                 }
-                workspace.MarkDeleted();
+
+                _dataContext.Set<Workspace>().Remove(workspace);
+
                 await SaveChangesAsync();
+
                 return ApiResult.Success(null, "Xoá workspace thành công");
             }
             catch (Exception ex)
@@ -84,7 +95,7 @@ namespace server.Service.Services
             try
             {
                 var workspaces = await _dataContext.Set<Workspace>()
-                    .Where(x => x.OwnerId == userId && !x.IsDeleted)
+                    .Where(x => x.OwnerId == userId)
                     .OrderByDescending(x => x.CreatedDate)
                     .ToListAsync();
 
@@ -96,13 +107,12 @@ namespace server.Service.Services
             }
         }
 
-
         public async Task<ApiResult> GetWorkspaceByIdAsync(int id)
         {
             try
             {
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted);
+                    .FirstOrDefaultAsync(x => x.Id == id);
 
                 if (workspace == null)
                 {
@@ -125,24 +135,32 @@ namespace server.Service.Services
                 {
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
                 }
+
                 var ownerId = _userService.UserId;
+
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == model.Id && !x.IsDeleted);
+                    .FirstOrDefaultAsync(x => x.Id == model.Id);
+
                 if (workspace == null)
                 {
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
                 }
+
                 if (workspace.OwnerId != ownerId)
                 {
                     return ApiResult.Fail("Bạn không có quyền chỉnh sửa workspace này", "FORBIDDEN");
                 }
+
                 if (!string.IsNullOrWhiteSpace(model.Name))
                 {
                     workspace.Name = model.Name.Trim();
                 }
+
                 workspace.Description = model.Description?.Trim();
                 workspace.MarkUpdated();
+
                 await SaveChangesAsync();
+
                 return ApiResult.Success(workspace, "Cập nhật workspace thành công");
             }
             catch (Exception ex)

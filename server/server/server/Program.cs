@@ -13,23 +13,13 @@ namespace server
             builder.Services.AddEndpointsApiExplorer();
             builder.Services.AddSwaggerGen(options =>
             {
-                options.SwaggerDoc("v1", new OpenApiInfo
-                {
-                    Title = "Block-Based PKM API",
-                    Version = "v1",
-                    Description = "Backend API for Block-Based PKM System",
-                    Contact = new OpenApiContact
-                    {
-                        Name = "Block-Based PKM",
-                        Email = "ngotrannguyenquan1908@gmail.com"
-                    }
-                });
+                options.SwaggerDoc("v1", new OpenApiInfo { Title = "Block-Based PKM API", Version = "v1" });
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
                     Name = "Authorization",
-                    Type = SecuritySchemeType.Http,
-                    Scheme = "bearer",
+                    Type = SecuritySchemeType.ApiKey,
+                    Scheme = "Bearer",
                     BearerFormat = "JWT",
                     In = ParameterLocation.Header,
                     Description = "Nhập: Bearer {your_token}"
@@ -40,18 +30,16 @@ namespace server
                     {
                         new OpenApiSecurityScheme
                         {
-                            Scheme = "bearer",
-                            BearerFormat = "JWT",
-                            Name = "Authorization",
-                            In = ParameterLocation.Header,
-                            Type = SecuritySchemeType.Http
+                            Reference = new OpenApiReference
+                            {
+                                Type = ReferenceType.SecurityScheme,
+                                Id = "Bearer"
+                            }
                         },
-                        new List<string>()
+                        Array.Empty<string>()
                     }
                 });
-
-                options.CustomSchemaIds(type => type.FullName);
-            });
+                        });
 
             builder.Services.AddCors(options =>
             {
@@ -61,10 +49,8 @@ namespace server
                         .AllowAnyMethod()
                         .AllowAnyHeader());
             });
-            // Register infrastructure services (persistence, identity, authentication) first
             builder.Services.AddInfrastructureServices(builder.Configuration);
 
-            // Then register application services that depend on infrastructure services
             builder.Services.AddApplicationServices();
 
             var app = builder.Build();
