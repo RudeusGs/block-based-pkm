@@ -1,0 +1,14 @@
+﻿server/server/.vs
+client/.vscode
+server/server/server/bin
+server/server/server/obj
+server/server/server/appsettings.json
+server/server/server.Domain/bin
+server/server/server.Domain/obj
+server/server/server.Infrastructure/bin
+server/server/server.Service/bin
+server/server/service.Tests.Unit/obj
+server/server/service.Tests.Unit/bin
+server/server/server.Service/obj
+server/server/server.Infrastructure/obj
+server/server/server.Infrastructure/Migrations
