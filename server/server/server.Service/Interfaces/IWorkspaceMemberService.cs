@@ -16,7 +16,7 @@ namespace server.Service.Interfaces
         /// <summary>
         /// Cập nhật role của thành viên trong workspace.
         /// </summary>
-        Task<ApiResult> UpdateMemberRoleAsync(int workspaceId, int userId, string newRole);
+        Task<ApiResult> UpdateMemberRoleAsync(UpdateWorkspaceMemberModel model);
 
         /// <summary>
         /// Xóa user khỏi workspace.

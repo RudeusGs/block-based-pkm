@@ -4,7 +4,7 @@ using server.Service.Models.Authenticate;
 
 namespace server.Controllers
 {
-    [Route("api/[controller]")]
+    [Route("api/auth")]
     [ApiController]
     public class AuthenticateController : BaseController
     {

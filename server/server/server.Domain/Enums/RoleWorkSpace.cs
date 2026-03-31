@@ -3,7 +3,6 @@
     public enum RoomRole
     {
         GroupLeader = 1,
-        GroupDeputy = 2,
-        RegularUser = 3
+        RegularUser = 2
     }
 }

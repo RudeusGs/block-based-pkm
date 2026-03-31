@@ -25,9 +25,9 @@ namespace server.Service.Interfaces
         Task<ApiResult> DeleteWorkspaceAsync(int workspaceId);
 
         /// <summary>
-        /// Lấy tất cả workspace mà user tham gia hoặc sở hữu.
+        /// Lấy tất cả workspace mà user tham gia hoặc sở hữu (có phân trang).
         /// </summary>
-        Task<ApiResult> GetAllByUserIdAsync(int userId);
+        Task<ApiResult> GetAllByUserIdAsync(int userId, PagingRequest paging);
 
         /// <summary>
         /// Lấy thông tin chi tiết của một workspace theo id.
