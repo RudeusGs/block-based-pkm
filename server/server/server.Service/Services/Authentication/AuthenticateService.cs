@@ -90,7 +90,7 @@ namespace server.Service.Services.Authentication
                     UserName = model.UserName.Trim(),
                     Email = model.Email.Trim(),
                     FullName = model.FullName?.Trim(),
-                    CreatedDate = DateTime.Now,
+                    CreatedDate = DateTime.UtcNow,
                     IsAuthen = false
                 };
 
@@ -126,8 +126,9 @@ namespace server.Service.Services.Authentication
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Register failed. Username={Username}, Email={Email}", model?.UserName, model?.Email);
-                return ApiResult.Fail("Có lỗi hệ thống khi đăng ký. Vui lòng thử lại.", errorCode: "REGISTER_EXCEPTION");
+                return ApiResult.Fail("Có lỗi hệ thống khi đăng ký. Vui lòng thử lại.",
+                    errorCode: "REGISTER_EXCEPTION",
+                    errors: new[] { ex.ToString() });
             }
         }
 

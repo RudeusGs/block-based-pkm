@@ -1,4 +1,5 @@
 using server.Domain.Base;
+using server.Domain.Enums;
 
 namespace server.Domain.Entities
 {
@@ -18,9 +19,9 @@ namespace server.Domain.Entities
         public int UserId { get; set; }
 
         /// <summary>
-        /// Vai trò của thành viên (Owner, Member, Viewer, ...).
+        /// Vai trò của thành viên trong workspace.
         /// </summary>
-        public string Role { get; set; }
+        public RoomRole Role { get; set; } = RoomRole.RegularUser;
 
         /// <summary>
         /// Thời điểm người dùng tham gia vào workspace.

@@ -5,9 +5,9 @@
         public int Id { get; set; }
         public virtual DateTime? CreatedDate { get; set; }
         public virtual DateTime? UpdatedDate { get; set; }
-        public void MarkUpdated()
+        public void MarkUpdated()   
         {
-            UpdatedDate = DateTime.Now;
+            UpdatedDate = DateTime.UtcNow;
         }
     }
 }

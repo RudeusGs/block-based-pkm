@@ -3,11 +3,12 @@ using Microsoft.AspNetCore.Mvc;
 using server.Service.Interfaces;
 using server.Service.Models.Workspace;
 using server.Service.Common.IServices;
+using server.Service.Models;
 
 namespace server.Controllers
 {
     [Authorize]
-    [Route("api/[controller]")]
+    [Route("api/workspace")]
     [ApiController]
     public class WorkspaceController : BaseController
     {
@@ -42,9 +43,15 @@ namespace server.Controllers
         }
 
         [HttpGet("my")]
-        public async Task<IActionResult> GetMyWorkspaces(CancellationToken ct)
+        public async Task<IActionResult> GetMyWorkspaces([FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10, CancellationToken ct = default)
         {
-            var result = await _workspaceService.GetAllByUserIdAsync(_userService.UserId);
+            var paging = new PagingRequest
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            var result = await _workspaceService.GetAllByUserIdAsync(_userService.UserId, paging);
             return FromApiResult(result);
         }
         [HttpGet("{id}")]
