@@ -26,12 +26,12 @@ namespace server.Service.Interfaces
         /// <summary>
         /// Lấy tất cả task trong workspace.
         /// </summary>
-        Task<ApiResult> GetTasksByWorkspaceAsync(int workspaceId);
+        Task<ApiResult> GetTasksByWorkspaceAsync(int workspaceId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy tất cả task trong page.
         /// </summary>
-        Task<ApiResult> GetTasksByPageAsync(int pageId);
+        Task<ApiResult> GetTasksByPageAsync(int pageId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy task cụ thể.
@@ -46,41 +46,41 @@ namespace server.Service.Interfaces
         /// <summary>
         /// Lấy task theo trạng thái.
         /// </summary>
-        Task<ApiResult> GetTasksByStatusAsync(int workspaceId, string status);
+        Task<ApiResult> GetTasksByStatusAsync(int workspaceId, string status, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy task quá hạn (overdue).
         /// </summary>
-        Task<ApiResult> GetOverdueTasksAsync(int workspaceId);
+        Task<ApiResult> GetOverdueTasksAsync(int workspaceId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy task sắp đến hạn.
         /// </summary>
-        Task<ApiResult> GetUpcomingTasksAsync(int workspaceId, int days = 7);
+        Task<ApiResult> GetUpcomingTasksAsync(int workspaceId, int days = 7, PagingRequest? paging = null);
 
         /// <summary>
         /// Tìm kiếm task theo từ khóa.
         /// </summary>
-        Task<ApiResult> SearchTasksAsync(int workspaceId, string keyword);
+        Task<ApiResult> SearchTasksAsync(int workspaceId, string keyword, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy task được tạo bởi user.
         /// </summary>
-        Task<ApiResult> GetTasksByCreatorAsync(int workspaceId, int userId);
+        Task<ApiResult> GetTasksByCreatorAsync(int workspaceId, int userId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy task assigned cho user.
         /// </summary>
-        Task<ApiResult> GetAssignedTasksAsync(int workspaceId, int userId);
+        Task<ApiResult> GetAssignedTasksAsync(int workspaceId, int userId, PagingRequest? paging = null);
 
         /// <summary>
         /// Sắp xếp task theo priority.
         /// </summary>
-        Task<ApiResult> GetTasksSortedByPriorityAsync(int workspaceId);
+        Task<ApiResult> GetTasksSortedByPriorityAsync(int workspaceId, PagingRequest? paging = null);
 
         /// <summary>
         /// Sắp xếp task theo due date.
         /// </summary>
-        Task<ApiResult> GetTasksSortedByDueDateAsync(int workspaceId);
+        Task<ApiResult> GetTasksSortedByDueDateAsync(int workspaceId, PagingRequest? paging = null);
     }
 }

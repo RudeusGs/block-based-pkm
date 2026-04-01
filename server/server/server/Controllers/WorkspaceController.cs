@@ -9,7 +9,6 @@ namespace server.Controllers
 {
     [Authorize]
     [Route("api/workspace")]
-    [ApiController]
     public class WorkspaceController : BaseController
     {
         private readonly IWorkspaceService _workspaceService;

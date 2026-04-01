@@ -33,6 +33,8 @@ namespace server.Service.Configurations
             #region Business services
             services.AddScoped<IWorkspaceService, WorkspaceService>();
             services.AddScoped<IWorkspaceMemberService, WorkspaceMemberService>();
+            services.AddScoped<IPageService, PageService>();
+            services.AddScoped<IWorkTaskService, WorkTaskService>();
             #endregion
 
             return services;

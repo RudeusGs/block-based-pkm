@@ -8,7 +8,6 @@ namespace server.Controllers
 {
     [Authorize]
     [Route("api/workspace-members")]
-    [ApiController]
     public class WorkspaceMemberController : BaseController
     {
         private readonly IWorkspaceMemberService _workspaceMemberService;
