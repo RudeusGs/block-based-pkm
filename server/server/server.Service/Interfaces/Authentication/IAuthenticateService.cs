@@ -18,6 +18,6 @@ namespace server.Service.Interfaces
         /// <summary>
         /// Lấy vai trò của người dùng.
         /// </summary>
-        Task<ApiResult> GetRoleUser(int id);
+        Task<ApiResult> GetRoleUser(int id); 
     }
 }

@@ -34,11 +34,6 @@ namespace server.Service.Interfaces
         Task<ApiResult> GetPageByIdAsync(int pageId);
 
         /// <summary>
-        /// Lấy tất cả task trong trang.
-        /// </summary>
-        Task<ApiResult> GetTasksByPageAsync(int pageId);
-
-        /// <summary>
         /// Tìm kiếm trang theo từ khóa.
         /// </summary>
         Task<ApiResult> SearchPagesAsync(int workspaceId, string keyword);

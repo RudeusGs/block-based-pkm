@@ -43,6 +43,27 @@ namespace server.Service.Services.Authentication
         }
 
         /// <summary>
+        /// Đảm bảo các vai trò hệ thống tồn tại (Admin, User...).
+        /// </summary>
+        public async Task EnsureRolesExistAsync()
+        {
+            // Ensure regular user role
+            await EnsureRegularRoleExistsAsync();
+
+            // Ensure admin role
+            if (!await _roleManager.RoleExistsAsync(RoleConstants.ADMIN))
+            {
+                var result = await _roleManager.CreateAsync(new IdentityRole<int>(RoleConstants.ADMIN));
+                if (!result.Succeeded)
+                {
+                    var errors = string.Join(" | ", result.Errors.Select(e => e.Description));
+                    _logger.LogError("Tạo vai trò '{RoleName}' thất bại. {Errors}", RoleConstants.ADMIN, errors);
+                    throw new InvalidOperationException($"Tạo vai trò '{RoleConstants.ADMIN}' thất bại. {errors}");
+                }
+            }
+        }
+
+        /// <summary>
         /// Gán vai trò người dùng thường cho người dùng.
         /// </summary>
         public async Task<(bool succeeded, List<string> errors)> AddToRegularRoleAsync(int userId)

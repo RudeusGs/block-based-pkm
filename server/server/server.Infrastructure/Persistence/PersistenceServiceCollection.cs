@@ -5,14 +5,12 @@ using server.Infrastructure.Persistence;
 
 public static class PersistenceServiceCollection
 {
-    public static IServiceCollection AddPersistence(
-        this IServiceCollection services,
-        IConfiguration configuration)
+    public static IServiceCollection AddPersistence(this IServiceCollection services, IConfiguration configuration)
     {
         services.AddDbContext<DataContext>(options =>
         {
             options.UseNpgsql(configuration.GetConnectionString("Connection"));
-            options.EnableDetailedErrors();
+            // options.EnableDetailedErrors(); (Debug only not shown in production)
         });
 
         return services;

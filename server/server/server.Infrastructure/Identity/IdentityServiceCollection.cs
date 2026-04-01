@@ -5,8 +5,7 @@ using server.Infrastructure.Persistence;
 
 public static class IdentityServiceCollection
 {
-    public static IServiceCollection AddIdentityServices(
-        this IServiceCollection services)
+    public static IServiceCollection AddIdentityServices(this IServiceCollection services)
     {
         services.AddIdentity<User, IdentityRole<int>>()
             .AddEntityFrameworkStores<DataContext>()
