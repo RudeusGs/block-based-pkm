@@ -35,6 +35,7 @@ namespace server.Service.Configurations
             services.AddScoped<IWorkspaceMemberService, WorkspaceMemberService>();
             services.AddScoped<IPageService, PageService>();
             services.AddScoped<IWorkTaskService, WorkTaskService>();
+            services.AddScoped<ITaskAssigneeService, TaskAssigneeService>();
             #endregion
 
             return services;

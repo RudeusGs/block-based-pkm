@@ -141,7 +141,7 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> GetPagesByWorkspaceAsync(int workspaceId)
+        public async Task<ApiResult> GetPagesByWorkspaceAsync(int workspaceId, PagingRequest? paging = null)
         {
             try
             {
@@ -167,20 +167,25 @@ namespace server.Service.Services
                 if (!isOwner && !isMember)
                     return ApiResult.Fail("Bạn không có quyền xem trang trong workspace này", "FORBIDDEN");
 
-                var pages = await _dataContext.Set<Page>()
+                var q = _dataContext.Set<Page>()
                     .AsNoTracking()
-                    .Where(p => p.WorkspaceId == workspaceId)
-                    .OrderByDescending(p => p.CreatedDate)
+                    .Where(p => p.WorkspaceId == workspaceId);
+
+                paging ??= new PagingRequest();
+                var total = await q.CountAsync();
+                var items = await q.OrderByDescending(p => p.CreatedDate)
+                    .Skip((paging.PageNumber - 1) * paging.PageSize)
+                    .Take(paging.PageSize)
                     .ToListAsync();
 
-                return ApiResult.Success(pages, "Lấy danh sách trang thành công");
+                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách trang thành công");
             }
             catch (Exception ex)
             {
                 return ApiResult.Fail("Có lỗi khi lấy danh sách trang", "SERVER_ERROR", new[] { ex.ToString() });
             }
         }
-        public async Task<ApiResult> SearchPagesAsync(int workspaceId, string keyword)
+        public async Task<ApiResult> SearchPagesAsync(int workspaceId, string keyword, PagingRequest? paging = null)
         {
             try
             {
@@ -214,9 +219,14 @@ namespace server.Service.Services
                     q = q.Where(p => p.Title.ToLower().Contains(kw));
                 }
 
-                var pages = await q.OrderByDescending(p => p.CreatedDate).ToListAsync();
+                paging ??= new PagingRequest();
+                var total = await q.CountAsync();
+                var items = await q.OrderByDescending(p => p.CreatedDate)
+                    .Skip((paging.PageNumber - 1) * paging.PageSize)
+                    .Take(paging.PageSize)
+                    .ToListAsync();
 
-                return ApiResult.Success(pages, "Tìm kiếm trang thành công");
+                return ApiResult.Success(new { Total = total, Items = items }, "Tìm kiếm trang thành công");
             }
             catch (Exception ex)
             {

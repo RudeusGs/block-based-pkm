@@ -24,9 +24,9 @@ namespace server.Service.Interfaces
         Task<ApiResult> DeletePageAsync(int pageId);
 
         /// <summary>
-        /// Lấy tất cả trang trong workspace.
+        /// Lấy tất cả trang trong workspace (hỗ trợ phân trang).
         /// </summary>
-        Task<ApiResult> GetPagesByWorkspaceAsync(int workspaceId);
+        Task<ApiResult> GetPagesByWorkspaceAsync(int workspaceId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy thông tin trang cụ thể.
@@ -34,9 +34,9 @@ namespace server.Service.Interfaces
         Task<ApiResult> GetPageByIdAsync(int pageId);
 
         /// <summary>
-        /// Tìm kiếm trang theo từ khóa.
+        /// Tìm kiếm trang theo từ khóa (hỗ trợ phân trang).
         /// </summary>
-        Task<ApiResult> SearchPagesAsync(int workspaceId, string keyword);
+        Task<ApiResult> SearchPagesAsync(int workspaceId, string keyword, PagingRequest? paging = null);
 
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.OpenApi.Models;
+using server.Infrastructure.Realtime;
 using server.Service.Configurations;
 namespace server
 {
@@ -52,7 +53,13 @@ namespace server
 
             builder.Services.AddApplicationServices();
 
+            // Add SignalR services and backplane configuration will be applied in Program when needed
+            builder.Services.AddSignalR();
+
             var app = builder.Build();
+
+            // Map SignalR hubs (centralized extension)
+            app.MapRealtimeHubs();
 
             if (app.Environment.IsDevelopment())
             {
