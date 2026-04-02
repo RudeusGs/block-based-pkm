@@ -39,16 +39,6 @@ namespace server.Service.Interfaces
         Task<ApiResult> GetCommentsByUserAsync(int userId);
 
         /// <summary>
-        /// Lấy bình luận trong khoảng thời gian.
-        /// </summary>
-        Task<ApiResult> GetCommentsByDateRangeAsync(GetCommentDateRangeModel model);
-
-        /// <summary>
-        /// Tìm kiếm bình luận theo từ khóa.
-        /// </summary>
-        Task<ApiResult> SearchCommentsAsync(int taskId, string keyword);
-
-        /// <summary>
         /// Lấy số lượng bình luận của task.
         /// </summary>
         Task<ApiResult> GetCommentCountAsync(int taskId);

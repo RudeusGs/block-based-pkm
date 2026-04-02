@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Service.Interfaces;
 using server.Service.Models;
@@ -6,6 +7,7 @@ using server.Service.Models.WorkTask;
 namespace server.Controllers
 {
     [Route("api/work-task")]
+    [Authorize]
     public class WorkTaskController : BaseController
     {
         private readonly IWorkTaskService _taskService;

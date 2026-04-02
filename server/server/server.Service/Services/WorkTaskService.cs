@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
+﻿using server.Infrastructure.Realtime.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
 using server.Service.Common.IServices;
@@ -10,8 +11,12 @@ namespace server.Service.Services
 {
     public class WorkTaskService : BaseService, IWorkTaskService
     {
-        public WorkTaskService(DataContext dataContext, IUserService userService) : base(dataContext, userService)
+        private readonly IRealtimeNotifier _notifier;
+
+        public WorkTaskService(DataContext dataContext, IUserService userService,
+            IRealtimeNotifier notifier) : base(dataContext, userService)
         {
+            _notifier = notifier;
         }
         public async Task<ApiResult> CreateTaskAsync(AddWorkTaskModel model, int userId)
         {
@@ -57,6 +62,16 @@ namespace server.Service.Services
                 _dataContext.Set<WorkTask>().Add(task);
                 await SaveChangesAsync();
 
+                try 
+                { 
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskCreated", 
+                        new { TaskId = task.Id, WorkspaceId = task.WorkspaceId, Title = task.Title, CreatedBy = task.CreatedById }); 
+                } 
+                catch(Exception ex)
+                { 
+                    return ApiResult.Success(task, "Tạo task oke nhưng có lỗi khi gửi realtime notification: " + ex.Message);
+                }
+
                 return ApiResult.Success(task, "Tạo task thành công");
             }
             catch (Exception ex)
@@ -94,6 +109,16 @@ namespace server.Service.Services
 
                 _dataContext.Set<WorkTask>().Remove(task);
                 await SaveChangesAsync();
+
+                try 
+                { 
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskDeleted", 
+                        new { TaskId = taskId, WorkspaceId = workspace.Id }); 
+                } 
+                catch(Exception ex)
+                { 
+                    return ApiResult.Success(null, "Xóa task oke nhưng có lỗi khi gửi realtime notification: " + ex.Message);
+                }
 
                 return ApiResult.Success(null, "Xóa task thành công");
             }
@@ -639,6 +664,15 @@ namespace server.Service.Services
                 task.MarkUpdated();
                 _dataContext.Set<WorkTask>().Update(task);
                 await SaveChangesAsync();
+                try
+                {
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskUpdated", 
+                        new { TaskId = task.Id, WorkspaceId = workspace.Id, Title = task.Title });
+                }
+                catch (Exception ex)
+                {
+                    return ApiResult.Success(null, "Cập nhật task oke la nhưng mà có lỗi khi gửi realtime notification: " + ex.Message);
+                }
 
                 return ApiResult.Success(task, "Cập nhật task thành công");
             }
@@ -694,6 +728,15 @@ namespace server.Service.Services
                 task.MarkUpdated();
                 _dataContext.Set<WorkTask>().Update(task);
                 await SaveChangesAsync();
+                try
+                {
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskStatusUpdated", 
+                        new { TaskId = task.Id, WorkspaceId = workspace.Id, Status = task.Status });
+                }
+                catch(Exception ex) 
+                {
+                    return ApiResult.Success(null, "Cập nhật trạng thái task oke, nhưng có lỗi khi gửi realtime notification: " + ex.Message);
+                }
 
                 return ApiResult.Success(task, "Cập nhật trạng thái thành công");
             }

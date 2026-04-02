@@ -6,17 +6,18 @@ using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
 using Microsoft.AspNetCore.SignalR;
 using server.Infrastructure.Realtime.Hubs;
+using server.Infrastructure.Realtime.Interfaces;
 
 namespace server.Service.Services
 {
     public class TaskAssigneeService : BaseService, ITaskAssigneeService
     {
-        private readonly IHubContext<WorkspaceHub> _hubContext;
+        private readonly IRealtimeNotifier _notifier;
 
         public TaskAssigneeService(DataContext dataContext, IUserService userService,
-            IHubContext<WorkspaceHub> hubContext) : base(dataContext, userService)
+            IRealtimeNotifier notifier) : base(dataContext, userService)
         {
-            _hubContext = hubContext;
+            _notifier = notifier;
         }
 
         public async Task<ApiResult> AssignTaskAsync(int taskId, int userId)
@@ -57,15 +58,11 @@ namespace server.Service.Services
 
                 _dataContext.Set<TaskAssignee>().Add(assignee);
                 await SaveChangesAsync();
-                try
-                {
-                    await _hubContext.Clients.Group(WorkspaceHub.GetWorkspaceGroupName(workspace.Id))
-                        .SendAsync("TaskAssigneeAdded", new { TaskId = taskId, UserId = userId });
-                }
-                catch(Exception ex) 
-                {
-                    return ApiResult.Success(assignee, "Gán task thành công, nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
+                try 
+                { 
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskAssigneeAdded", new { TaskId = taskId, UserId = userId }); 
+                } 
+                catch { }
 
                 return ApiResult.Success(assignee, "Gán task thành công");
             }
@@ -121,15 +118,11 @@ namespace server.Service.Services
 
                 await SaveChangesAsync();
 
-                try
-                {
-                    await _hubContext.Clients.Group(WorkspaceHub.GetWorkspaceGroupName(workspace.Id))
-                        .SendAsync("TaskAssigneesAdded", new { TaskId = taskId, UserIds = added.Select(a => a.UserId).ToList() });
-                }
-                catch (Exception ex)
-                {
-                    return ApiResult.Success(new { Added = added.Count, Items = added }, "Gán nhiều user thành công, nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
+                try 
+                { 
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskAssigneesAdded", new { TaskId = taskId, UserIds = added.Select(a => a.UserId).ToList() }); 
+                } 
+                catch { }
 
                 return ApiResult.Success(new { Added = added.Count, Items = added }, "Gán nhiều user thành công");
             }
@@ -365,15 +358,11 @@ namespace server.Service.Services
                 _dataContext.Set<TaskAssignee>().Remove(existed);
                 await SaveChangesAsync();
 
-                try
-                {
-                    await _hubContext.Clients.Group(WorkspaceHub.GetWorkspaceGroupName(workspace.Id))
-                        .SendAsync("TaskAssigneeRemoved", new { TaskId = taskId, UserId = userId });
-                }
-                catch (Exception ex)
-                {
-                    return ApiResult.Success(null, "Hủy phân công thành công, nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
+                try 
+                { 
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskAssigneeRemoved", new { TaskId = taskId, UserId = userId }); 
+                } 
+                catch { }
 
                 return ApiResult.Success(null, "Hủy phân công thành công");
             }
@@ -412,15 +401,11 @@ namespace server.Service.Services
                 _dataContext.Set<TaskAssignee>().RemoveRange(list);
                 await SaveChangesAsync();
 
-                try
-                {
-                    await _hubContext.Clients.Group(WorkspaceHub.GetWorkspaceGroupName(workspace.Id))
-                        .SendAsync("TaskAssigneesCleared", new { TaskId = taskId });
-                }
-                catch (Exception ex)
-                {
-                    return ApiResult.Success(null, "Hủy phân công tất cả thành công, nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
+                try 
+                { 
+                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskAssigneesCleared", new { TaskId = taskId }); 
+                } 
+                catch { }
 
                 return ApiResult.Success(null, "Hủy phân công tất cả thành công");
             }

@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Service.Interfaces;
 using server.Service.Models;
@@ -5,6 +6,7 @@ using server.Service.Models;
 namespace server.Controllers
 {
     [Route("api/task-assignee")]
+    [Authorize]
     public class TaskAssigneeController : BaseController
     {
         private readonly ITaskAssigneeService _service;

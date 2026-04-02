@@ -40,14 +40,17 @@ namespace server
                     }
                 });
                         });
-
+            var allowedOrigins = builder.Configuration
+            .GetSection("Cors:AllowedOrigins")
+            .Get<string[]>() ?? Array.Empty<string>();
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("AllowFrontend",
                     policy => policy
-                        .AllowAnyOrigin()
+                        .WithOrigins(allowedOrigins)
                         .AllowAnyMethod()
-                        .AllowAnyHeader());
+                        .AllowAnyHeader()
+                        .AllowCredentials());
             });
             builder.Services.AddInfrastructureServices(builder.Configuration);
 
@@ -57,9 +60,6 @@ namespace server
             builder.Services.AddSignalR();
 
             var app = builder.Build();
-
-            // Map SignalR hubs (centralized extension)
-            app.MapRealtimeHubs();
 
             if (app.Environment.IsDevelopment())
             {
@@ -86,7 +86,8 @@ namespace server
             // Enable authentication before authorization
             app.UseAuthentication();
             app.UseAuthorization();
-
+            // Map SignalR hubs (centralized extension)
+            app.MapRealtimeHubs();
             app.MapControllers();
 
             app.Run();
