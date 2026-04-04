@@ -1,6 +1,7 @@
-using Microsoft.OpenApi.Models;
 using server.Infrastructure.Realtime;
+using server.Infrastructure.Swagger;
 using server.Service.Configurations;
+using server.Infrastructure.Cors;
 namespace server
 {
     public class Program
@@ -9,84 +10,37 @@ namespace server
         {
             var builder = WebApplication.CreateBuilder(args);
 
+            // Add Services
             builder.Services.AddControllers();
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen(options =>
-            {
-                options.SwaggerDoc("v1", new OpenApiInfo { Title = "Block-Based PKM API", Version = "v1" });
 
-                options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-                {
-                    Name = "Authorization",
-                    Type = SecuritySchemeType.ApiKey,
-                    Scheme = "Bearer",
-                    BearerFormat = "JWT",
-                    In = ParameterLocation.Header,
-                    Description = "Nhập: Bearer {your_token}"
-                });
+            // Add Swagger via extension
+            builder.Services.AddCustomSwagger();
 
-                options.AddSecurityRequirement(new OpenApiSecurityRequirement
-                {
-                    {
-                        new OpenApiSecurityScheme
-                        {
-                            Reference = new OpenApiReference
-                            {
-                                Type = ReferenceType.SecurityScheme,
-                                Id = "Bearer"
-                            }
-                        },
-                        Array.Empty<string>()
-                    }
-                });
-                        });
-            var allowedOrigins = builder.Configuration
-            .GetSection("Cors:AllowedOrigins")
-            .Get<string[]>() ?? Array.Empty<string>();
-            builder.Services.AddCors(options =>
-            {
-                options.AddPolicy("AllowFrontend",
-                    policy => policy
-                        .WithOrigins(allowedOrigins)
-                        .AllowAnyMethod()
-                        .AllowAnyHeader()
-                        .AllowCredentials());
-            });
+            // CORS Config
+            builder.Services.AddCustomCors(builder.Configuration);
+
+            // Custom DI
             builder.Services.AddInfrastructureServices(builder.Configuration);
-
             builder.Services.AddApplicationServices();
 
-            // Add SignalR services and backplane configuration will be applied in Program when needed
+            // SignalR
             builder.Services.AddSignalR();
+            builder.Services.AddRealtime(builder.Configuration);
 
+            // Build App
             var app = builder.Build();
 
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
+            // Swagger UI
+            app.UseCustomSwaggerUI();
 
-                app.UseSwaggerUI(options =>
-                {
-                    options.SwaggerEndpoint("/swagger/v1/swagger.json", "Block-Based PKM API v1");
-
-                    options.RoutePrefix = "";
-
-                    options.DocumentTitle = "Block-Based PKM API Docs";
-
-                    options.DefaultModelsExpandDepth(-1);
-                });
-            }
-
+            // Middleware
             app.UseHttpsRedirection();
-
             app.UseRouting();
-
             app.UseCors("AllowFrontend");
-
-            // Enable authentication before authorization
             app.UseAuthentication();
             app.UseAuthorization();
-            // Map SignalR hubs (centralized extension)
+
+            // Map Endpoints
             app.MapRealtimeHubs();
             app.MapControllers();
 

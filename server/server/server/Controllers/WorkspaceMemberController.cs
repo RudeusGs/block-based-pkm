@@ -1,6 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using server.Service.Common.IServices;
 using server.Service.Interfaces;
 using server.Service.Models.WorkspaceMember;
 
@@ -8,11 +7,12 @@ namespace server.Controllers
 {
     [Authorize]
     [Route("api/workspace-members")]
+    [ApiController]
     public class WorkspaceMemberController : BaseController
     {
         private readonly IWorkspaceMemberService _workspaceMemberService;
-        public WorkspaceMemberController(
-            IWorkspaceMemberService workspaceMemberService)
+
+        public WorkspaceMemberController(IWorkspaceMemberService workspaceMemberService)
         {
             _workspaceMemberService = workspaceMemberService;
         }
@@ -21,7 +21,7 @@ namespace server.Controllers
         /// Thêm thành viên vào workspace
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> AddMember([FromBody] AddWorkspaceMemberModel model, CancellationToken ct)
+        public async Task<IActionResult> AddMember([FromBody] AddWorkspaceMemberModel model)
         {
             var result = await _workspaceMemberService.AddMemberAsync(model);
             return FromApiResult(result);
@@ -30,8 +30,8 @@ namespace server.Controllers
         /// <summary>
         /// Lấy danh sách thành viên của workspace
         /// </summary>
-        [HttpGet("{workspaceId}")]
-        public async Task<IActionResult> GetMembers(int workspaceId, CancellationToken ct)
+        [HttpGet("{workspaceId:int}")]
+        public async Task<IActionResult> GetMembers(int workspaceId)
         {
             var result = await _workspaceMemberService.GetWorkspaceMembersAsync(workspaceId);
             return FromApiResult(result);
@@ -40,8 +40,8 @@ namespace server.Controllers
         /// <summary>
         /// Xóa thành viên khỏi workspace
         /// </summary>
-        [HttpDelete("{workspaceId}/user/{userId}")]
-        public async Task<IActionResult> RemoveMember(int workspaceId, int userId, CancellationToken ct)
+        [HttpDelete("{workspaceId:int}/users/{userId:int}")]
+        public async Task<IActionResult> RemoveMember(int workspaceId, int userId)
         {
             var result = await _workspaceMemberService.RemoveMemberAsync(workspaceId, userId);
             return FromApiResult(result);
@@ -50,8 +50,8 @@ namespace server.Controllers
         /// <summary>
         /// Cập nhật role thành viên
         /// </summary>
-        [HttpPut("role")]
-        public async Task<IActionResult> UpdateRole([FromBody] UpdateWorkspaceMemberModel model, CancellationToken ct)
+        [HttpPut("{workspaceId:int}/users/{userId:int}")]
+        public async Task<IActionResult> UpdateRole(int workspaceId, int userId, [FromBody] UpdateWorkspaceMemberModel model)
         {
             var result = await _workspaceMemberService.UpdateMemberRoleAsync(model);
             return FromApiResult(result);

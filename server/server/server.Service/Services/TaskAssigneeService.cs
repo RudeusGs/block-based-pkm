@@ -4,8 +4,6 @@ using server.Service.Interfaces;
 using server.Service.Models;
 using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
-using Microsoft.AspNetCore.SignalR;
-using server.Infrastructure.Realtime.Hubs;
 using server.Infrastructure.Realtime.Interfaces;
 
 namespace server.Service.Services
@@ -99,30 +97,28 @@ namespace server.Service.Services
                     .Select(m => m.UserId)
                     .ToListAsync();
 
-                var added = new List<TaskAssignee>();
-                foreach (var uid in members)
-                {
-                    var exists = await _dataContext.Set<TaskAssignee>().AnyAsync(a => a.TaskId == taskId && a.UserId == uid);
-                    if (exists) continue;
+                // Avoid N+1: get existing assignee user ids in one query
+                var existingUserIds = await _dataContext.Set<TaskAssignee>().AsNoTracking()
+                    .Where(a => a.TaskId == taskId && userIds.Contains(a.UserId))
+                    .Select(a => a.UserId)
+                    .ToListAsync();
 
-                    var assignee = new TaskAssignee
-                    {
-                        TaskId = taskId,
-                        UserId = uid,
-                        AssignedAt = Now,
-                        CreatedDate = Now
-                    };
-                    _dataContext.Set<TaskAssignee>().Add(assignee);
-                    added.Add(assignee);
+                var toAdd = members.Except(existingUserIds).ToList();
+                var added = toAdd.Select(uid => new TaskAssignee
+                {
+                    TaskId = taskId,
+                    UserId = uid,
+                    AssignedAt = Now,
+                    CreatedDate = Now
+                }).ToList();
+
+                if (added.Count > 0)
+                {
+                    _dataContext.Set<TaskAssignee>().AddRange(added);
+                    await SaveChangesAsync();
                 }
 
-                await SaveChangesAsync();
-
-                try 
-                { 
-                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskAssigneesAdded", new { TaskId = taskId, UserIds = added.Select(a => a.UserId).ToList() }); 
-                } 
-                catch { }
+                try { await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskAssigneesAdded", new { TaskId = taskId, UserIds = added.Select(a => a.UserId).ToList() }); } catch { }
 
                 return ApiResult.Success(new { Added = added.Count, Items = added }, "Gán nhiều user thành công");
             }

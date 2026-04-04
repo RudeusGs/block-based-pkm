@@ -218,7 +218,7 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> GetTaskByIdAsync(int taskId)
+        public async Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct)
         {
             try
             {

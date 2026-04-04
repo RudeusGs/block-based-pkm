@@ -1,31 +1,32 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using server.Service.Interfaces;
 using server.Service.Models.Authenticate;
 
 namespace server.Controllers
 {
     [Route("api/auth")]
-    [ApiController]
+    [AllowAnonymous]
     public class AuthenticateController : BaseController
     {
         private readonly IAuthenticateService _authenticateService;
-        public AuthenticateController(
-            IAuthenticateService authenticateService)
+
+        public AuthenticateController(IAuthenticateService authenticateService)
         {
             _authenticateService = authenticateService;
         }
 
         [HttpPost("register")]
-        public async Task<IActionResult> Register(RegisterModel request)
+        public async Task<IActionResult> Register([FromBody] RegisterModel request)
         {
             var result = await _authenticateService.Register(request);
             return FromApiResult(result);
         }
 
         [HttpPost("login")]
-        public async Task<IActionResult> Login(LoginModel login)
+        public async Task<IActionResult> Login([FromBody] LoginModel request)
         {
-            var result = await _authenticateService.Login(login);
+            var result = await _authenticateService.Login(request);
             return FromApiResult(result);
         }
     }

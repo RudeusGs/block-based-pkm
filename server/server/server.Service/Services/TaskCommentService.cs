@@ -173,7 +173,7 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> GetCommentsByUserAsync(int userId)
+        public async Task<ApiResult> GetCommentsByUserAsync(int userId, PagingRequest? paging = null)
         {
             try
             {
@@ -191,8 +191,16 @@ namespace server.Service.Services
                         return ApiResult.Fail("Bạn không có quyền xem bình luận của user này", "FORBIDDEN");
                 }
 
-                var comments = await _dataContext.Set<TaskComment>().AsNoTracking().Where(c => c.UserId == userId).ToListAsync();
-                return ApiResult.Success(comments, "Lấy bình luận của user thành công");
+                var q = _dataContext.Set<TaskComment>().AsNoTracking().Where(c => c.UserId == userId);
+
+                paging ??= new PagingRequest();
+                var total = await q.CountAsync();
+                var items = await q.OrderByDescending(c => c.CreatedDate)
+                    .Skip((paging.PageNumber - 1) * paging.PageSize)
+                    .Take(paging.PageSize)
+                    .ToListAsync();
+
+                return ApiResult.Success(new { Total = total, Items = items }, "Lấy bình luận của user thành công");
             }
             catch (Exception ex)
             {
@@ -200,7 +208,7 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> GetTaskCommentsAsync(int taskId)
+        public async Task<ApiResult> GetTaskCommentsAsync(int taskId, PagingRequest? paging = null)
         {
             try
             {
@@ -224,8 +232,15 @@ namespace server.Service.Services
                 if (!isOwner && !isMember)
                     return ApiResult.Fail("Bạn không có quyền xem bình luận trong workspace này", "FORBIDDEN");
 
-                var comments = await _dataContext.Set<TaskComment>().AsNoTracking().Where(c => c.TaskId == taskId).OrderBy(c => c.CreatedDate).ToListAsync();
-                return ApiResult.Success(comments, "Lấy danh sách bình luận thành công");
+                paging ??= new PagingRequest();
+                var q = _dataContext.Set<TaskComment>().AsNoTracking().Where(c => c.TaskId == taskId);
+                var total = await q.CountAsync();
+                var items = await q.OrderBy(c => c.CreatedDate)
+                    .Skip((paging.PageNumber - 1) * paging.PageSize)
+                    .Take(paging.PageSize)
+                    .ToListAsync();
+
+                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách bình luận thành công");
             }
             catch (Exception ex)
             {

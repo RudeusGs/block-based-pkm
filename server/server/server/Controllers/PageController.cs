@@ -6,7 +6,7 @@ using server.Service.Models.Page;
 namespace server.Controllers
 {
     [Authorize]
-    [Route("api/page")]
+    [Route("api/pages")]
     public class PageController : BaseController
     {
         private readonly IPageService _pageService;
@@ -19,16 +19,15 @@ namespace server.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddPageModel model)
         {
-            var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
-                return FailResult("Unauthorized", StatusCodes.Status401Unauthorized, "UNAUTHORIZED");
+            if (!this.TryGetUserId(out var userId))
+                return this.FailUnauthorized();
 
             var result = await _pageService.CreatePageAsync(model, userId);
             return FromApiResult(result, StatusCodes.Status201Created);
         }
 
-        [HttpPut]
-        public async Task<IActionResult> Update([FromBody] UpdatePageModel model)
+        [HttpPut("{pageId:int}")] 
+        public async Task<IActionResult> Update(int pageId, [FromBody] UpdatePageModel model)
         {
             var result = await _pageService.UpdatePageAsync(model);
             return FromApiResult(result);
@@ -49,17 +48,13 @@ namespace server.Controllers
         }
 
         [HttpGet("workspace/{workspaceId:int}")]
-        public async Task<IActionResult> GetByWorkspace(int workspaceId)
-        {
-            var result = await _pageService.GetPagesByWorkspaceAsync(workspaceId);
-            return FromApiResult(result);
-        }
-
-        [HttpGet("search/{workspaceId:int}")]
-        public async Task<IActionResult> Search(int workspaceId, [FromQuery] string? q)
+        public async Task<IActionResult> GetByWorkspace(int workspaceId, [FromQuery] string? q = null)
         {
             var keyword = q ?? string.Empty;
-            var result = await _pageService.SearchPagesAsync(workspaceId, keyword);
+            var result = string.IsNullOrEmpty(keyword)
+                ? await _pageService.GetPagesByWorkspaceAsync(workspaceId)
+                : await _pageService.SearchPagesAsync(workspaceId, keyword);
+
             return FromApiResult(result);
         }
     }

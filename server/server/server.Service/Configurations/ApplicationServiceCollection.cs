@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.DependencyInjection;
 using server.Domain.Entities;
-using server.Infrastructure.Realtime.Interfaces;
-using server.Infrastructure.Realtime.Services;
 using server.Service.Common.IServices;
 using server.Service.Common.Services;
 using server.Service.Interfaces;
@@ -31,6 +29,7 @@ namespace server.Service.Configurations
             services.AddScoped<IRoleManagementService, RoleManagementService>();
             services.AddScoped<IAuthenticateService, AuthenticateService>();
             #endregion
+
             #region Business services
             services.AddScoped<IWorkspaceService, WorkspaceService>();
             services.AddScoped<IWorkspaceMemberService, WorkspaceMemberService>();

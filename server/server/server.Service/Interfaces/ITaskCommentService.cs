@@ -24,9 +24,9 @@ namespace server.Service.Interfaces
         Task<ApiResult> DeleteCommentAsync(int commentId);
 
         /// <summary>
-        /// Lấy tất cả bình luận của task.
+        /// Lấy tất cả bình luận của task (hỗ trợ phân trang).
         /// </summary>
-        Task<ApiResult> GetTaskCommentsAsync(int taskId);
+        Task<ApiResult> GetTaskCommentsAsync(int taskId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy bình luận cụ thể.
@@ -34,9 +34,9 @@ namespace server.Service.Interfaces
         Task<ApiResult> GetCommentByIdAsync(int commentId);
 
         /// <summary>
-        /// Lấy bình luận được tạo bởi user.
+        /// Lấy bình luận được tạo bởi user (hỗ trợ phân trang).
         /// </summary>
-        Task<ApiResult> GetCommentsByUserAsync(int userId);
+        Task<ApiResult> GetCommentsByUserAsync(int userId, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy số lượng bình luận của task.

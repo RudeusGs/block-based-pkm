@@ -20,9 +20,8 @@ namespace server.Controllers
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] AddWorkTaskModel model)
         {
-            var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
-                return FailResult("Unauthorized", StatusCodes.Status401Unauthorized, "UNAUTHORIZED");
+            if (!this.TryGetUserId(out var userId))
+                return this.FailUnauthorized();
 
             var result = await _taskService.CreateTaskAsync(model, userId);
             return FromApiResult(result, StatusCodes.Status201Created);
@@ -50,9 +49,9 @@ namespace server.Controllers
         }
 
         [HttpGet("{taskId:int}")]
-        public async Task<IActionResult> GetById(int taskId)
+        public async Task<IActionResult> GetById(int taskId, CancellationToken ct)
         {
-            var result = await _taskService.GetTaskByIdAsync(taskId);
+            var result = await _taskService.GetTaskByIdAsync(taskId, ct);
             return FromApiResult(result);
         }
 

@@ -36,7 +36,7 @@ namespace server.Service.Interfaces
         /// <summary>
         /// Lấy task cụ thể.
         /// </summary>
-        Task<ApiResult> GetTaskByIdAsync(int taskId);
+        Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct);
 
         /// <summary>
         /// Cập nhật trạng thái task (To Do, Doing, Done).

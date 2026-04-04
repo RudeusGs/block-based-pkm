@@ -6,9 +6,9 @@ using server.Service.Models.TaskComment;
 
 namespace server.Controllers
 {
-    [Route("api/task-comment")]
+    [Route("api/task-comments")]
     [Authorize]
-
+    [ApiController]
     public class TaskCommentController : BaseController
     {
         private readonly ITaskCommentService _service;
@@ -21,16 +21,15 @@ namespace server.Controllers
         [HttpPost]
         public async Task<IActionResult> Add([FromBody] AddCommentModel model)
         {
-            var userIdClaim = User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
-            if (!int.TryParse(userIdClaim, out var userId))
-                return FailResult("Unauthorized", StatusCodes.Status401Unauthorized, "UNAUTHORIZED");
+            if (!this.TryGetUserId(out var userId))
+                return this.FailUnauthorized();
 
             var result = await _service.AddCommentAsync(model, userId);
             return FromApiResult(result, StatusCodes.Status201Created);
         }
 
-        [HttpPut]
-        public async Task<IActionResult> Update([FromBody] UpdateCommentModel model)
+        [HttpPut("{commentId:int}")]
+        public async Task<IActionResult> Update(int commentId, [FromBody] UpdateCommentModel model)
         {
             var result = await _service.UpdateCommentAsync(model);
             return FromApiResult(result);
@@ -50,24 +49,24 @@ namespace server.Controllers
             return FromApiResult(result);
         }
 
-        [HttpGet("task/{taskId:int}")]
-        public async Task<IActionResult> GetByTask(int taskId)
+        [HttpGet("tasks/{taskId:int}/comments")]
+        public async Task<IActionResult> GetByTask(int taskId, [FromQuery] PagingRequest? paging = null)
         {
-            var result = await _service.GetTaskCommentsAsync(taskId);
+            var result = await _service.GetTaskCommentsAsync(taskId, paging);
             return FromApiResult(result);
         }
 
-        [HttpGet("count/{taskId:int}")]
+        [HttpGet("tasks/{taskId:int}/comments/count")]
         public async Task<IActionResult> Count(int taskId)
         {
             var result = await _service.GetCommentCountAsync(taskId);
             return FromApiResult(result);
         }
 
-        [HttpGet("user/{userId:int}")]
-        public async Task<IActionResult> GetByUser(int userId)
+        [HttpGet("users/{userId:int}/comments")]
+        public async Task<IActionResult> GetByUser(int userId, [FromQuery] PagingRequest? paging = null)
         {
-            var result = await _service.GetCommentsByUserAsync(userId);
+            var result = await _service.GetCommentsByUserAsync(userId, paging);
             return FromApiResult(result);
         }
     }
