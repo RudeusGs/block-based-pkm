@@ -1,11 +1,12 @@
-﻿using server.Infrastructure.Persistence;
+﻿using Microsoft.EntityFrameworkCore;
+using server.Domain.Entities;
+using server.Infrastructure.Persistence;
+using server.Infrastructure.Realtime.Interfaces;
+using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
 using server.Service.Models;
 using server.Service.Models.TaskComment;
-using Microsoft.EntityFrameworkCore;
-using server.Domain.Entities;
-using server.Infrastructure.Realtime.Interfaces;
 
 namespace server.Service.Services
 {
@@ -13,48 +14,59 @@ namespace server.Service.Services
     {
         private readonly IRealtimeNotifier _notifier;
 
-        public TaskCommentService(DataContext dataContext, IUserService userService,
-            IRealtimeNotifier notifier) : base(dataContext, userService)
+        public TaskCommentService(
+            DataContext dataContext,
+            IUserService userService,
+            IRealtimeNotifier notifier
+        ) : base(dataContext, userService)
         {
             _notifier = notifier;
         }
 
-        public async Task<ApiResult> AddCommentAsync(AddCommentModel model, int userId)
+        // ================= ADD =================
+        public async Task<ApiResult> AddCommentAsync(AddCommentModel model, CancellationToken ct = default)
         {
             try
             {
                 if (model == null || model.TaskId <= 0 || string.IsNullOrWhiteSpace(model.Content))
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
 
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0 || currentUserId != userId)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                var task = await _dataContext.Set<WorkTask>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == model.TaskId);
+                var task = await _dataContext.Set<WorkTask>()
+                    .FirstOrDefaultAsync(t => t.Id == model.TaskId, ct);
+
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
-                var workspace = await _dataContext.Set<Workspace>().AsNoTracking().FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
+                var workspace = await _dataContext.Set<Workspace>()
+                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
+
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
 
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>().AsNoTracking().AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == currentUserId);
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền bình luận trong workspace này", "FORBIDDEN");
+                var isMember = await _dataContext.Set<WorkspaceMember>()
+                    .AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == userId, ct);
 
-                var comment = new TaskComment
-                {
-                    TaskId = model.TaskId,
-                    UserId = currentUserId,
-                    Content = model.Content.Trim(),
-                    CreatedDate = Now
-                };
+                if (!isMember && workspace.OwnerId != userId)
+                    return ApiResult.Fail("Không có quyền", "FORBIDDEN");
+
+                var comment = new TaskComment(model.TaskId, userId, model.Content);
 
                 _dataContext.Set<TaskComment>().Add(comment);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
-                try { await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskCommentAdded", new { TaskId = model.TaskId, CommentId = comment.Id, UserId = currentUserId, Content = comment.Content }); } catch { }
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    workspace.Id,
+                    "TaskCommentAdded",
+                    new
+                    {
+                        TaskId = model.TaskId,
+                        CommentId = comment.Id,
+                        UserId = userId,
+                        Content = comment.Content
+                    });
 
                 return ApiResult.Success(comment, "Thêm bình luận thành công");
             }
@@ -64,228 +76,188 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> DeleteCommentAsync(int commentId)
-        {
-            try
-            {
-                if (commentId <= 0)
-                    return ApiResult.Fail("CommentId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var comment = await _dataContext.Set<TaskComment>().FirstOrDefaultAsync(c => c.Id == commentId);
-                if (comment == null)
-                    return ApiResult.Fail("Comment không tồn tại", "NOT_FOUND");
-
-                var task = await _dataContext.Set<WorkTask>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == comment.TaskId);
-                if (task == null)
-                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                var workspace = await _dataContext.Set<Workspace>().AsNoTracking().FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (comment.UserId != currentUserId && task.CreatedById != currentUserId && workspace.OwnerId != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền xóa bình luận này", "FORBIDDEN");
-
-                _dataContext.Set<TaskComment>().Remove(comment);
-                await SaveChangesAsync();
-
-                try { await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskCommentDeleted", new { TaskId = comment.TaskId, CommentId = commentId }); } catch { }
-
-                return ApiResult.Success(null, "Xóa bình luận thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi xóa bình luận", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetCommentByIdAsync(int commentId)
-        {
-            try
-            {
-                if (commentId <= 0)
-                    return ApiResult.Fail("CommentId không hợp lệ", "INVALID_INPUT");
-
-                var comment = await _dataContext.Set<TaskComment>().AsNoTracking().FirstOrDefaultAsync(c => c.Id == commentId);
-                if (comment == null)
-                    return ApiResult.Fail("Comment không tồn tại", "NOT_FOUND");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var task = await _dataContext.Set<WorkTask>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == comment.TaskId);
-                if (task == null)
-                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                var workspace = await _dataContext.Set<Workspace>().AsNoTracking().FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>().AsNoTracking().AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == currentUserId);
-                var isCommenter = comment.UserId == currentUserId;
-                if (!isOwner && !isMember && !isCommenter)
-                    return ApiResult.Fail("Bạn không có quyền xem bình luận này", "FORBIDDEN");
-
-                return ApiResult.Success(comment, "Lấy bình luận thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy bình luận", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetCommentCountAsync(int taskId)
-        {
-            try
-            {
-                if (taskId <= 0)
-                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
-
-                var task = await _dataContext.Set<WorkTask>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == taskId);
-                if (task == null)
-                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>().AsNoTracking().FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>().AsNoTracking().AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == currentUserId);
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem bình luận", "FORBIDDEN");
-
-                var count = await _dataContext.Set<TaskComment>().AsNoTracking().CountAsync(c => c.TaskId == taskId);
-                return ApiResult.Success(count, "Lấy số lượng bình luận thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy số lượng bình luận", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetCommentsByUserAsync(int userId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (userId <= 0)
-                    return ApiResult.Fail("UserId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                if (currentUserId != userId)
-                {
-                    var ownerOfAny = await _dataContext.Set<Workspace>().AsNoTracking().AnyAsync(w => w.OwnerId == currentUserId);
-                    if (!ownerOfAny)
-                        return ApiResult.Fail("Bạn không có quyền xem bình luận của user này", "FORBIDDEN");
-                }
-
-                var q = _dataContext.Set<TaskComment>().AsNoTracking().Where(c => c.UserId == userId);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(c => c.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy bình luận của user thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy bình luận", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTaskCommentsAsync(int taskId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (taskId <= 0)
-                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
-
-                var task = await _dataContext.Set<WorkTask>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == taskId);
-                if (task == null)
-                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>().AsNoTracking().FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>().AsNoTracking().AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == currentUserId);
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem bình luận trong workspace này", "FORBIDDEN");
-
-                paging ??= new PagingRequest();
-                var q = _dataContext.Set<TaskComment>().AsNoTracking().Where(c => c.TaskId == taskId);
-                var total = await q.CountAsync();
-                var items = await q.OrderBy(c => c.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách bình luận thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy bình luận", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> UpdateCommentAsync(UpdateCommentModel model)
+        public async Task<ApiResult> UpdateCommentAsync(UpdateCommentModel model, CancellationToken ct = default)
         {
             try
             {
                 if (model == null || model.CommentId <= 0 || string.IsNullOrWhiteSpace(model.Content))
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
 
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                var comment = await _dataContext.Set<TaskComment>().FirstOrDefaultAsync(c => c.Id == model.CommentId);
+                var comment = await _dataContext.Set<TaskComment>()
+                    .FirstOrDefaultAsync(c => c.Id == model.CommentId, ct);
+
                 if (comment == null)
                     return ApiResult.Fail("Comment không tồn tại", "NOT_FOUND");
 
-                var task = await _dataContext.Set<WorkTask>().AsNoTracking().FirstOrDefaultAsync(t => t.Id == comment.TaskId);
+                var task = await _dataContext.Set<WorkTask>()
+                    .FirstOrDefaultAsync(t => t.Id == comment.TaskId, ct);
+
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
-                var workspace = await _dataContext.Set<Workspace>().AsNoTracking().FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
+                var workspace = await _dataContext.Set<Workspace>()
+                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
+
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-                if (comment.UserId != currentUserId && workspace.OwnerId != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền cập nhật bình luận này", "FORBIDDEN");
 
-                comment.Content = model.Content.Trim();
-                comment.MarkUpdated();
-                _dataContext.Set<TaskComment>().Update(comment);
-                await SaveChangesAsync();
+                if (comment.UserId != userId && workspace.OwnerId != userId)
+                    return ApiResult.Fail("Không có quyền", "FORBIDDEN");
 
-                try { await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskCommentUpdated", new { TaskId = comment.TaskId, CommentId = comment.Id, Content = comment.Content }); } catch { }
+                comment.UpdateContent(model.Content, userId);
 
-                return ApiResult.Success(comment, "Cập nhật bình luận thành công");
+                await SaveChangesAsync(ct);
+
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    workspace.Id,
+                    "TaskCommentUpdated",
+                    new
+                    {
+                        TaskId = comment.TaskId,
+                        CommentId = comment.Id,
+                        Content = comment.Content
+                    });
+
+                return ApiResult.Success(comment, "Cập nhật thành công");
             }
             catch (Exception ex)
             {
-                return ApiResult.Fail("Có lỗi khi cập nhật bình luận", "SERVER_ERROR", new[] { ex.ToString() });
+                return ApiResult.Fail("Có lỗi khi cập nhật", "SERVER_ERROR", new[] { ex.ToString() });
             }
+        }
+
+        public async Task<ApiResult> DeleteCommentAsync(int commentId, CancellationToken ct = default)
+        {
+            try
+            {
+                if (commentId <= 0)
+                    return ApiResult.Fail("INVALID_INPUT");
+
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
+                var comment = await _dataContext.Set<TaskComment>()
+                    .FirstOrDefaultAsync(c => c.Id == commentId, ct);
+
+                if (comment == null)
+                    return ApiResult.Fail("NOT_FOUND");
+
+                var task = await _dataContext.Set<WorkTask>()
+                    .FirstOrDefaultAsync(t => t.Id == comment.TaskId, ct);
+
+                var workspace = await _dataContext.Set<Workspace>()
+                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
+
+                if (comment.UserId != userId &&
+                    task.CreatedById != userId &&
+                    workspace.OwnerId != userId)
+                    return ApiResult.Fail("FORBIDDEN");
+
+                _dataContext.Set<TaskComment>().Remove(comment);
+                await SaveChangesAsync(ct);
+
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    workspace.Id,
+                    "TaskCommentDeleted",
+                    new { TaskId = comment.TaskId, CommentId = commentId });
+
+                return ApiResult.Success(null, "Xóa thành công");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail(
+                    "Có lỗi xảy ra",
+                    "SERVER_ERROR",
+                    new[] { ex.ToString() }
+                );
+            }
+        }
+
+        public async Task<ApiResult> GetTaskCommentsAsync(int taskId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (taskId <= 0)
+                    return ApiResult.Fail("INVALID_INPUT");
+
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
+                var task = await _dataContext.Set<WorkTask>()
+                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+
+                var workspace = await _dataContext.Set<Workspace>()
+                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
+
+                var isMember = await _dataContext.Set<WorkspaceMember>()
+                    .AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == userId, ct);
+
+                if (!isMember && workspace.OwnerId != userId)
+                    return ApiResult.Fail("FORBIDDEN");
+
+                IQueryable<TaskComment> query = _dataContext.Set<TaskComment>()
+                    .AsNoTracking()
+                    .Where(c => c.TaskId == taskId)
+                    .OrderBy(c => c.CreatedDate);
+
+                if (paging != null)
+                {
+                    query = query.Skip((paging.PageNumber - 1) * paging.PageSize)
+                                 .Take(paging.PageSize);
+                }
+
+                var items = await query.ToListAsync(ct);
+
+                return ApiResult.Success(items, "OK");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail(
+                  "Có lỗi xảy ra",
+                  "SERVER_ERROR",
+                  new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetCommentByIdAsync(int commentId, CancellationToken ct = default)
+        {
+            var comment = await _dataContext.Set<TaskComment>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(c => c.Id == commentId, ct);
+
+            if (comment == null)
+                return ApiResult.Fail("NOT_FOUND");
+
+            return ApiResult.Success(comment, "OK");
+        }
+
+        public async Task<ApiResult> GetCommentCountAsync(int taskId, CancellationToken ct = default)
+        {
+            var count = await _dataContext.Set<TaskComment>()
+                .AsNoTracking()
+                .CountAsync(c => c.TaskId == taskId, ct);
+
+            return ApiResult.Success(count, "OK");
+        }
+
+        public async Task<ApiResult> GetCommentsByUserAsync(int userId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            IQueryable<TaskComment> query = _dataContext.Set<TaskComment>()
+                .AsNoTracking()
+                .Where(c => c.UserId == userId)
+                .OrderByDescending(c => c.CreatedDate);
+
+            if (paging != null)
+            {
+                query = query.Skip((paging.PageNumber - 1) * paging.PageSize)
+                             .Take(paging.PageSize);
+            }
+
+            var items = await query.ToListAsync(ct);
+
+            return ApiResult.Success(items, "OK");
         }
     }
 }

@@ -21,9 +21,9 @@ namespace server.Controllers
         /// Thêm thành viên vào workspace
         /// </summary>
         [HttpPost]
-        public async Task<IActionResult> AddMember([FromBody] AddWorkspaceMemberModel model)
+        public async Task<IActionResult> AddMember([FromBody] AddWorkspaceMemberModel model, CancellationToken ct)
         {
-            var result = await _workspaceMemberService.AddMemberAsync(model);
+            var result = await _workspaceMemberService.AddMemberAsync(model, ct);
             return FromApiResult(result);
         }
 
@@ -31,9 +31,9 @@ namespace server.Controllers
         /// Lấy danh sách thành viên của workspace
         /// </summary>
         [HttpGet("{workspaceId:int}")]
-        public async Task<IActionResult> GetMembers(int workspaceId)
+        public async Task<IActionResult> GetMembers(int workspaceId, CancellationToken ct)
         {
-            var result = await _workspaceMemberService.GetWorkspaceMembersAsync(workspaceId);
+            var result = await _workspaceMemberService.GetWorkspaceMembersAsync(workspaceId, ct);
             return FromApiResult(result);
         }
 
@@ -41,9 +41,9 @@ namespace server.Controllers
         /// Xóa thành viên khỏi workspace
         /// </summary>
         [HttpDelete("{workspaceId:int}/users/{userId:int}")]
-        public async Task<IActionResult> RemoveMember(int workspaceId, int userId)
+        public async Task<IActionResult> RemoveMember(int workspaceId, int userId, CancellationToken ct)
         {
-            var result = await _workspaceMemberService.RemoveMemberAsync(workspaceId, userId);
+            var result = await _workspaceMemberService.RemoveMemberAsync(workspaceId, userId, ct);
             return FromApiResult(result);
         }
 
@@ -51,9 +51,9 @@ namespace server.Controllers
         /// Cập nhật role thành viên
         /// </summary>
         [HttpPut("{workspaceId:int}/users/{userId:int}")]
-        public async Task<IActionResult> UpdateRole(int workspaceId, int userId, [FromBody] UpdateWorkspaceMemberModel model)
+        public async Task<IActionResult> UpdateRole(int workspaceId, int userId, [FromBody] UpdateWorkspaceMemberModel model, CancellationToken ct)
         {
-            var result = await _workspaceMemberService.UpdateMemberRoleAsync(model);
+            var result = await _workspaceMemberService.UpdateMemberRoleAsync(model, ct);
             return FromApiResult(result);
         }
     }

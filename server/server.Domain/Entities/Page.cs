@@ -3,23 +3,44 @@ using server.Domain.Base;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// Page: Trang tài liệu trong một không gian làm việc.
+    /// Page: Thực thể trang tài liệu. 
     /// </summary>
     public class Page : EntityBase
-    {
-        /// <summary>
-        /// Mã định danh của không gian làm việc.
-        /// </summary>
-        public int WorkspaceId { get; set; }
+    {        
+        public int WorkspaceId { get; private set; }
+        public string Title { get; private set; }
+        public int CreatedBy { get; private set; }
+        protected Page() { }
+        public Page(string title, int workspaceId, int createdBy)
+        {
+            if (workspaceId <= 0)
+                throw new DomainException("WorkspaceId phải lớn hơn 0.");
 
-        /// <summary>
-        /// Tiêu đề của trang.
-        /// </summary>
-        public string Title { get; set; }
+            if (createdBy <= 0)
+                throw new DomainException("Người tạo (CreatedBy) không hợp lệ.");
 
-        /// <summary>
-        /// Mã định danh của người tạo ra trang.
-        /// </summary>
-        public int CreatedBy { get; set; }
+            WorkspaceId = workspaceId;
+            CreatedBy = createdBy;
+            SetTitle(title);
+        }
+
+        public void UpdateTitle(string newTitle)
+        {
+            SetTitle(newTitle);
+            MarkUpdated();
+        }
+        public void MoveToWorkspace(int targetWorkspaceId)
+        {
+            if (targetWorkspaceId <= 0)
+                throw new DomainException("Workspace đích không hợp lệ.");
+
+            WorkspaceId = targetWorkspaceId;
+            MarkUpdated();
+        }
+        private void SetTitle(string title)
+        {
+            // Tiêu đề trống sẽ được đặt thành "Untitled".
+            Title = string.IsNullOrWhiteSpace(title) ? "Untitled" : title.Trim();
+        }
     }
 }

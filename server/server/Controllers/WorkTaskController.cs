@@ -7,8 +7,9 @@ using server.Service.Models.WorkTask;
 
 namespace server.Controllers
 {
-    [Route("api/work-task")]
+    [Route("api/work-tasks")]
     [Authorize]
+    [ApiController]
     public class WorkTaskController : BaseController
     {
         private readonly IWorkTaskService _taskService;
@@ -19,33 +20,23 @@ namespace server.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] AddWorkTaskModel model)
+        public async Task<IActionResult> Create([FromBody] AddWorkTaskModel model, CancellationToken ct)
         {
-            if (!this.TryGetUserId(out var userId))
-                return this.FailUnauthorized();
-
-            var result = await _taskService.CreateTaskAsync(model, userId);
+            var result = await _taskService.CreateTaskAsync(model, ct);
             return FromApiResult(result, StatusCodes.Status201Created);
         }
 
-        [HttpPut]
-        public async Task<IActionResult> Update([FromBody] UpdateWorkTaskModel model)
+        [HttpPut("{taskId:int}")]
+        public async Task<IActionResult> Update([FromBody] UpdateWorkTaskModel model, CancellationToken ct)
         {
-            var result = await _taskService.UpdateTaskAsync(model);
-            return FromApiResult(result);
-        }
-
-        [HttpPut("{taskId:int}/status")]
-        public async Task<IActionResult> UpdateStatus(int taskId, [FromBody] StatusWorkTask newStatus)
-        {
-            var result = await _taskService.UpdateTaskStatusAsync(taskId, newStatus);
+            var result = await _taskService.UpdateTaskAsync(model, ct);
             return FromApiResult(result);
         }
 
         [HttpDelete("{taskId:int}")]
-        public async Task<IActionResult> Delete(int taskId)
+        public async Task<IActionResult> Delete(int taskId, CancellationToken ct)
         {
-            var result = await _taskService.DeleteTaskAsync(taskId);
+            var result = await _taskService.DeleteTaskAsync(taskId, ct);
             return FromApiResult(result);
         }
 
@@ -57,72 +48,58 @@ namespace server.Controllers
         }
 
         [HttpGet("workspace/{workspaceId:int}")]
-        public async Task<IActionResult> GetByWorkspace(int workspaceId, [FromQuery] PagingRequest? paging)
+        public async Task<IActionResult> GetByWorkspace(int workspaceId, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var result = await _taskService.GetTasksByWorkspaceAsync(workspaceId, paging);
+            var result = await _taskService.GetTasksByWorkspaceAsync(workspaceId, paging, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("page/{pageId:int}")]
-        public async Task<IActionResult> GetByPage(int pageId, [FromQuery] PagingRequest? paging)
+        [HttpGet("workspace/{workspaceId:int}/search")]
+        public async Task<IActionResult> Search(int workspaceId, [FromQuery] string? q, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var result = await _taskService.GetTasksByPageAsync(pageId, paging);
+            var result = await _taskService.SearchTasksAsync(workspaceId, q ?? string.Empty, paging, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("search/{workspaceId:int}")]
-        public async Task<IActionResult> Search(int workspaceId, [FromQuery] string? q, [FromQuery] PagingRequest? paging)
+        [HttpGet("workspace/{workspaceId:int}/status")]
+        public async Task<IActionResult> GetByStatus(int workspaceId, [FromQuery] StatusWorkTask status, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var result = await _taskService.SearchTasksAsync(workspaceId, q ?? string.Empty, paging);
+            var result = await _taskService.GetTasksByStatusAsync(workspaceId, status, paging, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("status/{workspaceId:int}")]
-        public async Task<IActionResult> GetByStatus(int workspaceId, [FromQuery] StatusWorkTask status, [FromQuery] PagingRequest? paging)
+        [HttpGet("workspace/{workspaceId:int}/overdue")]
+        public async Task<IActionResult> GetOverdue(int workspaceId, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var result = await _taskService.GetTasksByStatusAsync(workspaceId, status, paging);
+            var result = await _taskService.GetOverdueTasksAsync(workspaceId, paging, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("overdue/{workspaceId:int}")]
-        public async Task<IActionResult> GetOverdue(int workspaceId, [FromQuery] PagingRequest? paging)
+        [HttpGet("workspace/{workspaceId:int}/recommended")]
+        public async Task<IActionResult> GetRecommended(int workspaceId, [FromQuery] int limit = 5, CancellationToken ct = default)
         {
-            var result = await _taskService.GetOverdueTasksAsync(workspaceId, paging);
+            var result = await _taskService.GetRecommendedTasksAsync(workspaceId, limit, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("upcoming/{workspaceId:int}")]
-        public async Task<IActionResult> GetUpcoming(int workspaceId, [FromQuery] PagingRequest? paging, [FromQuery] int days = 7)
+        [HttpPost("{taskId:int}/complete")]
+        public async Task<IActionResult> Complete(int taskId, [FromQuery] int durationMinutes, CancellationToken ct)
         {
-            var result = await _taskService.GetUpcomingTasksAsync(workspaceId, days, paging);
+            var result = await _taskService.CompleteTaskAsync(taskId, durationMinutes, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("creator/{workspaceId:int}/{userId:int}")]
-        public async Task<IActionResult> GetByCreator(int workspaceId, int userId, [FromQuery] PagingRequest? paging)
+        [HttpPost("{taskId:int}/reopen")]
+        public async Task<IActionResult> ReOpen(int taskId, CancellationToken ct)
         {
-            var result = await _taskService.GetTasksByCreatorAsync(workspaceId, userId, paging);
+            var result = await _taskService.ReOpenTaskAsync(taskId, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("assigned/{workspaceId:int}/{userId:int}")]
-        public async Task<IActionResult> GetAssigned(int workspaceId, int userId, [FromQuery] PagingRequest? paging)
+        [HttpGet("workspace/{workspaceId:int}/statistics")]
+        public async Task<IActionResult> GetStatistics(int workspaceId, CancellationToken ct)
         {
-            var result = await _taskService.GetAssignedTasksAsync(workspaceId, userId, paging);
-            return FromApiResult(result);
-        }
-
-        [HttpGet("sort/priority/{workspaceId:int}")]
-        public async Task<IActionResult> GetSortedByPriority(int workspaceId, [FromQuery] PagingRequest? paging)
-        {
-            var result = await _taskService.GetTasksSortedByPriorityAsync(workspaceId, paging);
-            return FromApiResult(result);
-        }
-
-        [HttpGet("sort/duedate/{workspaceId:int}")]
-        public async Task<IActionResult> GetSortedByDueDate(int workspaceId, [FromQuery] PagingRequest? paging)
-        {
-            var result = await _taskService.GetTasksSortedByDueDateAsync(workspaceId, paging);
+            var result = await _taskService.GetTaskStatisticsAsync(workspaceId, ct);
             return FromApiResult(result);
         }
     }

@@ -19,54 +19,51 @@ namespace server.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Add([FromBody] AddCommentModel model)
+        public async Task<IActionResult> Add([FromBody] AddCommentModel model, CancellationToken ct)
         {
-            if (!this.TryGetUserId(out var userId))
-                return this.FailUnauthorized();
-
-            var result = await _service.AddCommentAsync(model, userId);
+            var result = await _service.AddCommentAsync(model, ct);
             return FromApiResult(result, StatusCodes.Status201Created);
         }
 
         [HttpPut("{commentId:int}")]
-        public async Task<IActionResult> Update(int commentId, [FromBody] UpdateCommentModel model)
+        public async Task<IActionResult> Update([FromBody] UpdateCommentModel model, CancellationToken ct)
         {
-            var result = await _service.UpdateCommentAsync(model);
+            var result = await _service.UpdateCommentAsync(model, ct);
             return FromApiResult(result);
         }
 
         [HttpDelete("{commentId:int}")]
-        public async Task<IActionResult> Delete(int commentId)
+        public async Task<IActionResult> Delete(int commentId, CancellationToken ct)
         {
-            var result = await _service.DeleteCommentAsync(commentId);
+            var result = await _service.DeleteCommentAsync(commentId, ct);
             return FromApiResult(result);
         }
 
         [HttpGet("{commentId:int}")]
-        public async Task<IActionResult> GetById(int commentId)
+        public async Task<IActionResult> GetById(int commentId, CancellationToken ct)
         {
-            var result = await _service.GetCommentByIdAsync(commentId);
+            var result = await _service.GetCommentByIdAsync(commentId, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("tasks/{taskId:int}/comments")]
-        public async Task<IActionResult> GetByTask(int taskId, [FromQuery] PagingRequest? paging = null)
+        [HttpGet("tasks/{taskId:int}")]
+        public async Task<IActionResult> GetByTask(int taskId, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var result = await _service.GetTaskCommentsAsync(taskId, paging);
+            var result = await _service.GetTaskCommentsAsync(taskId, paging, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("tasks/{taskId:int}/comments/count")]
-        public async Task<IActionResult> Count(int taskId)
+        [HttpGet("tasks/{taskId:int}/count")]
+        public async Task<IActionResult> Count(int taskId, CancellationToken ct)
         {
-            var result = await _service.GetCommentCountAsync(taskId);
+            var result = await _service.GetCommentCountAsync(taskId, ct);
             return FromApiResult(result);
         }
 
-        [HttpGet("users/{userId:int}/comments")]
-        public async Task<IActionResult> GetByUser(int userId, [FromQuery] PagingRequest? paging = null)
+        [HttpGet("users/{userId:int}")]
+        public async Task<IActionResult> GetByUser(int userId, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var result = await _service.GetCommentsByUserAsync(userId, paging);
+            var result = await _service.GetCommentsByUserAsync(userId, paging, ct);
             return FromApiResult(result);
         }
     }

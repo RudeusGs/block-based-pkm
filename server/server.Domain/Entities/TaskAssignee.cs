@@ -3,23 +3,27 @@ using server.Domain.Base;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// TaskAssignee: Người được giao thực hiện một công việc.
+    /// TaskAssignee: Thực thể thể hiện việc giao việc cho một thành viên.
     /// </summary>
     public class TaskAssignee : EntityBase
     {
-        /// <summary>
-        /// Mã định danh của công việc.
-        /// </summary>
-        public int TaskId { get; set; }
+        public int TaskId { get; private set; }
+        public int UserId { get; private set; }
+        public DateTime AssignedAt { get; private set; }
+        protected TaskAssignee() { }
 
-        /// <summary>
-        /// Mã định danh của người được giao thực hiện công việc.
-        /// </summary>
-        public int UserId { get; set; }
+        public TaskAssignee(int taskId, int userId)
+        {
+            if (taskId <= 0)
+                throw new DomainException("TaskId không hợp lệ.");
 
-        /// <summary>
-        /// Thời điểm thực hiện việc giao bài.
-        /// </summary>
-        public DateTime AssignedAt { get; set; } = DateTime.UtcNow;
+            if (userId <= 0)
+                throw new DomainException("UserId không hợp lệ.");
+
+            TaskId = taskId;
+            UserId = userId;
+            AssignedAt = DateTime.UtcNow;
+        }
+
     }
 }

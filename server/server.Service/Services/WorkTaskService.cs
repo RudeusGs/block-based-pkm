@@ -7,73 +7,197 @@ using server.Service.Common.IServices;
 using server.Service.Interfaces;
 using server.Service.Models;
 using server.Service.Models.WorkTask;
-
+using server.Service.Common.Helpers;
 namespace server.Service.Services
 {
     public class WorkTaskService : BaseService, IWorkTaskService
     {
         private readonly IRealtimeNotifier _notifier;
 
-        public WorkTaskService(DataContext dataContext, IUserService userService,
-            IRealtimeNotifier notifier) : base(dataContext, userService)
+        public WorkTaskService(
+            DataContext dataContext,
+            IUserService userService,
+            IRealtimeNotifier notifier
+        ) : base(dataContext, userService)
         {
             _notifier = notifier;
         }
-        public async Task<ApiResult> CreateTaskAsync(AddWorkTaskModel model, int userId)
+
+        public async Task<ApiResult> UpdateTaskStatusAsync(int taskId, StatusWorkTask newStatus, CancellationToken ct = default)
         {
             try
             {
-                if (model == null)
+                if (taskId <= 0) return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
+                var currentUserId = _userService.UserId;
+                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
+                var task = await _dataContext.Set<WorkTask>().FirstOrDefaultAsync(t => t.Id == taskId, ct);
+                if (task == null) return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
+
+                if (newStatus == StatusWorkTask.Done) task.Complete(0);
+                else if (newStatus == StatusWorkTask.ToDo) task.ReOpen();
+                else ;
+
+                await SaveChangesAsync(ct);
+                await ServiceHelper.SafeNotifyAsync(_notifier, task.WorkspaceId, "TaskStatusUpdated", new { TaskId = task.Id, Status = newStatus });
+                return ApiResult.Success(task, "Cập nhật trạng thái thành công");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi cập nhật trạng thái", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetTasksByPageAsync(int pageId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (pageId <= 0) return ApiResult.Fail("PageId không hợp lệ", "INVALID_INPUT");
+                paging ??= new PagingRequest();
+
+                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.PageId == pageId).OrderByDescending(t => t.Id);
+                var total = await query.CountAsync(ct);
+                var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
+                return ApiResult.Success(new { Total = total, Items = items });
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy danh sách page tasks", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetUpcomingTasksAsync(int workspaceId, int days = 7, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0) return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
+                paging ??= new PagingRequest();
+
+                var toDate = Now.AddDays(days);
+                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate.Value >= Now && t.DueDate.Value <= toDate).OrderBy(t => t.DueDate);
+                var total = await query.CountAsync(ct);
+                var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
+                return ApiResult.Success(new { Total = total, Items = items });
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy upcoming tasks", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetTasksByCreatorAsync(int workspaceId, int userId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0 || userId <= 0) return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
+                paging ??= new PagingRequest();
+
+                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && t.CreatedById == userId).OrderByDescending(t => t.Id);
+                var total = await query.CountAsync(ct);
+                var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
+                return ApiResult.Success(new { Total = total, Items = items });
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy tasks by creator", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetAssignedTasksAsync(int workspaceId, int userId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0 || userId <= 0) return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
+                paging ??= new PagingRequest();
+
+                var taskIds = await _dataContext.Set<TaskAssignee>().AsNoTracking().Where(a => a.UserId == userId).Select(a => a.TaskId).ToListAsync(ct);
+                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => taskIds.Contains(t.Id) && t.WorkspaceId == workspaceId).OrderByDescending(t => t.Id);
+                var total = await query.CountAsync(ct);
+                var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
+                return ApiResult.Success(new { Total = total, Items = items });
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy assigned tasks", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetTasksSortedByPriorityAsync(int workspaceId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0) return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
+                paging ??= new PagingRequest();
+
+                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId).OrderByDescending(t => t.Priority);
+                var total = await query.CountAsync(ct);
+                var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
+                return ApiResult.Success(new { Total = total, Items = items });
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy danh sách theo priority", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetTasksSortedByDueDateAsync(int workspaceId, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0) return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
+                paging ??= new PagingRequest();
+
+                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId).OrderBy(t => t.DueDate);
+                var total = await query.CountAsync(ct);
+                var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
+                return ApiResult.Success(new { Total = total, Items = items });
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy danh sách theo due date", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> CreateTaskAsync(AddWorkTaskModel model, CancellationToken ct = default)
+        {
+            try
+            {
+                if (model == null || string.IsNullOrWhiteSpace(model.Title) || model.WorkspaceId <= 0)
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
 
-                if (model.WorkspaceId <= 0 || string.IsNullOrWhiteSpace(model.Title))
-                    return ApiResult.Fail("Workspace hoặc title không hợp lệ", "VALIDATION_ERROR");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0 || currentUserId != userId)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
                 var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId);
+                    .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId, ct);
 
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
 
-                var isOwner = workspace.OwnerId == currentUserId;
                 var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == model.WorkspaceId && m.UserId == currentUserId);
+                    .AnyAsync(m => m.WorkspaceId == model.WorkspaceId && m.UserId == userId, ct);
 
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền tạo task trong workspace này", "FORBIDDEN");
+                if (!isMember && workspace.OwnerId != userId)
+                    return ApiResult.Fail("Không có quyền", "FORBIDDEN");
 
-                var task = new WorkTask
-                {
-                    WorkspaceId = model.WorkspaceId,
-                    PageId = model.PageId,
-                    Title = model.Title.Trim(),
-                    Description = model.Description?.Trim(),
-                    Priority = model.Priority,
-                    DueDate = model.DueDate,
-                    CreatedById = currentUserId,
-                    CreatedDate = Now
-                };
+                var priority = model.Priority ?? PriorityWorkTask.Medium;
+
+                var task = new WorkTask(model.Title.Trim(), model.WorkspaceId, userId, model.PageId, priority);
+                task.UpdateDetails(task.Title, model.Description, priority, model.DueDate);
 
                 _dataContext.Set<WorkTask>().Add(task);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
-                try 
-                { 
-                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskCreated", 
-                        new { TaskId = task.Id, WorkspaceId = task.WorkspaceId, Title = task.Title, CreatedBy = task.CreatedById }); 
-                } 
-                catch(Exception ex)
-                { 
-                    return ApiResult.Success(task, "Tạo task oke nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
-
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    task.WorkspaceId,
+                    "TaskCreated",
+                    new { TaskId = task.Id }
+                );
                 return ApiResult.Success(task, "Tạo task thành công");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return ApiResult.Fail(ex.Message, "UNAUTHORIZED");
             }
             catch (Exception ex)
             {
@@ -81,601 +205,62 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> DeleteTaskAsync(int taskId)
+        public async Task<ApiResult> UpdateTaskAsync(UpdateWorkTaskModel model, CancellationToken ct = default)
         {
             try
             {
-                if (taskId <= 0)
-                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
+                if (model == null || model.TaskId <= 0 || string.IsNullOrWhiteSpace(model.Title))
+                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
 
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var task = await _dataContext.Set<WorkTask>()
-                    .FirstOrDefaultAsync(t => t.Id == taskId);
+                    .FirstOrDefaultAsync(t => t.Id == model.TaskId, ct);
 
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
                 var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
+                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
 
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
 
-                if (workspace.OwnerId != currentUserId && task.CreatedById != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền xóa task này", "FORBIDDEN");
-
-                _dataContext.Set<WorkTask>().Remove(task);
-                await SaveChangesAsync();
-
-                try 
-                { 
-                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskDeleted", 
-                        new { TaskId = taskId, WorkspaceId = workspace.Id }); 
-                } 
-                catch(Exception ex)
-                { 
-                    return ApiResult.Success(null, "Xóa task oke nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
-
-                return ApiResult.Success(null, "Xóa task thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi xóa task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetAssignedTasksAsync(int workspaceId, int userId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0 || userId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
                 var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
+                    .AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == userId, ct);
 
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
+                if (!isMember && workspace.OwnerId != userId)
+                    return ApiResult.Fail("Không có quyền", "FORBIDDEN");
 
-                var assignedIdsQuery = _dataContext.Set<TaskAssignee>().AsNoTracking().Where(a => a.UserId == userId).Select(a => a.TaskId);
+                var priority = model.Priority ?? task.Priority;
 
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && assignedIdsQuery.Contains(t.Id));
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task được phân công thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetOverdueTasksAsync(int workspaceId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var now = Now;
-                var q = _dataContext.Set<WorkTask>().AsNoTracking()
-                    .Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate < now && t.Status != StatusWorkTask.Done);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderBy(t => t.DueDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task quá hạn thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct)
-        {
-            try
-            {
-                if (taskId <= 0)
-                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
-
-                var task = await _dataContext.Set<WorkTask>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == taskId);
-
-                if (task == null)
-                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == task.WorkspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task này", "FORBIDDEN");
-
-                return ApiResult.Success(task, "Lấy task thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTasksByCreatorAsync(int workspaceId, int userId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0 || userId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && t.CreatedById == userId);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task của người tạo thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTasksByPageAsync(int pageId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (pageId <= 0)
-                    return ApiResult.Fail("PageId không hợp lệ", "INVALID_INPUT");
-
-                var page = await _dataContext.Set<Page>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.Id == pageId);
-
-                if (page == null)
-                    return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == page.WorkspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == page.WorkspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong page này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.PageId == pageId);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && t.Status == status);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task theo trạng thái thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTasksByWorkspaceAsync(int workspaceId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTasksSortedByDueDateAsync(int workspaceId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderBy(t => t.DueDate == null)
-                    .ThenBy(t => t.DueDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task theo due date thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetTasksSortedByPriorityAsync(int workspaceId, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderBy(t => t.Priority == "High" ? 0 : t.Priority == "Medium" ? 1 : t.Priority == "Low" ? 2 : 3)
-                    .ThenByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task theo priority thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> GetUpcomingTasksAsync(int workspaceId, int days = 7, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền xem task trong workspace này", "FORBIDDEN");
-
-                var to = Now.AddDays(days);
-                var q = _dataContext.Set<WorkTask>().AsNoTracking()
-                    .Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate >= Now && t.DueDate <= to && t.Status != StatusWorkTask.Done);
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderBy(t => t.DueDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Lấy danh sách task sắp đến hạn thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi lấy danh sách task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> SearchTasksAsync(int workspaceId, string keyword, PagingRequest? paging = null)
-        {
-            try
-            {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId);
-
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền tìm kiếm task trong workspace này", "FORBIDDEN");
-
-                var q = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId);
-
-                if (!string.IsNullOrWhiteSpace(keyword))
-                {
-                    var kw = keyword.Trim().ToLowerInvariant();
-                    q = q.Where(t => t.Title.ToLower().Contains(kw) || (t.Description != null && t.Description.ToLower().Contains(kw)));
-                }
-
-                paging ??= new PagingRequest();
-                var total = await q.CountAsync();
-                var items = await q.OrderByDescending(t => t.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync();
-
-                return ApiResult.Success(new { Total = total, Items = items }, "Tìm kiếm task thành công");
-            }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi tìm kiếm task", "SERVER_ERROR", new[] { ex.ToString() });
-            }
-        }
-
-        public async Task<ApiResult> UpdateTaskAsync(UpdateWorkTaskModel model)
-        {
-            try
-            {
-                if (model == null || model.TaskId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var task = await _dataContext.Set<WorkTask>()
-                    .FirstOrDefaultAsync(t => t.Id == model.TaskId);
-
-                if (task == null)
-                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (workspace.OwnerId != currentUserId && task.CreatedById != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền cập nhật task này", "FORBIDDEN");
-
-                if (!string.IsNullOrWhiteSpace(model.Title))
-                    task.Title = model.Title.Trim();
-
-                if (model.Description != null)
-                    task.Description = model.Description.Trim();
+                task.UpdateDetails(model.Title.Trim(), model.Description, priority, model.DueDate);
 
                 if (model.Status.HasValue)
-                    task.Status = model.Status.Value;
-
-                if (!string.IsNullOrWhiteSpace(model.Priority))
-                    task.Priority = model.Priority.Trim();
-
-                task.DueDate = model.DueDate;
-
-                task.MarkUpdated();
-                _dataContext.Set<WorkTask>().Update(task);
-                await SaveChangesAsync();
-                try
                 {
-                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskUpdated", 
-                        new { TaskId = task.Id, WorkspaceId = workspace.Id, Title = task.Title });
-                }
-                catch (Exception ex)
-                {
-                    return ApiResult.Success(null, "Cập nhật task oke la nhưng mà có lỗi khi gửi realtime notification: " + ex.Message);
+                    switch (model.Status.Value)
+                    {
+                        case StatusWorkTask.Done:
+                            task.Complete(0);
+                            break;
+                        case StatusWorkTask.ToDo:
+                            task.ReOpen();
+                            break;
+                    }
                 }
 
+                await SaveChangesAsync(ct);
+
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    task.WorkspaceId,
+                    "TaskUpdated",
+                    new { TaskId = task.Id }
+                );
                 return ApiResult.Success(task, "Cập nhật task thành công");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return ApiResult.Fail(ex.Message, "UNAUTHORIZED");
             }
             catch (Exception ex)
             {
@@ -683,66 +268,293 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> UpdateTaskStatusAsync(int taskId, StatusWorkTask newStatus)
+        public async Task<ApiResult> DeleteTaskAsync(int taskId, CancellationToken ct = default)
         {
             try
             {
                 if (taskId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
+                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
 
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var task = await _dataContext.Set<WorkTask>()
-                    .FirstOrDefaultAsync(t => t.Id == taskId);
+                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
 
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
                 var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId);
+                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
 
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
 
-                var isOwner = workspace.OwnerId == currentUserId;
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == task.WorkspaceId && m.UserId == currentUserId);
+                if (workspace.OwnerId != userId)
+                    return ApiResult.Fail("Chỉ owner được xóa", "FORBIDDEN");
 
-                if (!isOwner && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền cập nhật trạng thái task này", "FORBIDDEN");
+                _dataContext.Set<WorkTask>().Remove(task);
+                await SaveChangesAsync(ct);
 
-                var prevStatus = task.Status;
-                task.Status = newStatus;
-
-                if (prevStatus != StatusWorkTask.Done && newStatus == StatusWorkTask.Done)
-                {
-                    task.CompletionCount += 1;
-                    task.LastCompletedAt = Now;
-                }
-
-                task.MarkUpdated();
-                _dataContext.Set<WorkTask>().Update(task);
-                await SaveChangesAsync();
-                try
-                {
-                    await _notifier.SendToWorkspaceAsync(workspace.Id, "TaskStatusUpdated", 
-                        new { TaskId = task.Id, WorkspaceId = workspace.Id, Status = task.Status });
-                }
-                catch(Exception ex) 
-                {
-                    return ApiResult.Success(null, "Cập nhật trạng thái task oke, nhưng có lỗi khi gửi realtime notification: " + ex.Message);
-                }
-
-                return ApiResult.Success(task, "Cập nhật trạng thái thành công");
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    task.WorkspaceId,
+                    "TaskDeleted",
+                    new { TaskId = task.Id }
+                );
+                return ApiResult.Success(null, "Xóa task thành công");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return ApiResult.Fail(ex.Message, "UNAUTHORIZED");
             }
             catch (Exception ex)
             {
-                return ApiResult.Fail("Có lỗi khi cập nhật trạng thái task", "SERVER_ERROR", new[] { ex.ToString() });
+                return ApiResult.Fail("Có lỗi khi xóa task", "SERVER_ERROR", new[] { ex.ToString() });
             }
+        }
+
+        public async Task<ApiResult> CompleteTaskAsync(int taskId, int durationMinutes, CancellationToken ct = default)
+        {
+            try
+            {
+                if (taskId <= 0)
+                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
+
+                ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                var task = await _dataContext.Set<WorkTask>()
+                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+
+                if (task == null)
+                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
+
+                task.Complete(durationMinutes);
+                await SaveChangesAsync(ct);
+
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    task.WorkspaceId,
+                    "TaskCompleted",
+                    new { TaskId = task.Id }
+                );
+                return ApiResult.Success(task, "Hoàn thành task");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return ApiResult.Fail(ex.Message, "UNAUTHORIZED");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi complete task", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> ReOpenTaskAsync(int taskId, CancellationToken ct = default)
+        {
+            try
+            {
+                if (taskId <= 0)
+                    return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
+
+                ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
+                var task = await _dataContext.Set<WorkTask>()
+                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+
+                if (task == null)
+                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
+
+                task.ReOpen();
+                await SaveChangesAsync(ct);
+
+                await ServiceHelper.SafeNotifyAsync(
+                    _notifier,
+                    task.WorkspaceId,
+                    "ReOpenTask",
+                    new { TaskId = task.Id }
+                );
+                return ApiResult.Success(task, "Mở lại task");
+            }
+            catch (UnauthorizedAccessException ex)
+            {
+                return ApiResult.Fail(ex.Message, "UNAUTHORIZED");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi reopen", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetRecommendedTasksAsync(int workspaceId, int limit = 5, CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0)
+                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
+
+                var nowHour = DateTime.UtcNow.Hour;
+
+                var tasks = await _dataContext.Set<WorkTask>()
+                    .AsNoTracking()
+                    .Where(t => t.WorkspaceId == workspaceId && t.Status != StatusWorkTask.Done)
+                    .OrderByDescending(t => t.RecommendationWeight)
+                    .Take(limit * 2)
+                    .ToListAsync(ct);
+
+                var result = tasks
+                    .OrderBy(t => t.OptimalHourOfDay.HasValue
+                        ? Math.Abs(t.OptimalHourOfDay.Value - nowHour)
+                        : int.MaxValue)
+                    .Take(limit)
+                    .ToList();
+
+                return ApiResult.Success(result, "OK");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct = default)
+        {
+            var task = await _dataContext.Set<WorkTask>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+
+            if (task == null)
+                return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
+
+            return ApiResult.Success(task, "OK");
+        }
+
+        public async Task<ApiResult> GetTasksByWorkspaceAsync(
+            int workspaceId,
+            PagingRequest? paging = null,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0)
+                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
+
+                IQueryable<WorkTask> query = _dataContext.Set<WorkTask>()
+                    .AsNoTracking()
+                    .Where(t => t.WorkspaceId == workspaceId);
+
+                query = query.OrderByDescending(t => t.RecommendationWeight);
+
+                if (paging != null)
+                {
+                    var skip = (paging.PageNumber - 1) * paging.PageSize;
+
+                    query = query.Skip(skip)
+                                 .Take(paging.PageSize);
+                }
+
+                var items = await query.ToListAsync(ct);
+
+                return ApiResult.Success(items, "OK");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy tasks", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            var query = _dataContext.Set<WorkTask>()
+                .AsNoTracking()
+                .Where(t => t.WorkspaceId == workspaceId && t.Status == status);
+
+            if (paging != null)
+                query = query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize);
+
+            var items = await query.ToListAsync(ct);
+
+            return ApiResult.Success(items, "OK");
+        }
+
+        public async Task<ApiResult> GetOverdueTasksAsync(
+            int workspaceId,
+            PagingRequest? paging = null,
+            CancellationToken ct = default)
+        {
+            try
+            {
+                if (workspaceId <= 0)
+                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
+
+                IQueryable<WorkTask> query = _dataContext.Set<WorkTask>()
+                    .AsNoTracking()
+                    .Where(t => t.WorkspaceId == workspaceId &&
+                                t.DueDate.HasValue &&
+                                t.DueDate < DateTime.UtcNow &&
+                                t.Status != StatusWorkTask.Done);
+                query = query.OrderBy(t => t.DueDate);
+
+                if (paging != null)
+                {
+                    var skip = (paging.PageNumber - 1) * paging.PageSize;
+
+                    query = query.Skip(skip)
+                                 .Take(paging.PageSize);
+                }
+
+                var items = await query.ToListAsync(ct);
+
+                return ApiResult.Success(items, "OK");
+            }
+            catch (Exception ex)
+            {
+                return ApiResult.Fail("Có lỗi khi lấy overdue tasks", "SERVER_ERROR", new[] { ex.ToString() });
+            }
+        }
+
+        public async Task<ApiResult> SearchTasksAsync(int workspaceId, string keyword, PagingRequest? paging = null, CancellationToken ct = default)
+        {
+            var query = _dataContext.Set<WorkTask>()
+                .AsNoTracking()
+                .Where(t => t.WorkspaceId == workspaceId);
+
+            if (!string.IsNullOrWhiteSpace(keyword))
+            {
+                query = query.Where(t =>
+                    EF.Functions.Like(t.Title, $"%{keyword}%") ||
+                    (t.Description != null && EF.Functions.Like(t.Description, $"%{keyword}%")));
+            }
+
+            if (paging != null)
+                query = query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize);
+
+            var items = await query.ToListAsync(ct);
+
+            return ApiResult.Success(items, "OK");
+        }
+
+        public async Task<ApiResult> GetTaskStatisticsAsync(int workspaceId, CancellationToken ct = default)
+        {
+            var tasks = await _dataContext.Set<WorkTask>()
+                .AsNoTracking()
+                .Where(t => t.WorkspaceId == workspaceId)
+                .ToListAsync(ct);
+
+            var total = tasks.Count;
+            var completed = tasks.Count(t => t.Status == StatusWorkTask.Done);
+            var overdue = tasks.Count(t => t.DueDate.HasValue && t.DueDate < DateTime.UtcNow && t.Status != StatusWorkTask.Done);
+
+            var avgDuration = tasks
+                .Where(t => t.CompletionCount > 0)
+                .Select(t => (double)t.TotalDurationMinutes / t.CompletionCount)
+                .DefaultIfEmpty(0)
+                .Average();
+
+            return ApiResult.Success(new
+            {
+                Total = total,
+                Completed = completed,
+                Overdue = overdue,
+                AvgDuration = Math.Round(avgDuration, 2)
+            }, "OK");
         }
     }
 }

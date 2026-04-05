@@ -8,7 +8,7 @@ namespace server.Service.Models.WorkTask
         public string Title { get; set; }
         public string? Description { get; set; }
         public StatusWorkTask? Status { get; set; }
-        public string? Priority { get; set; }
+        public PriorityWorkTask? Priority { get; set; }
         public DateTime? DueDate { get; set; }
     }
 }

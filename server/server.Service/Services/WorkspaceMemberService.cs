@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using server.Domain.Base;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
 using server.Service.Common.IServices;
@@ -13,81 +14,57 @@ namespace server.Service.Services
         public WorkspaceMemberService(DataContext dataContext, IUserService userService)
             : base(dataContext, userService) { }
 
-        public async Task<ApiResult> AddMemberAsync(AddWorkspaceMemberModel model)
+        public async Task<ApiResult> AddMemberAsync(AddWorkspaceMemberModel model, CancellationToken ct = default)
         {
             try
             {
-                if (model == null || model.WorkspaceId <= 0 || string.IsNullOrWhiteSpace(model.UserEmail))
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
                 var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == model.WorkspaceId);
+                    .FirstOrDefaultAsync(x => x.Id == model.WorkspaceId, ct);
+                if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
 
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (workspace.OwnerId != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền thêm thành viên", "FORBIDDEN");
+                if (workspace.OwnerId != currentUserId) return ApiResult.Fail("Bạn không có quyền thêm thành viên", "FORBIDDEN");
 
                 var user = await _dataContext.Set<User>()
-                    .FirstOrDefaultAsync(x => x.Email == model.UserEmail.Trim());
+                    .FirstOrDefaultAsync(x => x.Email == model.UserEmail.Trim(), ct);
+                if (user == null) return ApiResult.Fail("User không tồn tại", "NOT_FOUND");
 
-                if (user == null)
-                    return ApiResult.Fail("User không tồn tại", "NOT_FOUND");
-
-                if (user.Id == currentUserId)
-                    return ApiResult.Fail("Bạn đã là thành viên", "VALIDATION_ERROR");
-
+                if (user.Id == currentUserId) return ApiResult.Fail("Bạn đã là thành viên", "VALIDATION_ERROR");
                 var exists = await _dataContext.Set<WorkspaceMember>()
-                    .AnyAsync(x => x.WorkspaceId == model.WorkspaceId && x.UserId == user.Id);
+                    .AnyAsync(x => x.WorkspaceId == model.WorkspaceId && x.UserId == user.Id, ct);
+                if (exists) return ApiResult.Fail("User đã tồn tại trong workspace", "DUPLICATE");
 
-                if (exists)
-                    return ApiResult.Fail("User đã tồn tại trong workspace", "DUPLICATE");
-
-                var member = new WorkspaceMember
-                {
-                    WorkspaceId = model.WorkspaceId,
-                    UserId = user.Id,
-                };
-
+                var member = new WorkspaceMember(model.WorkspaceId, user.Id);
                 _dataContext.Set<WorkspaceMember>().Add(member);
-                await SaveChangesAsync();
-
+                await SaveChangesAsync(ct);
                 return ApiResult.Success(null, "Thêm thành viên thành công");
+            }
+            catch (DomainException ex)
+            {
+                return ApiResult.Fail(ex.Message, "VALIDATION_ERROR");
+            }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception ex)
             {
-                return ApiResult.Fail(
-                    "Có lỗi xảy ra khi thêm thành viên",
-                    "SERVER_ERROR",
-                    new[] { ex.Message }
-                );
+                return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message });
             }
         }
 
-        public async Task<ApiResult> GetWorkspaceMembersAsync(int workspaceId)
+        public async Task<ApiResult> GetWorkspaceMembersAsync(int workspaceId, CancellationToken ct = default)
         {
             try
             {
-                if (workspaceId <= 0)
-                    return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
                 var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
-                var hasAccess = await _dataContext.Set<Workspace>()
-                    .AnyAsync(w => w.Id == workspaceId &&
-                                  (w.OwnerId == currentUserId ||
-                                   _dataContext.Set<WorkspaceMember>()
-                                       .Any(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId)));
-
-                if (!hasAccess)
-                    return ApiResult.Fail("Bạn không có quyền xem", "FORBIDDEN");
+                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var hasAccess = await _dataContext.Set<WorkspaceMember>()
+                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId, ct)
+                    || await _dataContext.Set<Workspace>().AnyAsync(w => w.Id == workspaceId && w.OwnerId == currentUserId, ct);
+                if (!hasAccess) return ApiResult.Fail("Bạn không có quyền xem danh sách này", "FORBIDDEN");
 
                 var members = await (from m in _dataContext.Set<WorkspaceMember>()
                                      join u in _dataContext.Set<User>() on m.UserId equals u.Id
@@ -101,102 +78,87 @@ namespace server.Service.Services
                                          u.FullName,
                                          m.Role,
                                          m.JoinedAt
-                                     }).ToListAsync();
+                                     }).AsNoTracking().ToListAsync(ct);
 
                 return ApiResult.Success(members, "OK");
             }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
+            }
             catch (Exception ex)
             {
-                return ApiResult.Fail(
-                    "Có lỗi khi lấy danh sách thành viên",
-                    "SERVER_ERROR",
-                    new[] { ex.Message }
-                );
+                return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message });
             }
         }
 
-        public async Task<ApiResult> RemoveMemberAsync(int workspaceId, int userId)
+        public async Task<ApiResult> RemoveMemberAsync(int workspaceId, int userId, CancellationToken ct = default)
         {
             try
             {
-                if (workspaceId <= 0 || userId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
                 var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
+                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (userId == workspace.OwnerId)
-                    return ApiResult.Fail("Không thể xóa owner", "FORBIDDEN");
-
+                    .FirstOrDefaultAsync(w => w.Id == workspaceId, ct);
+                if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
+                if (userId == workspace.OwnerId) return ApiResult.Fail("Không thể xóa chủ sở hữu", "FORBIDDEN");
                 if (currentUserId != workspace.OwnerId && currentUserId != userId)
-                    return ApiResult.Fail("Không có quyền", "FORBIDDEN");
+                    return ApiResult.Fail("Bạn không có quyền thực hiện hành động này", "FORBIDDEN");
 
                 var member = await _dataContext.Set<WorkspaceMember>()
-                    .FirstOrDefaultAsync(m => m.WorkspaceId == workspaceId && m.UserId == userId);
+                    .FirstOrDefaultAsync(m => m.WorkspaceId == workspaceId && m.UserId == userId, ct);
 
-                if (member == null)
-                    return ApiResult.Fail("Member không tồn tại", "NOT_FOUND");
+                if (member == null) return ApiResult.Fail("Thành viên không tồn tại trong workspace", "NOT_FOUND");
 
                 _dataContext.Set<WorkspaceMember>().Remove(member);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
-                return ApiResult.Success(null, "Xóa thành công");
+                return ApiResult.Success(null, "Xóa thành viên thành công");
+            }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception ex)
             {
-                return ApiResult.Fail(
-                    "Lỗi khi xóa thành viên",
-                    "SERVER_ERROR",
-                    new[] { ex.Message }
-                );
+                return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message });
             }
         }
 
-        public async Task<ApiResult> UpdateMemberRoleAsync(UpdateWorkspaceMemberModel model)
+        public async Task<ApiResult> UpdateMemberRoleAsync(UpdateWorkspaceMemberModel model, CancellationToken ct = default)
         {
             try
             {
-                if (model == null || model.WorkspaceId <= 0 || model.WorkspaceMemberId <= 0)
-                    return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
                 var currentUserId = _userService.UserId;
-                if (currentUserId <= 0)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId);
+                    .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId, ct);
 
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (workspace.OwnerId != currentUserId)
-                    return ApiResult.Fail("Không có quyền", "FORBIDDEN");
+                if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
+                if (workspace.OwnerId != currentUserId) return ApiResult.Fail("Chỉ chủ sở hữu mới có thể thay đổi vai trò", "FORBIDDEN");
 
                 var member = await _dataContext.Set<WorkspaceMember>()
-                    .FirstOrDefaultAsync(m => m.Id == model.WorkspaceMemberId);
+                    .FirstOrDefaultAsync(m => m.Id == model.WorkspaceMemberId, ct);
 
-                if (member == null)
-                    return ApiResult.Fail("Member không tồn tại", "NOT_FOUND");
+                if (member == null) return ApiResult.Fail("Thành viên không tồn tại", "NOT_FOUND");
+                member.AssignRole(model.Role);
 
-                member.Role = model.Role;
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
-                return ApiResult.Success(null, "Cập nhật role thành công");
+                return ApiResult.Success(null, "Cập nhật vai trò thành công");
+            }
+            catch (DomainException ex)
+            {
+                return ApiResult.Fail(ex.Message, "VALIDATION_ERROR");
+            }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception ex)
             {
-                return ApiResult.Fail(
-                    "Lỗi khi cập nhật role",
-                    "SERVER_ERROR",
-                    new[] { ex.Message }
-                );
+                return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message });
             }
         }
     }

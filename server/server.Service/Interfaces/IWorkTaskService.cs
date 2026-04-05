@@ -5,83 +5,66 @@ using server.Service.Models.WorkTask;
 namespace server.Service.Interfaces
 {
     /// <summary>
-    /// IWorkTaskService: Quản lý công việc trong workspace.
+    /// IWorkTaskService: Quản lý công việc thông minh với thuật toán gợi ý.
     /// </summary>
     public interface IWorkTaskService
     {
-        /// <summary>
-        /// Tạo task mới.
-        /// </summary>
-        Task<ApiResult> CreateTaskAsync(AddWorkTaskModel model, int userId);
 
-        /// <summary>
-        /// Cập nhật thông tin task.
-        /// </summary>
-        Task<ApiResult> UpdateTaskAsync(UpdateWorkTaskModel model);
+        /// Tạo task mới. Mặc định tính toán trọng số ban đầu dựa trên Priority.
+        Task<ApiResult> CreateTaskAsync(AddWorkTaskModel model, CancellationToken ct = default);
 
-        /// <summary>
+        /// Cập nhật thông tin task. Tự động tính lại trọng số nếu thay đổi Priority.
+        Task<ApiResult> UpdateTaskAsync(UpdateWorkTaskModel model, CancellationToken ct = default);
+
         /// Xóa task.
-        /// </summary>
-        Task<ApiResult> DeleteTaskAsync(int taskId);
+        Task<ApiResult> DeleteTaskAsync(int taskId, CancellationToken ct = default);
 
         /// <summary>
-        /// Lấy tất cả task trong workspace.
+        /// Đánh dấu hoàn thành task. 
+        /// Thực hiện: Tăng CompletionCount, tính lại RecommendationWeight và OptimalHour.
         /// </summary>
-        Task<ApiResult> GetTasksByWorkspaceAsync(int workspaceId, PagingRequest? paging = null);
+        /// <param name="durationMinutes">Thời gian user thực hiện task (phút)</param>
+        Task<ApiResult> CompleteTaskAsync(int taskId, int durationMinutes, CancellationToken ct = default);
 
         /// <summary>
-        /// Lấy tất cả task trong page.
+        /// Mở lại task đã xong.
         /// </summary>
-        Task<ApiResult> GetTasksByPageAsync(int pageId, PagingRequest? paging = null);
+        Task<ApiResult> ReOpenTaskAsync(int taskId, CancellationToken ct = default);
+
+        /// <summary>
+        /// Lấy danh sách task được GỢI Ý (Smart Recommendations).
+        /// Thuật toán: Sắp xếp theo RecommendationWeight giảm dần và ưu tiên task có OptimalHour gần với giờ hiện tại.
+        /// </summary>
+        Task<ApiResult> GetRecommendedTasksAsync(int workspaceId, int limit = 5, CancellationToken ct = default);
 
         /// <summary>
         /// Lấy task cụ thể.
         /// </summary>
-        Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct);
+        Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct = default);
 
         /// <summary>
-        /// Cập nhật trạng thái task.
+        /// Lấy tất cả task trong workspace (Hỗ trợ phân trang).
         /// </summary>
-        Task<ApiResult> UpdateTaskStatusAsync(int taskId, StatusWorkTask newStatus);
+        Task<ApiResult> GetTasksByWorkspaceAsync(int workspaceId, PagingRequest? paging = null, CancellationToken ct = default);
 
         /// <summary>
-        /// Lấy task theo trạng thái.
+        /// Lấy task theo trạng thái (To Do, In Progress, Done).
         /// </summary>
-        Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null);
+        Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null, CancellationToken ct = default);
 
         /// <summary>
-        /// Lấy task quá hạn (overdue).
+        /// Lấy task quá hạn. Sắp xếp theo độ trễ (Overdue duration).
         /// </summary>
-        Task<ApiResult> GetOverdueTasksAsync(int workspaceId, PagingRequest? paging = null);
-
-        /// <summary>
-        /// Lấy task sắp đến hạn.
-        /// </summary>
-        Task<ApiResult> GetUpcomingTasksAsync(int workspaceId, int days = 7, PagingRequest? paging = null);
+        Task<ApiResult> GetOverdueTasksAsync(int workspaceId, PagingRequest? paging = null, CancellationToken ct = default);
 
         /// <summary>
         /// Tìm kiếm task theo từ khóa.
         /// </summary>
-        Task<ApiResult> SearchTasksAsync(int workspaceId, string keyword, PagingRequest? paging = null);
+        Task<ApiResult> SearchTasksAsync(int workspaceId, string keyword, PagingRequest? paging = null, CancellationToken ct = default);
 
         /// <summary>
-        /// Lấy task được tạo bởi user.
+        /// Lấy thống kê hiệu suất hoàn thành task trong workspace (Dùng cho Dashboard).
         /// </summary>
-        Task<ApiResult> GetTasksByCreatorAsync(int workspaceId, int userId, PagingRequest? paging = null);
-
-        /// <summary>
-        /// Lấy task assigned cho user.
-        /// </summary>
-        Task<ApiResult> GetAssignedTasksAsync(int workspaceId, int userId, PagingRequest? paging = null);
-
-        /// <summary>
-        /// Sắp xếp task theo priority.
-        /// </summary>
-        Task<ApiResult> GetTasksSortedByPriorityAsync(int workspaceId, PagingRequest? paging = null);
-
-        /// <summary>
-        /// Sắp xếp task theo due date.
-        /// </summary>
-        Task<ApiResult> GetTasksSortedByDueDateAsync(int workspaceId, PagingRequest? paging = null);
+        Task<ApiResult> GetTaskStatisticsAsync(int workspaceId, CancellationToken ct = default);
     }
 }
