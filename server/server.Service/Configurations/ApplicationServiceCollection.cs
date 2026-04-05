@@ -1,6 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.DependencyInjection;
-using server.Domain.Entities;
+﻿using Microsoft.Extensions.DependencyInjection;
 using server.Service.Common.IServices;
 using server.Service.Common.Services;
 using server.Service.Interfaces;

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using server.Domain.Enums;
 using server.Service.Interfaces;
 using server.Service.Models;
 using server.Service.Models.WorkTask;
@@ -35,7 +36,7 @@ namespace server.Controllers
         }
 
         [HttpPut("{taskId:int}/status")]
-        public async Task<IActionResult> UpdateStatus(int taskId, [FromBody] string newStatus)
+        public async Task<IActionResult> UpdateStatus(int taskId, [FromBody] StatusWorkTask newStatus)
         {
             var result = await _taskService.UpdateTaskStatusAsync(taskId, newStatus);
             return FromApiResult(result);
@@ -77,7 +78,7 @@ namespace server.Controllers
         }
 
         [HttpGet("status/{workspaceId:int}")]
-        public async Task<IActionResult> GetByStatus(int workspaceId, [FromQuery] string status, [FromQuery] PagingRequest? paging)
+        public async Task<IActionResult> GetByStatus(int workspaceId, [FromQuery] StatusWorkTask status, [FromQuery] PagingRequest? paging)
         {
             var result = await _taskService.GetTasksByStatusAsync(workspaceId, status, paging);
             return FromApiResult(result);

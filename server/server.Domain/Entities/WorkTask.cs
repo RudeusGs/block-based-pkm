@@ -1,4 +1,5 @@
 using server.Domain.Base;
+using server.Domain.Enums;
 
 namespace server.Domain.Entities
 {
@@ -28,9 +29,9 @@ namespace server.Domain.Entities
         public string? Description { get; set; }
 
         /// <summary>
-        /// Trạng thái của công việc (To Do, Doing, Done, ...).
+        /// Trạng thái của công việc.
         /// </summary>
-        public string Status { get; set; } = "To Do";
+        public StatusWorkTask Status { get; set; } = StatusWorkTask.ToDo;
 
         /// <summary>
         /// Mức độ ưu tiên (Low, Medium, High).
@@ -77,7 +78,7 @@ namespace server.Domain.Entities
         /// </summary>
         public int? OptimalHourOfDay { get; set; }
 
-        /// <summary>
+        /// <summary>   
         /// Lịch sử thực hiện gần đây (JSON format): 
         /// Lưu thông tin các lần hoàn thành gần nhất (thời gian, duration) để tính trend.
         /// </summary>

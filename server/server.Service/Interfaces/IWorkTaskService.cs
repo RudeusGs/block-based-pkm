@@ -1,3 +1,4 @@
+using server.Domain.Enums;
 using server.Service.Models;
 using server.Service.Models.WorkTask;
 
@@ -39,14 +40,14 @@ namespace server.Service.Interfaces
         Task<ApiResult> GetTaskByIdAsync(int taskId, CancellationToken ct);
 
         /// <summary>
-        /// Cập nhật trạng thái task (To Do, Doing, Done).
+        /// Cập nhật trạng thái task.
         /// </summary>
-        Task<ApiResult> UpdateTaskStatusAsync(int taskId, string newStatus);
+        Task<ApiResult> UpdateTaskStatusAsync(int taskId, StatusWorkTask newStatus);
 
         /// <summary>
         /// Lấy task theo trạng thái.
         /// </summary>
-        Task<ApiResult> GetTasksByStatusAsync(int workspaceId, string status, PagingRequest? paging = null);
+        Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null);
 
         /// <summary>
         /// Lấy task quá hạn (overdue).

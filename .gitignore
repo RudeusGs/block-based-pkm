@@ -12,3 +12,15 @@ server/server/service.Tests.Unit/bin
 server/server/server.Service/obj
 server/server/server.Infrastructure/obj
 server/server/server.Infrastructure/Migrations
+server/.vs
+server/server/bin
+server/server/obj
+server/server.Domain/bin
+server/server.Domain/obj
+server/server.Infrastructure/bin
+server/server.Infrastructure/Migrations
+server/server.Infrastructure/obj
+server/server.Service/bin
+server/server.Service/obj
+server/service.Tests.Unit/bin
+server/service.Tests.Unit/obj

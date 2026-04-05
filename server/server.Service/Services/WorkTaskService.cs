@@ -1,6 +1,7 @@
 ﻿using server.Infrastructure.Realtime.Interfaces;
 using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
+using server.Domain.Enums;
 using server.Infrastructure.Persistence;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
@@ -201,7 +202,7 @@ namespace server.Service.Services
 
                 var now = Now;
                 var q = _dataContext.Set<WorkTask>().AsNoTracking()
-                    .Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate < now && !string.Equals(t.Status, "Done", StringComparison.OrdinalIgnoreCase));
+                    .Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate < now && t.Status != StatusWorkTask.Done);
 
                 paging ??= new PagingRequest();
                 var total = await q.CountAsync();
@@ -352,11 +353,11 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> GetTasksByStatusAsync(int workspaceId, string status, PagingRequest? paging = null)
+        public async Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null)
         {
             try
             {
-                if (workspaceId <= 0 || string.IsNullOrWhiteSpace(status))
+                if (workspaceId <= 0)
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
 
                 var currentUserId = _userService.UserId;
@@ -554,7 +555,7 @@ namespace server.Service.Services
 
                 var to = Now.AddDays(days);
                 var q = _dataContext.Set<WorkTask>().AsNoTracking()
-                    .Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate >= Now && t.DueDate <= to && !string.Equals(t.Status, "Done", StringComparison.OrdinalIgnoreCase));
+                    .Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate >= Now && t.DueDate <= to && t.Status != StatusWorkTask.Done);
 
                 paging ??= new PagingRequest();
                 var total = await q.CountAsync();
@@ -653,8 +654,8 @@ namespace server.Service.Services
                 if (model.Description != null)
                     task.Description = model.Description.Trim();
 
-                if (!string.IsNullOrWhiteSpace(model.Status))
-                    task.Status = model.Status.Trim();
+                if (model.Status.HasValue)
+                    task.Status = model.Status.Value;
 
                 if (!string.IsNullOrWhiteSpace(model.Priority))
                     task.Priority = model.Priority.Trim();
@@ -682,11 +683,11 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> UpdateTaskStatusAsync(int taskId, string newStatus)
+        public async Task<ApiResult> UpdateTaskStatusAsync(int taskId, StatusWorkTask newStatus)
         {
             try
             {
-                if (taskId <= 0 || string.IsNullOrWhiteSpace(newStatus))
+                if (taskId <= 0)
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
 
                 var currentUserId = _userService.UserId;
@@ -714,12 +715,10 @@ namespace server.Service.Services
                 if (!isOwner && !isMember)
                     return ApiResult.Fail("Bạn không có quyền cập nhật trạng thái task này", "FORBIDDEN");
 
-                var normalizedNew = newStatus.Trim();
                 var prevStatus = task.Status;
-                task.Status = normalizedNew;
+                task.Status = newStatus;
 
-                if (!string.Equals(prevStatus, "Done", StringComparison.OrdinalIgnoreCase)
-                    && string.Equals(normalizedNew, "Done", StringComparison.OrdinalIgnoreCase))
+                if (prevStatus != StatusWorkTask.Done && newStatus == StatusWorkTask.Done)
                 {
                     task.CompletionCount += 1;
                     task.LastCompletedAt = Now;
