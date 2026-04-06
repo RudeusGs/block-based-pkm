@@ -3,39 +3,45 @@ using server.Domain.Base;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// ActivityLog: Nhật ký hoạt động trong hệ thống.
-    /// Ghi lại các hành động: tạo, chỉnh sửa, xóa trên các đối tượng.
+    /// ActivityLog: Thực thể nhật ký hoạt động.
     /// </summary>
     public class ActivityLog : EntityBase
     {
-        /// <summary>
-        /// Mã định danh của không gian làm việc.
-        /// </summary>
-        public int WorkspaceId { get; set; }
+        public int WorkspaceId { get; private set; }
+        public int UserId { get; private set; }
+        public string Action { get; private set; } // Create, Update, Delete...
+        public string EntityType { get; private set; } // Task, Page, Workspace...
+        public int EntityId { get; private set; }
+        public string? Metadata { get; private set; } // JSON chứa OldValue/NewValue
+
+        protected ActivityLog() { }
 
         /// <summary>
-        /// Mã định danh của người thực hiện hành động.
+        /// Khởi tạo một bản ghi nhật ký mới.
         /// </summary>
-        public int UserId { get; set; }
+        public ActivityLog(
+            int workspaceId,
+            int userId,
+            string action,
+            string entityType,
+            int entityId,
+            string? metadata = null)
+        {
+            if (workspaceId <= 0) throw new DomainException("WorkspaceId không hợp lệ.");
+            if (userId <= 0) throw new DomainException("UserId không hợp lệ.");
 
-        /// <summary>
-        /// Loại hành động (Create, Update, Delete, ...).
-        /// </summary>
-        public string Action { get; set; }
+            if (string.IsNullOrWhiteSpace(action))
+                throw new DomainException("Hành động (Action) không được để trống.");
 
-        /// <summary>
-        /// Loại đối tượng bị tác động (Task, Page, Workspace, ...).
-        /// </summary>
-        public string EntityType { get; set; }
+            if (string.IsNullOrWhiteSpace(entityType))
+                throw new DomainException("Loại đối tượng (EntityType) không được để trống.");
 
-        /// <summary>
-        /// Mã định danh của đối tượng bị tác động.
-        /// </summary>
-        public int EntityId { get; set; }
-
-        /// <summary>
-        /// Dữ liệu bổ sung dưới dạng JSON (giá trị cũ, giá trị mới, ...).
-        /// </summary>
-        public string? Metadata { get; set; }
+            WorkspaceId = workspaceId;
+            UserId = userId;
+            Action = action.Trim().ToUpper();
+            EntityType = entityType.Trim();
+            EntityId = entityId;
+            Metadata = metadata;
+        }
     }
 }

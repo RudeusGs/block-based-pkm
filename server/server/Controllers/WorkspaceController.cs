@@ -27,7 +27,7 @@ namespace server.Controllers
         [HttpPut("{id:int}")]
         public async Task<IActionResult> Update(int id, [FromBody] UpdateWorkspaceModel model, CancellationToken ct)
         {
-            var result = await _workspaceService.UpdateWorkspaceAsync(model, ct);
+            var result = await _workspaceService.UpdateWorkspaceAsync(id, model, ct);
             return FromApiResult(result);
         }
 

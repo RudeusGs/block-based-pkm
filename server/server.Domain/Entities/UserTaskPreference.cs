@@ -1,68 +1,116 @@
+using System.Text.Json;
 using server.Domain.Base;
+using server.Domain.Enums;
 
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// UserTaskPreference: Tùy chỉnh cá nhân cho gợi ý task của user.
-    /// Lưu những thói quen, giờ làm việc, độ ưu tiên của user để tùy chỉnh thuật toán.
+    /// UserTaskPreference: Cấu hình cá nhân hóa cho hệ thống gợi ý.
+    /// Chứa các quy tắc chặn (Guard Clauses) để điều tiết tần suất và thời điểm gợi ý.
     /// </summary>
     public class UserTaskPreference : EntityBase
     {
-        /// <summary>
-        /// Mã định danh của user.
-        /// </summary>
-        public int UserId { get; set; }
+        // Định danh
+        public int UserId { get; private set; }
+        public int WorkspaceId { get; private set; }
+
+        // Cấu hình thời gian làm việc
+        public int WorkDayStartHour { get; private set; }
+        public int WorkDayEndHour { get; private set; }
+        public string? PreferredDaysOfWeek { get; private set; } // Lưu JSON: [1,2,3,4,5]
+
+        // Tham số thuật toán
+        public int MaxRecommendationsPerSession { get; private set; }
+        public StatusUserTaskPreference MinPriorityForRecommendation { get; private set; }
+        public int RecommendationSensitivity { get; private set; }
+        public int RecommendationIntervalMinutes { get; private set; }
+        public bool EnableAutoRecommendation { get; private set; }
+
+        protected UserTaskPreference() { }
+
+        public UserTaskPreference(int userId, int workspaceId)
+        {
+            if (userId <= 0 || workspaceId <= 0)
+                throw new DomainException("UserId và WorkspaceId không hợp lệ.");
+
+            UserId = userId;
+            WorkspaceId = workspaceId;
+
+            WorkDayStartHour = 8;
+            WorkDayEndHour = 18;
+            MaxRecommendationsPerSession = 3;
+            RecommendationSensitivity = 50;
+            RecommendationIntervalMinutes = 30;
+            EnableAutoRecommendation = true;
+            PreferredDaysOfWeek = "[1,2,3,4,5]";
+        }
 
         /// <summary>
-        /// Mã định danh của workspace.
+        /// Cập nhật khung giờ làm việc.
         /// </summary>
-        public int WorkspaceId { get; set; }
+        public void UpdateWorkHours(int start, int end)
+        {
+            if (start < 0 || start > 23 || end < 0 || end > 23)
+                throw new DomainException("Giờ làm việc phải từ 0 đến 23.");
+
+            if (start >= end)
+                throw new DomainException("Giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
+
+            WorkDayStartHour = start;
+            WorkDayEndHour = end;
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Giờ bắt đầu ngày làm việc (0-23).
-        /// Ví dụ: 9 = người dùng thường bắt đầu làm việc lúc 9 giờ sáng.
+        /// Cập nhật độ nhạy của thuật toán.
         /// </summary>
-        public int WorkDayStartHour { get; set; } = 8;
+        public void UpdateSensitivity(int sensitivity)
+        {
+            if (sensitivity < 0 || sensitivity > 100)
+                throw new DomainException("Độ nhạy phải nằm trong khoảng 0-100.");
+
+            RecommendationSensitivity = sensitivity;
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Giờ kết thúc ngày làm việc (0-23).
-        /// Ví dụ: 18 = kết thúc lúc 6 giờ chiều.
+        /// Kiểm tra xem hiện tại có phải là thời điểm thích hợp để gợi ý không.
         /// </summary>
-        public int WorkDayEndHour { get; set; } = 18;
+        public bool IsSuitableForRecommendation(DateTime currentTime)
+        {
+            if (!EnableAutoRecommendation) return false;
+
+            // 1. Kiểm tra giờ làm việc
+            if (currentTime.Hour < WorkDayStartHour || currentTime.Hour >= WorkDayEndHour)
+                return false;
+
+            // 2. Kiểm tra ngày làm việc (Parse JSON đơn giản)
+            var dayOfWeek = (int)currentTime.DayOfWeek;
+            if (PreferredDaysOfWeek != null && !PreferredDaysOfWeek.Contains(dayOfWeek.ToString()))
+                return false;
+
+            return true;
+        }
 
         /// <summary>
-        /// Tối đa bao nhiêu task được gợi ý cùng một lúc (0-10).
+        /// Cập nhật danh sách ngày làm việc ưu tiên.
         /// </summary>
-        public int MaxRecommendationsPerSession { get; set; } = 3;
+        public void SetPreferredDays(List<int> days)
+        {
+            if (days == null || !days.Any())
+                throw new DomainException("Danh sách ngày ưu tiên không được để trống.");
 
-        /// <summary>
-        /// Mức độ ưu tiên tối thiểu cho gợi ý (Low, Medium, High).
-        /// Chỉ gợi ý task có mức độ ưu tiên >= giá trị này.
-        /// </summary>
-        public string MinPriorityForRecommendation { get; set; } = "Low";
+            if (days.Any(d => d < 0 || d > 6))
+                throw new DomainException("Giá trị ngày không hợp lệ (0-6).");
 
-        /// <summary>
-        /// Có bật tính năng gợi ý tự động hay không.
-        /// </summary>
-        public bool EnableAutoRecommendation { get; set; } = true;
+            PreferredDaysOfWeek = JsonSerializer.Serialize(days.Distinct().OrderBy(d => d));
+            MarkUpdated();
+        }
 
-        /// <summary>
-        /// Khoảng cách tối thiểu giữa các gợi ý (tính bằng phút). 30 phút
-        /// </summary>
-        public int RecommendationIntervalMinutes { get; set; } = 30;
-
-        /// <summary>
-        /// Những ngày trong tuần nào user muốn nhận gợi ý (JSON format).
-        /// Ví dụ: [1,2,3,4,5] = Monday-Friday (0=Sunday, 1=Monday, ..., 6=Saturday)
-        /// </summary>
-        public string? PreferredDaysOfWeek { get; set; } = "[1,2,3,4,5]";
-
-        /// <summary>
-        /// Độ nhạy của thuật toán gợi ý (0-100).
-        /// - 0-30: Tương đối, chỉ gợi ý những task rất phù hợp
-        /// - 31-70: Trung bình, gợi ý task trung bình hoặc hơn
-        /// - 71-100: Tích cực, gợi ý nhiều task để user chọn
-        /// </summary>
-        public int RecommendationSensitivity { get; set; } = 50;
+        public void SetAutoRecommendation(bool enable)
+        {
+            EnableAutoRecommendation = enable;
+            MarkUpdated();
+        }
     }
 }

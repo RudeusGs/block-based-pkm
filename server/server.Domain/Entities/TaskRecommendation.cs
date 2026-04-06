@@ -1,69 +1,119 @@
 using server.Domain.Base;
+using server.Domain.Enums;
 
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// TaskRecommendation: Gợi ý task cho user tại một thời điểm cụ thể.
-    /// Dùng để lưu những task được gợi ý, mức độ phù hợp, và kết quả (user có chọn hay không).
+    /// TaskRecommendation: Thực thể quản lý vòng đời của một lời gợi ý từ hệ thống.
+    /// Đóng gói logic chuyển đổi trạng thái và bảo vệ tính toàn vẹn của điểm số.
     /// </summary>
     public class TaskRecommendation : EntityBase
     {
-        /// <summary>
-        /// Mã định danh của task được gợi ý.
-        /// </summary>
-        public int TaskId { get; set; }
+        // Định danh
+        public int TaskId { get; private set; }
+        public int UserId { get; private set; }
+        public int WorkspaceId { get; private set; }
+
+        // Dữ liệu Gợi ý
+        public decimal RecommendationScore { get; private set; }
+        public string? RecommendationReason { get; private set; }
+        public DateTime RecommendedAt { get; private set; }
+        public DateTime? ExpiresAt { get; private set; }
+
+        // Trạng thái & Phản hồi từ User
+        public StatusTaskRecommendation Status { get; private set; }
+        public DateTime? AcceptedAt { get; private set; }
+        public DateTime? RejectedAt { get; private set; }
+
+        protected TaskRecommendation() { }
 
         /// <summary>
-        /// Mã định danh của user nhận được gợi ý.
+        /// Khởi tạo một lời gợi ý mới từ hệ thống.
         /// </summary>
-        public int UserId { get; set; }
+        public TaskRecommendation(
+            int taskId,
+            int userId,
+            int workspaceId,
+            decimal score,
+            string? reason,
+            int validHours = 24)
+        {
+            if (taskId <= 0 || userId <= 0 || workspaceId <= 0)
+                throw new DomainException("Thông tin định danh gợi ý không hợp lệ.");
+
+            if (score < 0 || score > 100)
+                throw new DomainException("Điểm gợi ý phải nằm trong khoảng 0-100.");
+
+            TaskId = taskId;
+            UserId = userId;
+            WorkspaceId = workspaceId;
+            RecommendationScore = score;
+            RecommendationReason = reason;
+
+            RecommendedAt = DateTime.UtcNow;
+            ExpiresAt = DateTime.UtcNow.AddHours(validHours);
+            Status = StatusTaskRecommendation.Pending;
+        }
+
 
         /// <summary>
-        /// Mã định danh của workspace.
+        /// Chấp nhận gợi ý (User chọn làm task này).
         /// </summary>
-        public int WorkspaceId { get; set; }
+        public void Accept()
+        {
+            EnsureNotExpired();
+            if (Status != StatusTaskRecommendation.Pending)
+                throw new DomainException("Chỉ có thể chấp nhận gợi ý đang ở trạng thái chờ.");
+
+            Status = StatusTaskRecommendation.Accepted;
+            AcceptedAt = DateTime.UtcNow;
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Điểm trọng số gợi ý (0-100).
-        /// Càng cao = task càng phù hợp với user.
+        /// Từ chối gợi ý (User không muốn làm task này).
         /// </summary>
-        public decimal RecommendationScore { get; set; }
+        public void Reject()
+        {
+            if (Status != StatusTaskRecommendation.Pending && Status != StatusTaskRecommendation.Accepted)
+                throw new DomainException("Không thể từ chối gợi ý ở trạng thái hiện tại.");
+
+            Status = StatusTaskRecommendation.Rejected;
+            RejectedAt = DateTime.UtcNow;
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Lý do gợi ý (JSON format):
-        /// Chứa thông tin chi tiết: tần suất hoàn thành trước đó, thời gian tối ưu, độ ưu tiên, ...
-        /// Ví dụ: {"frequency": "high", "optimal_hour": 9, "priority": "high", "last_completed_days_ago": 3}
+        /// Đánh dấu đã hoàn thành task thông qua lời gợi ý này.
         /// </summary>
-        public string? RecommendationReason { get; set; }
+        public void MarkCompleted()
+        {
+            if (Status != StatusTaskRecommendation.Accepted)
+                throw new DomainException("Task phải được chấp nhận trước khi đánh dấu hoàn thành.");
+
+            Status = StatusTaskRecommendation.Completed;
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Thời điểm gợi ý.
+        /// Kiểm tra và cập nhật trạng thái hết hạn.
         /// </summary>
-        public DateTime RecommendedAt { get; set; } = DateTime.UtcNow;
+        public void CheckExpiration()
+        {
+            if (Status == StatusTaskRecommendation.Pending && DateTime.UtcNow > ExpiresAt)
+            {
+                Status = StatusTaskRecommendation.Expired;
+                MarkUpdated();
+            }
+        }
 
-        /// <summary>
-        /// Trạng thái gợi ý (Pending, Accepted, Rejected, Completed, Expired).
-        /// - Pending: Vừa gợi ý, chưa user phản hồi
-        /// - Accepted: User đã chọn làm task này
-        /// - Rejected: User từ chối
-        /// - Completed: User đã hoàn thành task
-        /// - Expired: Gợi ý hết hạn (quá lâu không làm)
-        /// </summary>
-        public string Status { get; set; } = "Pending";
-
-        /// <summary>
-        /// Thời điểm user đã chọn task này (nếu có).
-        /// </summary>
-        public DateTime? AcceptedAt { get; set; }
-
-        /// <summary>
-        /// Thời điểm hết hạn của gợi ý.
-        /// </summary>
-        public DateTime? ExpiresAt { get; set; }
-
-        /// <summary>
-        /// Thời điểm user từ chối gợi ý (nếu có).
-        /// </summary>
-        public DateTime? RejectedAt { get; set; }
+        private void EnsureNotExpired()
+        {
+            if (Status == StatusTaskRecommendation.Expired || (ExpiresAt.HasValue && DateTime.UtcNow > ExpiresAt))
+            {
+                Status = StatusTaskRecommendation.Expired;
+                throw new DomainException("Gợi ý này đã hết hạn.");
+            }
+        }
     }
 }

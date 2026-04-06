@@ -15,8 +15,6 @@ namespace server.Controllers
             _service = service;
         }
 
-        // ASSIGN
-
         [HttpPost("tasks/{taskId:int}/assignees")]
         public async Task<IActionResult> Assign(int taskId, [FromBody] List<int> userIds)
         {
@@ -26,8 +24,6 @@ namespace server.Controllers
             var result = await _service.AssignTaskToMultipleUsersAsync(taskId, userIds);
             return FromApiResult(result);
         }
-
-        // UNASSIGN
 
         [HttpDelete("tasks/{taskId:int}/assignees/{userId:int}")]
         public async Task<IActionResult> Unassign(int taskId, int userId)
@@ -48,8 +44,6 @@ namespace server.Controllers
             var result = await _service.UnassignTaskFromAllAsync(taskId);
             return FromApiResult(result);
         }
-
-        // GET
 
         [HttpGet("tasks/{taskId:int}/assignees")]
         public async Task<IActionResult> GetAssignees(int taskId)
@@ -85,8 +79,6 @@ namespace server.Controllers
             var result = await _service.IsAssignedAsync(taskId, userId);
             return FromApiResult(result);
         }
-
-        // REASSIGN
 
         [HttpPost("tasks/{taskId:int}/assignees/{oldUserId:int}/reassign")]
         public async Task<IActionResult> Reassign(int taskId, int oldUserId, [FromBody] int newUserId)

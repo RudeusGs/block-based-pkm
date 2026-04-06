@@ -51,7 +51,7 @@ namespace server.Controllers
         /// Cập nhật role thành viên
         /// </summary>
         [HttpPut("{workspaceId:int}/users/{userId:int}")]
-        public async Task<IActionResult> UpdateRole(int workspaceId, int userId, [FromBody] UpdateWorkspaceMemberModel model, CancellationToken ct)
+        public async Task<IActionResult> UpdateRole([FromBody] UpdateWorkspaceMemberModel model, CancellationToken ct)
         {
             var result = await _workspaceMemberService.UpdateMemberRoleAsync(model, ct);
             return FromApiResult(result);

@@ -2,6 +2,7 @@
 using server.Domain.Base;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
+using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Models;
 using server.Service.Models.Workspace;
@@ -18,7 +19,7 @@ namespace server.Service.Services
             using var transaction = await _dataContext.Database.BeginTransactionAsync(ct);
             try
             {
-                var ownerId = _userService.UserId;
+                var ownerId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 if (ownerId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
                 var workspace = new Workspace(model.Name?.Trim()!, ownerId, model.Description?.Trim());
@@ -47,13 +48,13 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> UpdateWorkspaceAsync(UpdateWorkspaceModel model, CancellationToken ct = default)
+        public async Task<ApiResult> UpdateWorkspaceAsync(int id, UpdateWorkspaceModel model, CancellationToken ct = default)
         {
             try
             {
-                var userId = _userService.UserId;
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == model.Id, ct);
+                    .FirstOrDefaultAsync(x => x.Id == id, ct);
 
                 if (workspace == null) return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
                 if (workspace.OwnerId != userId) return ApiResult.Fail("Forbidden", "FORBIDDEN");

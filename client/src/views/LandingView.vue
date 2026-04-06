@@ -18,9 +18,7 @@
             <li class="nav-item">
               <a class="nav-link" href="#">How It Works</a>
             </li>
-            <li class="nav-item">
-              <a class="nav-link" href="#">Pricing</a>
-            </li>
+
           </ul>
           <div class="d-flex align-items-center gap-3">
             <button class="btn btn-primary-white px-4 py-2 rounded-3 fw-semibold"><a class="btn-getstarted" href="/login">Get Started</a></button>
@@ -62,7 +60,7 @@
               </div>
               <div class="demo-url mx-auto d-flex align-items-center gap-2 px-3 py-1 rounded-2">
                 <span class="material-symbols-outlined" style="font-size:14px;">lock</span>
-                <span class="text-muted" style="font-size: 12px;">obsidian-architect.io/workspace/q3-roadmap</span>
+                <span class="text-muted" style="font-size: 12px;">block-based.io/workspace/q3-roadmap</span>
               </div>
             </div>
             <div class="row g-0" style="height: 540px;">
@@ -70,10 +68,36 @@
                 <div class="d-flex align-items-center gap-2 mb-4 text-primary-accent fw-semibold small">
                   <span class="material-symbols-outlined">dashboard</span> Workspace
                 </div>
-                <div class="d-flex flex-column gap-3">
-                  <div class="skeleton-bar" style="width: 6rem;"></div>
-                  <div class="skeleton-bar" style="width: 8rem;"></div>
-                  <div class="skeleton-bar" style="width: 7rem;"></div>
+                <div class="d-flex flex-column gap-1">
+                  <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: rgba(255,255,255,0.05); cursor: pointer;">
+                    <div class="d-flex align-items-center gap-2 text-muted">
+                      <span class="material-symbols-outlined text-primary-accent fs-6">folder_open</span>
+                      <span class="small fw-medium text-white">Projects</span>
+                    </div>
+                    <span class="material-symbols-outlined fs-6 text-muted">expand_more</span>
+                  </div>
+                  <div class="d-flex flex-column gap-1 ms-3 ps-2 border-start border-secondary mb-2 mt-1">
+                    <div class="d-flex align-items-center gap-2 p-1 px-2 rounded-2" style="background: rgba(255,255,255,0.08); cursor: pointer;">
+                      <span class="material-symbols-outlined fs-6 text-primary-accent text-opacity-75" style="font-size: 14px !important;">description</span>
+                      <span class="small fw-medium text-white">Q3 Roadmap</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 p-1 px-2 rounded-2 text-muted" style="cursor: pointer;">
+                      <span class="material-symbols-outlined fs-6 text-muted" style="font-size: 14px !important;">description</span>
+                      <span class="small">Product Spec</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 p-1 px-2 rounded-2 text-muted" style="cursor: pointer;">
+                      <span class="material-symbols-outlined fs-6 text-muted" style="font-size: 14px !important;">analytics</span>
+                      <span class="small">User Research</span>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 p-2 rounded-3 text-muted mt-2" style="cursor: pointer;">
+                    <span class="material-symbols-outlined fs-6">folder</span>
+                    <span class="small fw-medium">Meeting Notes</span>
+                  </div>
+                  <div class="d-flex align-items-center gap-2 p-2 rounded-3 text-muted" style="cursor: pointer;">
+                    <span class="material-symbols-outlined fs-6">folder</span>
+                    <span class="small fw-medium">Daily Journal</span>
+                  </div>
                 </div>
               </div>
               <div class="col-12 col-md-9 p-5">
@@ -95,9 +119,28 @@
                         <span class="material-symbols-outlined text-primary-accent" style="font-size: 16px;">task_alt</span>
                         <span class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.1em;">Active Tasks</span>
                       </div>
-                      <div class="d-flex flex-column gap-3">
-                        <div class="skeleton-row rounded-3"></div>
-                        <div class="skeleton-row rounded-3"></div>
+                      <div class="d-flex flex-column gap-2">
+                        <div class="d-flex align-items-start gap-3 p-2 rounded-3" style="background: rgba(255,255,255,0.03);">
+                          <input type="checkbox" checked class="form-check-input mt-1 shadow-none" style="background-color: #ffffff; border-color: #ffffff;">
+                          <div>
+                            <div class="text-muted small fw-medium text-decoration-line-through">Finalize Q3 KPI targets</div>
+                            <div class="text-muted" style="font-size: 10px;">Assigned to Alex</div>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-start gap-3 p-2 rounded-3 border-start border-2 border-white" style="background: rgba(255,255,255,0.05);">
+                          <input type="checkbox" class="form-check-input mt-1 shadow-none" style="background-color: transparent; border-color: #404040;">
+                          <div>
+                            <div class="text-white small fw-medium">Draft go-to-market strategy</div>
+                            <div class="text-primary-accent" style="font-size: 10px;">Due Tomorrow</div>
+                          </div>
+                        </div>
+                        <div class="d-flex align-items-start gap-3 p-2 rounded-3" style="background: transparent; border: 1px solid rgba(255,255,255,0.05);">
+                          <input type="checkbox" class="form-check-input mt-1 shadow-none" style="background-color: transparent; border-color: #404040;">
+                          <div>
+                            <div class="text-muted small fw-medium">Review customer feedback</div>
+                            <div class="text-muted" style="font-size: 10px;">Blocked by Design team</div>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -107,13 +150,37 @@
                         <span class="material-symbols-outlined text-muted" style="font-size: 16px;">analytics</span>
                         <span class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.1em;">Velocity</span>
                       </div>
-                      <div class="velocity-chart rounded-3 d-flex align-items-end p-3 gap-2">
-                        <div class="bar-item" style="height: 40%;"></div>
-                        <div class="bar-item" style="height: 70%;"></div>
-                        <div class="bar-item bar-active" style="height: 90%;"></div>
-                        <div class="bar-item" style="height: 50%;"></div>
+                      <div class="velocity-chart rounded-3 d-flex align-items-end p-3 gap-2 pb-4">
+                        <div class="bar-item position-relative" style="height: 40%;"><span class="position-absolute bottom-0 start-50 translate-middle-x text-muted" style="font-size: 9px; margin-bottom: -18px;">W1</span></div>
+                        <div class="bar-item position-relative" style="height: 70%;"><span class="position-absolute bottom-0 start-50 translate-middle-x text-muted" style="font-size: 9px; margin-bottom: -18px;">W2</span></div>
+                        <div class="bar-item bar-active position-relative" style="height: 90%;">
+                           <div class="position-absolute top-0 start-50 translate-middle bg-white text-black rounded-pill fw-bold" style="font-size: 9px; padding: 2px 6px; margin-top: -8px;">24</div>
+                           <span class="position-absolute bottom-0 start-50 translate-middle-x text-muted" style="font-size: 9px; margin-bottom: -18px;">W3</span>
+                        </div>
+                        <div class="bar-item position-relative" style="height: 50%;"><span class="position-absolute bottom-0 start-50 translate-middle-x text-muted" style="font-size: 9px; margin-bottom: -18px;">W4</span></div>
                       </div>
                     </div>
+                  </div>
+                  <!-- Block Editor Mock -->
+                  <div class="col-12 mt-4 pt-2">
+                     <div class="px-3">
+                        <div class="d-flex align-items-center gap-2 mb-2 text-muted">
+                           <span class="material-symbols-outlined" style="font-size: 14px; opacity: 0.5;">drag_indicator</span>
+                           <h4 class="text-white fs-5 fw-semibold mb-0" style="letter-spacing: -0.02em;">Project Overview</h4>
+                        </div>
+                        <div class="d-flex align-items-start gap-2 mb-2 text-muted ms-4">
+                           <p class="mb-0" style="font-size: 14px; line-height: 1.6;">The Q3 roadmap focuses entirely on <span class="text-primary-accent bg-dark px-2 py-1 rounded-2" style="font-size: 12px; border: 1px solid #262626;">user adoption</span> and reducing onboarding friction. Everything else is secondary priority.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-4 text-muted">
+                           <span class="material-symbols-outlined" style="font-size: 14px; opacity: 0.5;">drag_indicator</span>
+                           <span class="material-symbols-outlined text-primary-accent" style="font-size: 16px;">format_quote</span>
+                           <p class="fst-italic border-start border-2 ps-3 mb-0 text-white-50" style="font-size: 14px; border-color: #404040 !important;">"Simplicity is the ultimate sophistication." - We need to push for at least 30% conversion rate before Halloween.</p>
+                        </div>
+                        <div class="d-flex align-items-center gap-2 mt-4 text-muted ms-4">
+                           <span class="material-symbols-outlined text-primary-accent" style="font-size: 14px;">add</span>
+                           <span class="text-muted" style="font-size: 14px;">Type '/' for commands</span>
+                        </div>
+                     </div>
                   </div>
                 </div>
               </div>
@@ -248,72 +315,7 @@
         </div>
       </section>
 
-      <section class="container-xl px-4 mb-5 pb-5">
-        <div class="text-center mb-5">
-          <h2 class="fw-bold mb-2 text-white" style="font-size: 2.25rem; letter-spacing: -0.04em;">Simple, transparent pricing.</h2>
-          <p class="text-muted">Focus on your work, not your subscription.</p>
-        </div>
-        <div class="row g-4 align-items-center">
-          <div class="col-12 col-md-4">
-            <div class="pricing-card p-5 rounded-4 d-flex flex-column h-100">
-              <h4 class="fw-bold mb-2 text-white">Free</h4>
-              <div class="fw-bold mb-4 text-white" style="font-size: 2.25rem;">$0 <span class="text-muted fw-normal fs-6">/ forever</span></div>
-              <ul class="list-unstyled d-flex flex-column gap-3 mb-5 flex-grow-1">
-                <li class="d-flex align-items-center gap-3 text-muted small">
-                  <span class="material-symbols-outlined text-white-50" style="font-size: 18px;">check_circle</span> Unlimited docs
-                </li>
-                <li class="d-flex align-items-center gap-3 text-muted small">
-                  <span class="material-symbols-outlined text-white-50" style="font-size: 18px;">check_circle</span> 5 team members
-                </li>
-                <li class="d-flex align-items-center gap-3 text-muted small">
-                  <span class="material-symbols-outlined text-white-50" style="font-size: 18px;">check_circle</span> Core features
-                </li>
-              </ul>
-              <button class="btn btn-ghost w-100 py-3 rounded-3 fw-bold">Get Started</button>
-            </div>
-          </div>
-          <div class="col-12 col-md-4">
-            <div class="pricing-card pricing-card-pro p-5 rounded-4 d-flex flex-column h-100 position-relative">
-              <div class="pro-badge position-absolute top-0 start-50 translate-middle px-3 py-1 rounded-pill fw-bold text-uppercase" style="font-size: 10px; letter-spacing: 0.1em; white-space: nowrap;">Most Popular</div>
-              <h4 class="fw-bold mb-2 text-white">Pro</h4>
-              <div class="fw-bold mb-4 text-white" style="font-size: 2.25rem;">$12 <span class="text-muted fw-normal fs-6">/ user / mo</span></div>
-              <ul class="list-unstyled d-flex flex-column gap-3 mb-5 flex-grow-1">
-                <li class="d-flex align-items-center gap-3 text-white small">
-                  <span class="material-symbols-outlined text-white" style="font-size: 18px;">check_circle</span> Unlimited everything
-                </li>
-                <li class="d-flex align-items-center gap-3 text-white small">
-                  <span class="material-symbols-outlined text-white" style="font-size: 18px;">check_circle</span> AI-powered architect
-                </li>
-                <li class="d-flex align-items-center gap-3 text-white small">
-                  <span class="material-symbols-outlined text-white" style="font-size: 18px;">check_circle</span> 30-day version history
-                </li>
-                <li class="d-flex align-items-center gap-3 text-white small">
-                  <span class="material-symbols-outlined text-white" style="font-size: 18px;">check_circle</span> Custom domains
-                </li>
-              </ul>
-              <button class="btn btn-primary-solid w-100 py-3 rounded-3 fw-bold">Upgrade Now</button>
-            </div>
-          </div>
-          <div class="col-12 col-md-4">
-            <div class="pricing-card p-5 rounded-4 d-flex flex-column h-100">
-              <h4 class="fw-bold mb-2 text-white">Enterprise</h4>
-              <div class="fw-bold mb-4 text-white" style="font-size: 2.25rem;">Custom</div>
-              <ul class="list-unstyled d-flex flex-column gap-3 mb-5 flex-grow-1">
-                <li class="d-flex align-items-center gap-3 text-muted small">
-                  <span class="material-symbols-outlined text-white-50" style="font-size: 18px;">check_circle</span> SSO &amp; Security
-                </li>
-                <li class="d-flex align-items-center gap-3 text-muted small">
-                  <span class="material-symbols-outlined text-white-50" style="font-size: 18px;">check_circle</span> Dedicated success manager
-                </li>
-                <li class="d-flex align-items-center gap-3 text-muted small">
-                  <span class="material-symbols-outlined text-white-50" style="font-size: 18px;">check_circle</span> Custom API limits
-                </li>
-              </ul>
-              <button class="btn btn-ghost w-100 py-3 rounded-3 fw-bold">Contact Sales</button>
-            </div>
-          </div>
-        </div>
-      </section>
+
 
       <section class="container-xl px-4 mb-5 pb-5">
         <div class="cta-section position-relative p-5 p-md-5 rounded-5 text-center overflow-hidden">
@@ -321,7 +323,7 @@
           <div class="cta-blob cta-blob-2"></div>
           <div class="position-relative" style="z-index: 1;">
             <h2 class="fw-bold mb-4 text-white" style="font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -0.04em;">Ready to architect your focus?</h2>
-            <p class="text-muted fs-5 mb-5 mx-auto" style="max-width: 500px;">Join the new standard of productivity today. Start your 14-day free trial on us.</p>
+            <p class="text-muted fs-5 mb-5 mx-auto" style="max-width: 500px;">Join the new standard of productivity today.</p>
             <button class="btn btn-cta px-5 py-3 rounded-4 fw-black fs-5">Get Started Now</button>
           </div>
         </div>
@@ -383,7 +385,7 @@ onMounted(() => {
     update() {
       this.x += this.speedX;
       this.y += this.speedY;
-      if (this.life > 0) this.life -= 0.02; // Tốc độ biến mất
+      if (this.life > 0) this.life -= 0.02;
     }
 
     draw() {
@@ -396,7 +398,6 @@ onMounted(() => {
   }
 
   const handleMouseMove = (e: MouseEvent) => {
-    // Mỗi khi di chuyển chuột, tạo ra 2-3 hạt mới
     for (let i = 0; i < 2; i++) {
       particles.push(new Particle(e.clientX, e.clientY));
     }
@@ -643,10 +644,6 @@ onMounted(() => {
 .quote-icon { font-size: 2.5rem; opacity: 0.05; position: absolute; top: 1.5rem; right: 2rem; color: #ffffff; }
 .avatar-initial { width: 48px; height: 48px; border-radius: 50%; background: #1a1a1a; display: flex; align-items: center; justify-content: center; }
 
-/* ─── Pricing ─── */
-.pricing-card { background: #0a0a0a; border: 1px solid #1a1a1a; }
-.pricing-card-pro { border: 1px solid #ffffff !important; transform: translateY(-8px); }
-.pro-badge { background: #ffffff; color: #000000; }
 
 /* ─── CTA ─── */
 .cta-section {
@@ -668,6 +665,5 @@ onMounted(() => {
 .btn-getstarted { color: #000000; text-decoration: none; }
 @media (max-width: 768px) {
   .hero-title { font-size: 3rem; }
-  .pricing-card-pro { transform: none; }
 }
 </style>

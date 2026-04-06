@@ -1,46 +1,86 @@
 using server.Domain.Base;
+using server.Domain.Enums;
 
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// UserTaskHistory: Lịch sử hoàn thành task của user.
-    /// Dùng để tracking: bao lâu user hoàn thành task, bao giờ hoàn thành, để tính toán trọng số gợi ý.
+    /// UserTaskHistory: Nhật ký chi tiết tương tác của User với Task.
+    /// Đóng gói logic tính toán thời gian thực tế và quản lý trạng thái lịch sử.
     /// </summary>
     public class UserTaskHistory : EntityBase
     {
-        /// <summary>
-        /// Mã định danh của task.
-        /// </summary>
-        public int TaskId { get; set; }
+        // Định danh
+        public int TaskId { get; private set; }
+        public int UserId { get; private set; }
+
+        // Dữ liệu thời gian
+        public DateTime StartedAt { get; private set; }
+        public DateTime? CompletedAt { get; private set; }
+        public int DurationMinutes { get; private set; }
+
+        // Trạng thái & Ghi chú
+        public StatusUserTaskHistory Status { get; private set; }
+        public string? Notes { get; private set; }
+
+        protected UserTaskHistory() { }
 
         /// <summary>
-        /// Mã định danh của user.
+        /// Khởi tạo một bản ghi lịch sử khi User bắt đầu thực hiện Task.
         /// </summary>
-        public int UserId { get; set; }
+        public UserTaskHistory(int taskId, int userId)
+        {
+            if (taskId <= 0 || userId <= 0)
+                throw new DomainException("TaskId và UserId phải lớn hơn 0.");
+
+            TaskId = taskId;
+            UserId = userId;
+            StartedAt = DateTime.UtcNow;
+        }
 
         /// <summary>
-        /// Thời điểm bắt đầu làm task.
+        /// Hoàn thành Task và tự động tính toán thời gian thực hiện.
         /// </summary>
-        public DateTime StartedAt { get; set; }
+        public void MarkAsCompleted(string? notes = null)
+        {
+            if (Status == StatusUserTaskHistory.Completed) return;
+
+            CompletedAt = DateTime.UtcNow;
+            Status = StatusUserTaskHistory.Completed;
+            Notes = notes?.Trim();
+            CalculateDuration();
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Thời điểm hoàn thành task.
+        /// Ghi nhận việc từ bỏ Task giữa chừng.
         /// </summary>
-        public DateTime CompletedAt { get; set; }
+        public void MarkAsAbandoned(string? notes = null)
+        {
+            Status = StatusUserTaskHistory.Abandoned;
+            CompletedAt = DateTime.UtcNow;
+            Notes = notes?.Trim();
+
+            CalculateDuration();
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Thời gian dành để hoàn thành task (tính bằng phút).
+        /// Ghi nhận việc bỏ qua Task (Skipped).
+        /// Thường Duration sẽ bằng 0 vì User chưa thực sự bắt đầu làm.
         /// </summary>
-        public int DurationMinutes { get; set; }
+        public void MarkAsSkipped()
+        {
+            Status = StatusUserTaskHistory.Skipped;
+            DurationMinutes = 0;
+            MarkUpdated();
+        }
 
-        /// <summary>
-        /// Trạng thái hoàn thành (Completed, Abandoned, Skipped, ...).
-        /// </summary>
-        public string Status { get; set; } = "Completed";
+        private void CalculateDuration()
+        {
+            if (!CompletedAt.HasValue) return;
 
-        /// <summary>
-        /// Ghi chú hoặc bình luận khi hoàn thành.
-        /// </summary>
-        public string? Notes { get; set; }
+            var diff = CompletedAt.Value - StartedAt;
+            DurationMinutes = diff.TotalMinutes < 1 ? 1 : (int)Math.Round(diff.TotalMinutes);
+        }
     }
 }

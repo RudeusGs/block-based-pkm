@@ -27,7 +27,7 @@ namespace server.Controllers
         }
 
         [HttpPut("{pageId:int}")] 
-        public async Task<IActionResult> Update(int pageId, [FromBody] UpdatePageModel model)
+        public async Task<IActionResult> Update([FromBody] UpdatePageModel model)
         {
             var result = await _pageService.UpdatePageAsync(model);
             return FromApiResult(result);

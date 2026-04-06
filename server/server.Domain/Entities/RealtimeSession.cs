@@ -3,34 +3,72 @@ using server.Domain.Base;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// RealtimeSession: Phiên làm việc thời gian thực của người dùng.
-    /// Theo dõi ai đang trực tuyến, đang xem hoặc chỉnh sửa trang/workspace nào.
+    /// RealtimeSession: Thực thể quản lý phiên làm việc trực tuyến.
     /// </summary>
     public class RealtimeSession : EntityBase
     {
-        /// <summary>
-        /// Mã định danh của người dùng đang trực tuyến.
-        /// </summary>
-        public int UserId { get; set; }
+        public int UserId { get; private set; }
+        public int WorkspaceId { get; private set; }
+        public int? PageId { get; private set; }
+        public DateTime ConnectedAt { get; private set; }
+        public DateTime LastPing { get; private set; }
+        protected RealtimeSession() { }
 
         /// <summary>
-        /// Mã định danh của không gian làm việc đang làm việc.
+        /// Khởi tạo một phiên làm việc mới khi người dùng kết nối
         /// </summary>
-        public int WorkspaceId { get; set; }
+        public RealtimeSession(int userId, int workspaceId, int? pageId = null)
+        {
+            if (userId <= 0) throw new DomainException("UserId không hợp lệ.");
+            if (workspaceId <= 0) throw new DomainException("WorkspaceId không hợp lệ.");
+
+            UserId = userId;
+            WorkspaceId = workspaceId;
+            PageId = pageId;
+
+            ConnectedAt = DateTime.UtcNow;
+            LastPing = DateTime.UtcNow;
+        }
 
         /// <summary>
-        /// Mã định danh của trang đang xem hoặc chỉnh sửa (có thể null).
+        /// Cập nhật thời điểm hoạt động cuối cùng (Keep-alive).
         /// </summary>
-        public int? PageId { get; set; }
+        public void Ping()
+        {
+            LastPing = DateTime.UtcNow;
+            MarkUpdated();
+        }
 
         /// <summary>
-        /// Thời điểm bắt đầu kết nối phiên.
+        /// Cập nhật vị trí hiện tại của người dùng khi họ chuyển trang bên trong Workspace.
         /// </summary>
-        public DateTime ConnectedAt { get; set; } = DateTime.UtcNow;
+        public void MoveToPage(int? newPageId)
+        {
+            if (PageId == newPageId) return;
+
+            PageId = newPageId;
+            Ping();
+        }
 
         /// <summary>
-        /// Thời điểm cuối cùng hệ thống ghi nhận người dùng còn hoạt động.
+        /// Kiểm tra xem phiên này còn hoạt động hay đã quá hạn (Timeout).
         /// </summary>
-        public DateTime LastPing { get; set; } = DateTime.UtcNow;
+        /// <param name="timeoutSeconds">Thời gian chờ tối đa (giây)</param>
+        public bool IsExpired(int timeoutSeconds = 60)
+        {
+            return (DateTime.UtcNow - LastPing).TotalSeconds > timeoutSeconds;
+        }
+
+        /// <summary>
+        /// Thay đổi Workspace (Nếu người dùng switch workspace mà không ngắt kết nối).
+        /// </summary>
+        public void SwitchWorkspace(int newWorkspaceId, int? newPageId = null)
+        {
+            if (newWorkspaceId <= 0) throw new DomainException("WorkspaceId mới không hợp lệ.");
+
+            WorkspaceId = newWorkspaceId;
+            PageId = newPageId;
+            Ping();
+        }
     }
 }
