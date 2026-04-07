@@ -4,11 +4,12 @@ using server.Domain.Enums;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// WorkTask: Thực thể công việc với logic tự động tính toán trọng số gợi ý.
+    /// WorkTask: Thực thể công việc tập trung vào quản lý trạng thái và dữ liệu cốt lõi.
+    /// Các chỉ số hiệu suất chi tiết được chuyển sang TaskPerformanceMetric để tránh dư thừa.
     /// </summary>
     public class WorkTask : EntityBase
     {
-        // Dữ liệu cơ bản
+        // --- Dữ liệu cơ bản ---
         public string Title { get; private set; }
         public string? Description { get; private set; }
         public StatusWorkTask Status { get; private set; }
@@ -18,19 +19,11 @@ namespace server.Domain.Entities
         public int? PageId { get; private set; }
         public int CreatedById { get; private set; }
 
-        // Dữ liệu gợi ý & Thống kê
-        // Số lần task này đã được hoàn thành, dùng để đánh giá mức độ quan trọng và tần suất xuất hiện trong gợi ý.
+        // --- Dữ liệu hỗ trợ gợi ý nhanh (Source of Truth cho hiển thị) ---
         public int CompletionCount { get; private set; }
-        // Thời điểm task được hoàn thành lần cuối, dùng để đánh giá tính thời sự và ưu tiên trong gợi ý.
         public DateTime? LastCompletedAt { get; private set; }
-        // Tổng thời gian (phút) đã được ghi nhận khi hoàn thành task, dùng để đánh giá độ phức tạp và thời gian cần thiết cho gợi ý.
-        public int TotalDurationMinutes { get; private set; }
-        // Trọng số gợi ý được tính toán dựa trên các yếu tố như độ ưu tiên, tần suất hoàn thành, thời gian hoàn thành, ... Dùng để xếp hạng trong thuật toán gợi ý.
-        public decimal RecommendationWeight { get; private set; }
-        // Giờ trong ngày mà task này thường được hoàn thành (0-23), dùng để gợi ý vào những thời điểm phù hợp trong ngày.
         public int? OptimalHourOfDay { get; private set; }
-        // Chuỗi lịch sử hoàn thành gần đây, JSON chứa các timestamp, dùng để phân tích thói quen hoàn thành và cải thiện thuật toán gợi ý.
-        public string? RecentCompletionHistory { get; private set; }
+        public decimal RecommendationWeight { get; private set; }
 
         protected WorkTask() { }
 
@@ -43,14 +36,12 @@ namespace server.Domain.Entities
             Priority = priority;
             Status = StatusWorkTask.ToDo;
 
-            // Khởi tạo các giá trị mặc định
             CompletionCount = 0;
-            TotalDurationMinutes = 0;
             RecommendationWeight = 0;
         }
 
         /// <summary>
-        /// Cập nhật thông tin chi tiết của Task.
+        /// Cập nhật thông tin chi tiết. Trọng số sẽ được tính lại dựa trên Priority mới.
         /// </summary>
         public void UpdateDetails(string title, string? description, PriorityWorkTask priority, DateTime? dueDate)
         {
@@ -58,26 +49,26 @@ namespace server.Domain.Entities
             Description = description;
             Priority = priority;
             DueDate = dueDate;
+
             CalculateWeight();
             MarkUpdated();
         }
 
         /// <summary>
-        /// Hoàn thành task và tự động cập nhật các chỉ số thông minh.
+        /// Hoàn thành task. Cập nhật các chỉ số cơ bản phục vụ gợi ý nhanh.
         /// </summary>
-        public void Complete(int durationMinutes)
+        public void Complete()
         {
             if (Status == StatusWorkTask.Done) return;
 
             Status = StatusWorkTask.Done;
             LastCompletedAt = DateTime.UtcNow;
             CompletionCount++;
-            TotalDurationMinutes += Math.Max(0, durationMinutes);
 
-            // Cập nhật giờ tối ưu dựa trên thời điểm hoàn thành thực tế
+            // Cập nhật giờ tối ưu theo công thức Cumulative Moving Average
             UpdateOptimalHour(DateTime.UtcNow.Hour);
 
-            // Tự động tính toán lại trọng số cho thuật toán gợi ý
+            // Cập nhật trọng số ưu tiên
             CalculateWeight();
 
             MarkUpdated();
@@ -87,8 +78,6 @@ namespace server.Domain.Entities
         {
             if (Status == StatusWorkTask.ToDo) return;
             Status = StatusWorkTask.ToDo;
-
-            // Khi mở lại, có thể giảm nhẹ trọng số hoặc giữ nguyên tùy nghiệp vụ
             MarkUpdated();
         }
 
@@ -100,18 +89,28 @@ namespace server.Domain.Entities
             Title = title.Trim();
         }
 
+        /// <summary>
+        /// Tính toán giờ người dùng thường làm task này nhất bằng công thức trung bình tích lũy.
+        /// Giúp dữ liệu ổn định, không bị nhiễu bởi các lần hoàn thành bất thường.
+        /// </summary>
         private void UpdateOptimalHour(int currentHour)
         {
-            if (OptimalHourOfDay == null)
+            if (!OptimalHourOfDay.HasValue)
             {
                 OptimalHourOfDay = currentHour;
             }
             else
             {
-                OptimalHourOfDay = (OptimalHourOfDay.Value + currentHour) / 2;
+                // Công thức: NewAvg = ((OldAvg * (N-1)) + NewVal) / N
+                double updatedHour = ((double)OptimalHourOfDay.Value * (CompletionCount - 1) + currentHour) / CompletionCount;
+                OptimalHourOfDay = (int)Math.Round(updatedHour);
             }
         }
 
+        /// <summary>
+        /// Trọng số này dùng để thuật toán AI ưu tiên các task quan trọng 
+        /// hoặc các task thường xuyên được thực hiện trong quá khứ.
+        /// </summary>
         private void CalculateWeight()
         {
             decimal priorityScore = Priority switch
@@ -121,16 +120,9 @@ namespace server.Domain.Entities
                 PriorityWorkTask.Low => 1.0m,
                 _ => 1.0m
             };
-            RecommendationWeight = (CompletionCount * 0.7m) + (priorityScore * 1.5m);
-        }
 
-        /// <summary>
-        /// Cập nhật chuỗi lịch sử (thường là kết quả của việc Serialize một List object)
-        /// </summary>
-        public void UpdateHistory(string jsonHistory)
-        {
-            RecentCompletionHistory = jsonHistory;
-            MarkUpdated();
+            // Logic: Ưu tiên Độ ưu tiên (1.5) cao hơn Tần suất hoàn thành (0.7)
+            RecommendationWeight = (CompletionCount * 0.7m) + (priorityScore * 1.5m);
         }
     }
 }

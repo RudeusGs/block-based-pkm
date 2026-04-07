@@ -60,7 +60,7 @@ namespace server.Domain.Entities
         }
 
         /// <summary>
-        /// Thay đổi Workspace (Nếu người dùng switch workspace mà không ngắt kết nối).
+        /// Thay đổi Workspace (Nếu người dùng switch workspace mà không ngắt kết nối). 
         /// </summary>
         public void SwitchWorkspace(int newWorkspaceId, int? newPageId = null)
         {
