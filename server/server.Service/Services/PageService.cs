@@ -10,7 +10,8 @@ namespace server.Service.Services
 {
     public class PageService : BaseService, IPageService
     {
-        public PageService(DataContext dataContext, IUserService userService) : base(dataContext, userService)
+        public PageService(DataContext dataContext, IUserService userService)
+            : base(dataContext, userService)
         {
         }
 
@@ -36,7 +37,9 @@ namespace server.Service.Services
 
                 if (workspace.OwnerId != currentUserId && !isMember)
                     return ApiResult.Fail("Bạn không có quyền tạo trang trong workspace này", "FORBIDDEN");
+
                 var page = new Page(model.Title, model.WorkspaceId, currentUserId);
+
                 _dataContext.Set<Page>().Add(page);
                 await _dataContext.SaveChangesAsync(ct);
 
@@ -56,7 +59,9 @@ namespace server.Service.Services
                 var page = await _dataContext.Set<Page>()
                     .FirstOrDefaultAsync(p => p.Id == model.PageId, ct);
 
-                if (page == null) return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
+                if (page == null)
+                    return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
+
                 var workspaceOwnerId = await _dataContext.Set<Workspace>()
                     .Where(w => w.Id == page.WorkspaceId)
                     .Select(w => w.OwnerId)
@@ -64,7 +69,8 @@ namespace server.Service.Services
 
                 if (workspaceOwnerId != currentUserId && page.CreatedBy != currentUserId)
                     return ApiResult.Fail("Bạn không có quyền cập nhật trang này", "FORBIDDEN");
-                page.UpdateTitle(model.Title);
+
+                page.UpdateTitle(model.Title, currentUserId);
 
                 await _dataContext.SaveChangesAsync(ct);
                 return ApiResult.Success(page, "Cập nhật trang thành công");
@@ -80,8 +86,11 @@ namespace server.Service.Services
             try
             {
                 var currentUserId = _userService.UserId;
-                var page = await _dataContext.Set<Page>().FirstOrDefaultAsync(p => p.Id == pageId, ct);
-                if (page == null) return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
+                var page = await _dataContext.Set<Page>()
+                    .FirstOrDefaultAsync(p => p.Id == pageId, ct);
+
+                if (page == null)
+                    return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
 
                 var workspaceOwnerId = await _dataContext.Set<Workspace>()
                     .Where(w => w.Id == page.WorkspaceId)
@@ -91,7 +100,8 @@ namespace server.Service.Services
                 if (workspaceOwnerId != currentUserId && page.CreatedBy != currentUserId)
                     return ApiResult.Fail("Bạn không có quyền xóa trang này", "FORBIDDEN");
 
-                _dataContext.Set<Page>().Remove(page);
+                page.Archive(currentUserId);
+
                 await _dataContext.SaveChangesAsync(ct);
 
                 return ApiResult.Success(null, "Xóa trang thành công");
@@ -107,11 +117,17 @@ namespace server.Service.Services
             try
             {
                 var currentUserId = _userService.UserId;
-                var page = await _dataContext.Set<Page>().AsNoTracking().FirstOrDefaultAsync(p => p.Id == pageId, ct);
-                if (page == null) return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
+                var page = await _dataContext.Set<Page>()
+                    .AsNoTracking()
+                    .Where(p => p.Id == pageId && !p.IsArchived)
+                    .FirstOrDefaultAsync(ct);
+
+                if (page == null)
+                    return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
 
                 bool hasAccess = await HasAccessToWorkspace(page.WorkspaceId, currentUserId, ct);
-                if (!hasAccess) return ApiResult.Fail("Bạn không có quyền xem trang này", "FORBIDDEN");
+                if (!hasAccess)
+                    return ApiResult.Fail("Bạn không có quyền xem trang này", "FORBIDDEN");
 
                 return ApiResult.Success(page);
             }
@@ -130,12 +146,14 @@ namespace server.Service.Services
                     return ApiResult.Fail("Không có quyền truy cập", "FORBIDDEN");
 
                 paging ??= new PagingRequest();
+
                 var query = _dataContext.Set<Page>()
                     .AsNoTracking()
-                    .Where(p => p.WorkspaceId == workspaceId);
+                    .Where(p => p.WorkspaceId == workspaceId && !p.IsArchived);
 
                 var total = await query.CountAsync(ct);
-                var items = await query.OrderByDescending(p => p.Id)
+                var items = await query
+                    .OrderByDescending(p => p.Id)
                     .Skip((paging.PageNumber - 1) * paging.PageSize)
                     .Take(paging.PageSize)
                     .ToListAsync(ct);
@@ -156,7 +174,9 @@ namespace server.Service.Services
                 if (!await HasAccessToWorkspace(workspaceId, currentUserId, ct))
                     return ApiResult.Fail("Không có quyền truy cập", "FORBIDDEN");
 
-                var query = _dataContext.Set<Page>().AsNoTracking().Where(p => p.WorkspaceId == workspaceId);
+                var query = _dataContext.Set<Page>()
+                    .AsNoTracking()
+                    .Where(p => p.WorkspaceId == workspaceId && !p.IsArchived);
 
                 if (!string.IsNullOrWhiteSpace(keyword))
                 {
@@ -166,7 +186,8 @@ namespace server.Service.Services
 
                 paging ??= new PagingRequest();
                 var total = await query.CountAsync(ct);
-                var items = await query.OrderByDescending(p => p.Id)
+                var items = await query
+                    .OrderByDescending(p => p.Id)
                     .Skip((paging.PageNumber - 1) * paging.PageSize)
                     .Take(paging.PageSize)
                     .ToListAsync(ct);
@@ -178,6 +199,7 @@ namespace server.Service.Services
                 return ApiResult.Fail("Lỗi tìm kiếm", "SERVER_ERROR", new[] { ex.Message });
             }
         }
+
         private async Task<bool> HasAccessToWorkspace(int workspaceId, int userId, CancellationToken ct)
         {
             var workspace = await _dataContext.Set<Workspace>()

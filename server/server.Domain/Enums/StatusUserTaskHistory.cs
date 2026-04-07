@@ -6,6 +6,7 @@
     /// </summary>
     public enum StatusUserTaskHistory
     {
+        InProgress = 0,
         /// <summary>
         /// Đã hoàn thành công việc thành công. (Tín hiệu tích cực nhất)
         /// </summary>

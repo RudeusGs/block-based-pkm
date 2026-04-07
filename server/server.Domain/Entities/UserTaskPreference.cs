@@ -5,8 +5,19 @@ using server.Domain.Enums;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// UserTaskPreference: Cấu hình cá nhân hóa cho hệ thống gợi ý.
-    /// Chứa các quy tắc chặn (Guard Clauses) để điều tiết tần suất và thời điểm gợi ý.
+    /// UserTaskPreference: Cấu hình cá nhân hóa cho hệ thống gợi ý Task.
+    /// 
+    ///  Mục đích:
+    /// - Điều chỉnh hành vi Recommendation Engine theo từng user
+    /// - Kiểm soát thời gian, tần suất và điều kiện gợi ý
+    /// 
+    ///  Lưu ý:
+    /// - Entity này KHÔNG chứa logic AI
+    /// - Chỉ đóng vai trò config + guard conditions
+    /// 
+    ///  Design Principle:
+    /// - Validate chặt chẽ input
+    /// - Tránh string hack (JSON phải parse đúng)
     /// </summary>
     public class UserTaskPreference : EntityBase
     {
@@ -14,14 +25,18 @@ namespace server.Domain.Entities
         public int UserId { get; private set; }
         public int WorkspaceId { get; private set; }
 
-        // Cấu hình thời gian làm việc
+        // Work schedule
         public int WorkDayStartHour { get; private set; }
         public int WorkDayEndHour { get; private set; }
-        public string? PreferredDaysOfWeek { get; private set; } // Lưu JSON: [1,2,3,4,5]
 
-        // Tham số thuật toán
+        /// <summary>
+        /// JSON lưu danh sách ngày trong tuần (0 = Sunday → 6 = Saturday)
+        /// </summary>
+        public string? PreferredDaysOfWeek { get; private set; }
+
+        // Recommendation config
         public int MaxRecommendationsPerSession { get; private set; }
-        public StatusUserTaskPreference MinPriorityForRecommendation { get; private set; }
+        public PriorityWorkTask MinPriorityForRecommendation { get; private set; }
         public int RecommendationSensitivity { get; private set; }
         public int RecommendationIntervalMinutes { get; private set; }
         public bool EnableAutoRecommendation { get; private set; }
@@ -31,77 +46,86 @@ namespace server.Domain.Entities
         public UserTaskPreference(int userId, int workspaceId)
         {
             if (userId <= 0 || workspaceId <= 0)
-                throw new DomainException("UserId và WorkspaceId không hợp lệ.");
+                throw new DomainException("UserId/WorkspaceId không hợp lệ.");
 
             UserId = userId;
             WorkspaceId = workspaceId;
 
+            // Default config
             WorkDayStartHour = 8;
             WorkDayEndHour = 18;
+
             MaxRecommendationsPerSession = 3;
             RecommendationSensitivity = 50;
             RecommendationIntervalMinutes = 30;
             EnableAutoRecommendation = true;
-            PreferredDaysOfWeek = "[1,2,3,4,5]";
+
+            MinPriorityForRecommendation = PriorityWorkTask.Medium;
+
+            PreferredDaysOfWeek = JsonSerializer.Serialize(new[] { 1, 2, 3, 4, 5 });
         }
 
         /// <summary>
-        /// Cập nhật khung giờ làm việc.
+        /// Update giờ làm việc
         /// </summary>
         public void UpdateWorkHours(int start, int end)
         {
             if (start < 0 || start > 23 || end < 0 || end > 23)
-                throw new DomainException("Giờ làm việc phải từ 0 đến 23.");
+                throw new DomainException("Giờ phải trong khoảng 0-23.");
 
             if (start >= end)
                 throw new DomainException("Giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
 
             WorkDayStartHour = start;
             WorkDayEndHour = end;
+
             MarkUpdated();
         }
 
         /// <summary>
-        /// Cập nhật độ nhạy của thuật toán.
+        /// Update độ nhạy recommendation
         /// </summary>
         public void UpdateSensitivity(int sensitivity)
         {
             if (sensitivity < 0 || sensitivity > 100)
-                throw new DomainException("Độ nhạy phải nằm trong khoảng 0-100.");
+                throw new DomainException("Độ nhạy phải từ 0-100.");
 
             RecommendationSensitivity = sensitivity;
             MarkUpdated();
         }
 
         /// <summary>
-        /// Kiểm tra xem hiện tại có phải là thời điểm thích hợp để gợi ý không.
+        /// Kiểm tra có phù hợp để gợi ý không
         /// </summary>
         public bool IsSuitableForRecommendation(DateTime currentTime)
         {
-            if (!EnableAutoRecommendation) return false;
+            if (!EnableAutoRecommendation)
+                return false;
 
-            // 1. Kiểm tra giờ làm việc
+            // 1. Check giờ
             if (currentTime.Hour < WorkDayStartHour || currentTime.Hour >= WorkDayEndHour)
                 return false;
 
-            // 2. Kiểm tra ngày làm việc (Parse JSON đơn giản)
-            var dayOfWeek = (int)currentTime.DayOfWeek;
-            if (PreferredDaysOfWeek != null && !PreferredDaysOfWeek.Contains(dayOfWeek.ToString()))
+            // 2. Check ngày
+            var allowedDays = ParsePreferredDays();
+            var currentDay = (int)currentTime.DayOfWeek;
+
+            if (allowedDays.Any() && !allowedDays.Contains(currentDay))
                 return false;
 
             return true;
         }
 
         /// <summary>
-        /// Cập nhật danh sách ngày làm việc ưu tiên.
+        /// Set ngày làm việc
         /// </summary>
         public void SetPreferredDays(List<int> days)
         {
             if (days == null || !days.Any())
-                throw new DomainException("Danh sách ngày ưu tiên không được để trống.");
+                throw new DomainException("Danh sách ngày không được rỗng.");
 
             if (days.Any(d => d < 0 || d > 6))
-                throw new DomainException("Giá trị ngày không hợp lệ (0-6).");
+                throw new DomainException("Ngày phải từ 0-6.");
 
             PreferredDaysOfWeek = JsonSerializer.Serialize(days.Distinct().OrderBy(d => d));
             MarkUpdated();
@@ -111,6 +135,24 @@ namespace server.Domain.Entities
         {
             EnableAutoRecommendation = enable;
             MarkUpdated();
+        }
+
+        /// <summary>
+        /// Parse JSON → List<int>
+        /// </summary>
+        private List<int> ParsePreferredDays()
+        {
+            if (string.IsNullOrWhiteSpace(PreferredDaysOfWeek))
+                return new List<int>();
+
+            try
+            {
+                return JsonSerializer.Deserialize<List<int>>(PreferredDaysOfWeek) ?? new List<int>();
+            }
+            catch
+            {
+                return new List<int>();
+            }
         }
     }
 }

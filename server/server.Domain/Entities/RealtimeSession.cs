@@ -3,35 +3,79 @@ using server.Domain.Base;
 namespace server.Domain.Entities
 {
     /// <summary>
-    /// RealtimeSession: Thực thể quản lý phiên làm việc trực tuyến.
+    /// RealtimeSession: Thực thể quản lý phiên kết nối realtime của user.
+    /// 
+    ///  Mục đích:
+    /// - Theo dõi trạng thái online của user trong hệ thống
+    /// - Hỗ trợ các tính năng realtime (presence, collaboration, cursor...)
+    /// 
+    ///  Lưu ý:
+    /// - 1 User có thể có nhiều session (multi-device, multi-tab)
+    /// - Session được xác định bằng ConnectionId (SignalR)
+    /// 
+    ///  Design Principle:
+    /// - Lightweight entity (chỉ tracking state)
+    /// - Không chứa business logic phức tạp
     /// </summary>
     public class RealtimeSession : EntityBase
     {
+        /// <summary>
+        /// User sở hữu session
+        /// </summary>
         public int UserId { get; private set; }
+
+        /// <summary>
+        /// Workspace hiện tại
+        /// </summary>
         public int WorkspaceId { get; private set; }
+
+        /// <summary>
+        /// Page hiện tại (có thể null)
+        /// </summary>
         public int? PageId { get; private set; }
+
+        /// <summary>
+        /// ID kết nối realtime (SignalR/WebSocket)
+        /// </summary>
+        public string ConnectionId { get; private set; }
+
+        /// <summary>
+        /// Thời điểm bắt đầu kết nối
+        /// </summary>
         public DateTime ConnectedAt { get; private set; }
+
+        /// <summary>
+        /// Thời điểm ping cuối cùng (heartbeat)
+        /// </summary>
         public DateTime LastPing { get; private set; }
+
         protected RealtimeSession() { }
 
         /// <summary>
-        /// Khởi tạo một phiên làm việc mới khi người dùng kết nối
+        /// Khởi tạo session mới khi user connect
         /// </summary>
-        public RealtimeSession(int userId, int workspaceId, int? pageId = null)
+        public RealtimeSession(int userId, int workspaceId, string connectionId, int? pageId = null)
         {
-            if (userId <= 0) throw new DomainException("UserId không hợp lệ.");
-            if (workspaceId <= 0) throw new DomainException("WorkspaceId không hợp lệ.");
+            if (userId <= 0)
+                throw new DomainException("UserId không hợp lệ.");
+
+            if (workspaceId <= 0)
+                throw new DomainException("WorkspaceId không hợp lệ.");
+
+            if (string.IsNullOrWhiteSpace(connectionId))
+                throw new DomainException("ConnectionId không hợp lệ.");
 
             UserId = userId;
             WorkspaceId = workspaceId;
             PageId = pageId;
+            ConnectionId = connectionId;
 
             ConnectedAt = DateTime.UtcNow;
             LastPing = DateTime.UtcNow;
         }
 
         /// <summary>
-        /// Cập nhật thời điểm hoạt động cuối cùng (Keep-alive).
+        /// Cập nhật heartbeat (keep-alive)
         /// </summary>
         public void Ping()
         {
@@ -40,7 +84,7 @@ namespace server.Domain.Entities
         }
 
         /// <summary>
-        /// Cập nhật vị trí hiện tại của người dùng khi họ chuyển trang bên trong Workspace.
+        /// User chuyển sang page khác
         /// </summary>
         public void MoveToPage(int? newPageId)
         {
@@ -51,23 +95,37 @@ namespace server.Domain.Entities
         }
 
         /// <summary>
-        /// Kiểm tra xem phiên này còn hoạt động hay đã quá hạn (Timeout).
+        /// Kiểm tra session có hết hạn không
         /// </summary>
-        /// <param name="timeoutSeconds">Thời gian chờ tối đa (giây)</param>
+        /// <param name="timeoutSeconds">Timeout (default: 60s)</param>
         public bool IsExpired(int timeoutSeconds = 60)
         {
             return (DateTime.UtcNow - LastPing).TotalSeconds > timeoutSeconds;
         }
 
         /// <summary>
-        /// Thay đổi Workspace (Nếu người dùng switch workspace mà không ngắt kết nối). 
+        /// User chuyển workspace
         /// </summary>
         public void SwitchWorkspace(int newWorkspaceId, int? newPageId = null)
         {
-            if (newWorkspaceId <= 0) throw new DomainException("WorkspaceId mới không hợp lệ.");
+            if (newWorkspaceId <= 0)
+                throw new DomainException("WorkspaceId không hợp lệ.");
 
             WorkspaceId = newWorkspaceId;
             PageId = newPageId;
+
+            Ping();
+        }
+
+        /// <summary>
+        /// Update connectionId (reconnect case)
+        /// </summary>
+        public void UpdateConnection(string newConnectionId)
+        {
+            if (string.IsNullOrWhiteSpace(newConnectionId))
+                throw new DomainException("ConnectionId không hợp lệ.");
+
+            ConnectionId = newConnectionId;
             Ping();
         }
     }

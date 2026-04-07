@@ -8,6 +8,7 @@ using server.Service.Interfaces;
 using server.Service.Models;
 using server.Service.Models.WorkTask;
 using server.Service.Common.Helpers;
+
 namespace server.Service.Services
 {
     public class WorkTaskService : BaseService, IWorkTaskService
@@ -30,14 +31,10 @@ namespace server.Service.Services
                 if (taskId <= 0) return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
                 var currentUserId = _userService.UserId;
                 if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-
                 var task = await _dataContext.Set<WorkTask>().FirstOrDefaultAsync(t => t.Id == taskId, ct);
                 if (task == null) return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                if (newStatus == StatusWorkTask.Done) task.Complete(0);
+                if (newStatus == StatusWorkTask.Done) task.Complete();
                 else if (newStatus == StatusWorkTask.ToDo) task.ReOpen();
-                else ;
-
                 await SaveChangesAsync(ct);
                 await ServiceHelper.SafeNotifyAsync(_notifier, task.WorkspaceId, "TaskStatusUpdated", new { TaskId = task.Id, Status = newStatus });
                 return ApiResult.Success(task, "Cập nhật trạng thái thành công");
@@ -54,7 +51,6 @@ namespace server.Service.Services
             {
                 if (pageId <= 0) return ApiResult.Fail("PageId không hợp lệ", "INVALID_INPUT");
                 paging ??= new PagingRequest();
-
                 var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.PageId == pageId).OrderByDescending(t => t.Id);
                 var total = await query.CountAsync(ct);
                 var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
@@ -72,7 +68,6 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0) return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
                 paging ??= new PagingRequest();
-
                 var toDate = Now.AddDays(days);
                 var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && t.DueDate.HasValue && t.DueDate.Value >= Now && t.DueDate.Value <= toDate).OrderBy(t => t.DueDate);
                 var total = await query.CountAsync(ct);
@@ -91,7 +86,6 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0 || userId <= 0) return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
                 paging ??= new PagingRequest();
-
                 var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId && t.CreatedById == userId).OrderByDescending(t => t.Id);
                 var total = await query.CountAsync(ct);
                 var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
@@ -109,9 +103,11 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0 || userId <= 0) return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
                 paging ??= new PagingRequest();
-
-                var taskIds = await _dataContext.Set<TaskAssignee>().AsNoTracking().Where(a => a.UserId == userId).Select(a => a.TaskId).ToListAsync(ct);
-                var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => taskIds.Contains(t.Id) && t.WorkspaceId == workspaceId).OrderByDescending(t => t.Id);
+                var query = from t in _dataContext.Set<WorkTask>()
+                            join a in _dataContext.Set<TaskAssignee>()
+                                on t.Id equals a.TaskId
+                            where a.UserId == userId && t.WorkspaceId == workspaceId
+                            select t;
                 var total = await query.CountAsync(ct);
                 var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
                 return ApiResult.Success(new { Total = total, Items = items });
@@ -128,7 +124,6 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0) return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
                 paging ??= new PagingRequest();
-
                 var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId).OrderByDescending(t => t.Priority);
                 var total = await query.CountAsync(ct);
                 var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
@@ -146,7 +141,6 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0) return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
                 paging ??= new PagingRequest();
-
                 var query = _dataContext.Set<WorkTask>().AsNoTracking().Where(t => t.WorkspaceId == workspaceId).OrderBy(t => t.DueDate);
                 var total = await query.CountAsync(ct);
                 var items = await query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize).ToListAsync(ct);
@@ -164,29 +158,20 @@ namespace server.Service.Services
             {
                 if (model == null || string.IsNullOrWhiteSpace(model.Title) || model.WorkspaceId <= 0)
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
-
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId, ct);
-
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
                 var isMember = await _dataContext.Set<WorkspaceMember>()
                     .AnyAsync(m => m.WorkspaceId == model.WorkspaceId && m.UserId == userId, ct);
-
                 if (!isMember && workspace.OwnerId != userId)
                     return ApiResult.Fail("Không có quyền", "FORBIDDEN");
-
                 var priority = model.Priority ?? PriorityWorkTask.Medium;
-
                 var task = new WorkTask(model.Title.Trim(), model.WorkspaceId, userId, model.PageId, priority);
                 task.UpdateDetails(task.Title, model.Description, priority, model.DueDate);
-
                 _dataContext.Set<WorkTask>().Add(task);
                 await SaveChangesAsync(ct);
-
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
                     task.WorkspaceId,
@@ -211,45 +196,34 @@ namespace server.Service.Services
             {
                 if (model == null || model.TaskId <= 0 || string.IsNullOrWhiteSpace(model.Title))
                     return ApiResult.Fail("Dữ liệu không hợp lệ", "INVALID_INPUT");
-
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var task = await _dataContext.Set<WorkTask>()
                     .FirstOrDefaultAsync(t => t.Id == model.TaskId, ct);
-
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
                 var isMember = await _dataContext.Set<WorkspaceMember>()
                     .AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == userId, ct);
-
                 if (!isMember && workspace.OwnerId != userId)
                     return ApiResult.Fail("Không có quyền", "FORBIDDEN");
-
                 var priority = model.Priority ?? task.Priority;
-
                 task.UpdateDetails(model.Title.Trim(), model.Description, priority, model.DueDate);
-
                 if (model.Status.HasValue)
                 {
                     switch (model.Status.Value)
                     {
                         case StatusWorkTask.Done:
-                            task.Complete(0);
+                            task.Complete();
                             break;
                         case StatusWorkTask.ToDo:
                             task.ReOpen();
                             break;
                     }
                 }
-
                 await SaveChangesAsync(ct);
-
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
                     task.WorkspaceId,
@@ -274,26 +248,19 @@ namespace server.Service.Services
             {
                 if (taskId <= 0)
                     return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
-
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var task = await _dataContext.Set<WorkTask>()
                     .FirstOrDefaultAsync(t => t.Id == taskId, ct);
-
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
                 if (workspace == null)
                     return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
                 if (workspace.OwnerId != userId)
                     return ApiResult.Fail("Chỉ owner được xóa", "FORBIDDEN");
-
                 _dataContext.Set<WorkTask>().Remove(task);
                 await SaveChangesAsync(ct);
-
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
                     task.WorkspaceId,
@@ -312,23 +279,19 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> CompleteTaskAsync(int taskId, int durationMinutes, CancellationToken ct = default)
+        public async Task<ApiResult> CompleteTaskAsync(int taskId, CancellationToken ct = default)
         {
             try
             {
                 if (taskId <= 0)
                     return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
-
                 ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var task = await _dataContext.Set<WorkTask>()
                     .FirstOrDefaultAsync(t => t.Id == taskId, ct);
-
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
-                task.Complete(durationMinutes);
+                task.Complete();
                 await SaveChangesAsync(ct);
-
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
                     task.WorkspaceId,
@@ -353,18 +316,13 @@ namespace server.Service.Services
             {
                 if (taskId <= 0)
                     return ApiResult.Fail("TaskId không hợp lệ", "INVALID_INPUT");
-
                 ServiceHelper.GetCurrentUserIdOrThrow(_userService);
-
                 var task = await _dataContext.Set<WorkTask>()
                     .FirstOrDefaultAsync(t => t.Id == taskId, ct);
-
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
                 task.ReOpen();
                 await SaveChangesAsync(ct);
-
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
                     task.WorkspaceId,
@@ -389,24 +347,14 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0)
                     return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
-                var nowHour = DateTime.UtcNow.Hour;
-
                 var tasks = await _dataContext.Set<WorkTask>()
                     .AsNoTracking()
                     .Where(t => t.WorkspaceId == workspaceId && t.Status != StatusWorkTask.Done)
-                    .OrderByDescending(t => t.RecommendationWeight)
-                    .Take(limit * 2)
-                    .ToListAsync(ct);
-
-                var result = tasks
-                    .OrderBy(t => t.OptimalHourOfDay.HasValue
-                        ? Math.Abs(t.OptimalHourOfDay.Value - nowHour)
-                        : int.MaxValue)
+                    .OrderByDescending(t => t.Priority)
+                    .ThenBy(t => t.DueDate)
                     .Take(limit)
-                    .ToList();
-
-                return ApiResult.Success(result, "OK");
+                    .ToListAsync(ct);
+                return ApiResult.Success(tasks, "OK");
             }
             catch (Exception ex)
             {
@@ -419,10 +367,8 @@ namespace server.Service.Services
             var task = await _dataContext.Set<WorkTask>()
                 .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id == taskId, ct);
-
             if (task == null)
                 return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
-
             return ApiResult.Success(task, "OK");
         }
 
@@ -435,23 +381,17 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0)
                     return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
                 IQueryable<WorkTask> query = _dataContext.Set<WorkTask>()
                     .AsNoTracking()
                     .Where(t => t.WorkspaceId == workspaceId);
-
-                query = query.OrderByDescending(t => t.RecommendationWeight);
-
+                query = query.OrderByDescending(t => t.Id); // Đã sửa để phù hợp với entity (không còn RecommendationWeight)
                 if (paging != null)
                 {
                     var skip = (paging.PageNumber - 1) * paging.PageSize;
-
                     query = query.Skip(skip)
                                  .Take(paging.PageSize);
                 }
-
                 var items = await query.ToListAsync(ct);
-
                 return ApiResult.Success(items, "OK");
             }
             catch (Exception ex)
@@ -465,12 +405,9 @@ namespace server.Service.Services
             var query = _dataContext.Set<WorkTask>()
                 .AsNoTracking()
                 .Where(t => t.WorkspaceId == workspaceId && t.Status == status);
-
             if (paging != null)
                 query = query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize);
-
             var items = await query.ToListAsync(ct);
-
             return ApiResult.Success(items, "OK");
         }
 
@@ -483,7 +420,6 @@ namespace server.Service.Services
             {
                 if (workspaceId <= 0)
                     return ApiResult.Fail("WorkspaceId không hợp lệ", "INVALID_INPUT");
-
                 IQueryable<WorkTask> query = _dataContext.Set<WorkTask>()
                     .AsNoTracking()
                     .Where(t => t.WorkspaceId == workspaceId &&
@@ -491,17 +427,13 @@ namespace server.Service.Services
                                 t.DueDate < DateTime.UtcNow &&
                                 t.Status != StatusWorkTask.Done);
                 query = query.OrderBy(t => t.DueDate);
-
                 if (paging != null)
                 {
                     var skip = (paging.PageNumber - 1) * paging.PageSize;
-
                     query = query.Skip(skip)
                                  .Take(paging.PageSize);
                 }
-
                 var items = await query.ToListAsync(ct);
-
                 return ApiResult.Success(items, "OK");
             }
             catch (Exception ex)
@@ -515,19 +447,15 @@ namespace server.Service.Services
             var query = _dataContext.Set<WorkTask>()
                 .AsNoTracking()
                 .Where(t => t.WorkspaceId == workspaceId);
-
             if (!string.IsNullOrWhiteSpace(keyword))
             {
                 query = query.Where(t =>
                     EF.Functions.Like(t.Title, $"%{keyword}%") ||
                     (t.Description != null && EF.Functions.Like(t.Description, $"%{keyword}%")));
             }
-
             if (paging != null)
                 query = query.Skip((paging.PageNumber - 1) * paging.PageSize).Take(paging.PageSize);
-
             var items = await query.ToListAsync(ct);
-
             return ApiResult.Success(items, "OK");
         }
 
@@ -542,18 +470,12 @@ namespace server.Service.Services
             var completed = tasks.Count(t => t.Status == StatusWorkTask.Done);
             var overdue = tasks.Count(t => t.DueDate.HasValue && t.DueDate < DateTime.UtcNow && t.Status != StatusWorkTask.Done);
 
-            var avgDuration = tasks
-                .Where(t => t.CompletionCount > 0)
-                .Select(t => (double)t.TotalDurationMinutes / t.CompletionCount)
-                .DefaultIfEmpty(0)
-                .Average();
-
             return ApiResult.Success(new
             {
                 Total = total,
                 Completed = completed,
-                Overdue = overdue,
-                AvgDuration = Math.Round(avgDuration, 2)
+                Overdue = overdue
+                // AvgDuration đã bị loại bỏ vì entity không còn lưu CompletionCount / TotalDurationMinutes
             }, "OK");
         }
     }

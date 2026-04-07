@@ -83,9 +83,9 @@ namespace server.Controllers
         }
 
         [HttpPost("{taskId:int}/complete")]
-        public async Task<IActionResult> Complete(int taskId, [FromQuery] int durationMinutes, CancellationToken ct)
+        public async Task<IActionResult> Complete(int taskId, CancellationToken ct)
         {
-            var result = await _taskService.CompleteTaskAsync(taskId, durationMinutes, ct);
+            var result = await _taskService.CompleteTaskAsync(taskId, ct);
             return FromApiResult(result);
         }
 
