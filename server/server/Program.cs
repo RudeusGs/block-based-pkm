@@ -25,7 +25,6 @@ namespace server
 
             // SignalR
             builder.Services.AddSignalR();
-            builder.Services.AddRealtime(builder.Configuration);
 
             // Build App
             var app = builder.Build();

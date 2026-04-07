@@ -124,7 +124,6 @@ namespace server.Domain.Entities
             IsArchived = true;
             ArchivedAt = DateTime.UtcNow;
 
-            // ⚠️ Cascade archive cho subpages
             foreach (var sub in SubPages)
             {
                 sub.Archive(userId);
@@ -142,8 +141,6 @@ namespace server.Domain.Entities
 
             IsArchived = false;
             ArchivedAt = null;
-
-            // ⚠️ Cascade restore
             foreach (var sub in SubPages)
             {
                 sub.Restore(userId);
