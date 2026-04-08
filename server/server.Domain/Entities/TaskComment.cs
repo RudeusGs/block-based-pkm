@@ -4,6 +4,8 @@ namespace server.Domain.Entities
 {
     public class TaskComment : EntityBase
     {
+        private const string DeletedMessage = "Bình luận này đã bị gỡ bỏ.";
+
         public int TaskId { get; private set; }
         public int UserId { get; private set; }
 
@@ -46,7 +48,8 @@ namespace server.Domain.Entities
 
         public void UpdateContent(string newContent, int requestUserId)
         {
-            EnsureEditable(requestUserId);
+            EnsureNotDeleted();
+            EnsureOwner(requestUserId);
 
             SetContent(newContent);
             MarkUpdated();
@@ -54,11 +57,13 @@ namespace server.Domain.Entities
 
         public void SoftDelete(int requestUserId)
         {
-            EnsureEditable(requestUserId);
+            EnsureNotDeleted();
+            EnsureOwner(requestUserId);
 
-            OriginalContent = Content;
+            if (OriginalContent == null)
+                OriginalContent = Content;
 
-            Content = "Bình luận này đã bị gỡ bỏ.";
+            Content = DeletedMessage;
 
             base.SoftDelete();
         }
@@ -68,8 +73,7 @@ namespace server.Domain.Entities
             if (!IsDeleted)
                 return;
 
-            if (UserId != requestUserId)
-                throw new DomainException("Bạn không có quyền khôi phục.");
+            EnsureOwner(requestUserId);
 
             base.Restore();
 
@@ -94,12 +98,9 @@ namespace server.Domain.Entities
             Content = trimmed;
         }
 
-        private void EnsureEditable(int requestUserId)
+        private void EnsureOwner(int userId)
         {
-            if (IsDeleted)
-                throw new DomainException("Không thể chỉnh sửa comment đã bị xóa.");
-
-            if (UserId != requestUserId)
+            if (UserId != userId)
                 throw new DomainException("Không có quyền thao tác.");
         }
     }

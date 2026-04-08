@@ -24,3 +24,4 @@ server/server.Service/bin
 server/server.Service/obj
 server/service.Tests.Unit/bin
 server/service.Tests.Unit/obj
+server/server/appsettings.json
