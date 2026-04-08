@@ -475,7 +475,6 @@ namespace server.Service.Services
                 Total = total,
                 Completed = completed,
                 Overdue = overdue
-                // AvgDuration đã bị loại bỏ vì entity không còn lưu CompletionCount / TotalDurationMinutes
             }, "OK");
         }
     }
