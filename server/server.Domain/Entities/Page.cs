@@ -44,28 +44,36 @@ namespace server.Domain.Entities
 
         public void UpdateTitle(string newTitle, int userId)
         {
+            EnsureNotDeleted();
             EnsureNotArchived();
+
             SetTitle(newTitle);
             RegisterModification(userId);
         }
 
         public void UpdateContent(string? newContent, int userId)
         {
+            EnsureNotDeleted();
             EnsureNotArchived();
+
             Content = NormalizeContent(newContent);
             RegisterModification(userId);
         }
 
         public void UpdateAppearance(string? icon, string? coverImage, int userId)
         {
+            EnsureNotDeleted();
             EnsureNotArchived();
-            Icon = icon;
-            CoverImage = coverImage;
+
+            Icon = NormalizeString(icon);
+            CoverImage = NormalizeString(coverImage);
+
             RegisterModification(userId);
         }
 
         public void Move(int targetWorkspaceId, int? targetParentPageId, int userId)
         {
+            EnsureNotDeleted();
             EnsureNotArchived();
 
             if (targetWorkspaceId <= 0)
@@ -85,6 +93,8 @@ namespace server.Domain.Entities
 
         public void Archive(int userId)
         {
+            EnsureNotDeleted();
+
             if (IsArchived) return;
 
             IsArchived = true;
@@ -100,6 +110,8 @@ namespace server.Domain.Entities
 
         public void Restore(int userId)
         {
+            EnsureNotDeleted();
+
             if (!IsArchived) return;
 
             IsArchived = false;
@@ -113,7 +125,7 @@ namespace server.Domain.Entities
             RegisterModification(userId);
         }
 
-        // PRIVATE
+        // PRIVATE 
 
         private void SetTitle(string title)
         {
@@ -129,6 +141,12 @@ namespace server.Domain.Entities
         {
             if (string.IsNullOrWhiteSpace(content)) return null;
             return content.Trim();
+        }
+
+        private string? NormalizeString(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value)) return null;
+            return value.Trim();
         }
 
         private void RegisterModification(int userId)
