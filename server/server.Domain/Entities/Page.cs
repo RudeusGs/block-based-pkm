@@ -2,23 +2,6 @@ using server.Domain.Base;
 
 namespace server.Domain.Entities
 {
-    /// <summary>
-    /// Page: Thực thể đại diện cho một trang tài liệu (giống Notion).
-    /// 
-    ///  Mục đích:
-    /// - Quản lý nội dung (title, content, icon, cover)
-    /// - Hỗ trợ cấu trúc cây (parent/child)
-    /// - Liên kết với Task
-    /// 
-    ///  Lưu ý quan trọng:
-    /// - Page có thể nằm trong cây phân cấp nhiều cấp
-    /// - Phải đảm bảo không tạo vòng lặp (cycle)
-    /// - Không cho phép chỉnh sửa khi đã archive
-    /// 
-    ///  Design Principle:
-    /// - Page là Aggregate Root của Page Tree
-    /// - Quản lý consistency của subtree
-    /// </summary>
     public class Page : EntityBase
     {
         public int WorkspaceId { get; private set; }
@@ -33,7 +16,6 @@ namespace server.Domain.Entities
         public int CreatedBy { get; private set; }
         public int? LastModifiedBy { get; private set; }
 
-        // Soft delete
         public bool IsArchived { get; private set; }
         public DateTime? ArchivedAt { get; private set; }
 
@@ -60,9 +42,6 @@ namespace server.Domain.Entities
             SetTitle(title);
         }
 
-        /// <summary>
-        /// Cập nhật tiêu đề
-        /// </summary>
         public void UpdateTitle(string newTitle, int userId)
         {
             EnsureNotArchived();
@@ -70,19 +49,13 @@ namespace server.Domain.Entities
             RegisterModification(userId);
         }
 
-        /// <summary>
-        /// Cập nhật nội dung
-        /// </summary>
         public void UpdateContent(string? newContent, int userId)
         {
             EnsureNotArchived();
-            Content = newContent;
+            Content = NormalizeContent(newContent);
             RegisterModification(userId);
         }
 
-        /// <summary>
-        /// Cập nhật icon + cover
-        /// </summary>
         public void UpdateAppearance(string? icon, string? coverImage, int userId)
         {
             EnsureNotArchived();
@@ -91,9 +64,6 @@ namespace server.Domain.Entities
             RegisterModification(userId);
         }
 
-        /// <summary>
-        /// Di chuyển page sang workspace hoặc parent khác
-        /// </summary>
         public void Move(int targetWorkspaceId, int? targetParentPageId, int userId)
         {
             EnsureNotArchived();
@@ -104,7 +74,6 @@ namespace server.Domain.Entities
             if (targetParentPageId.HasValue && targetParentPageId == Id)
                 throw new DomainException("Không thể move vào chính nó.");
 
-            // ⚠️ Không cho phép move sang workspace khác nếu có parent
             if (targetParentPageId.HasValue && targetWorkspaceId != WorkspaceId)
                 throw new DomainException("Không thể move sang workspace khác khi có parent.");
 
@@ -114,9 +83,6 @@ namespace server.Domain.Entities
             RegisterModification(userId);
         }
 
-        /// <summary>
-        /// Archive page (soft delete)
-        /// </summary>
         public void Archive(int userId)
         {
             if (IsArchived) return;
@@ -132,15 +98,13 @@ namespace server.Domain.Entities
             RegisterModification(userId);
         }
 
-        /// <summary>
-        /// Restore page
-        /// </summary>
         public void Restore(int userId)
         {
             if (!IsArchived) return;
 
             IsArchived = false;
             ArchivedAt = null;
+
             foreach (var sub in SubPages)
             {
                 sub.Restore(userId);
@@ -149,19 +113,29 @@ namespace server.Domain.Entities
             RegisterModification(userId);
         }
 
-        /// <summary>
-        /// Validate & set title
-        /// </summary>
+        // PRIVATE
+
         private void SetTitle(string title)
         {
-            Title = string.IsNullOrWhiteSpace(title) ? "Untitled" : title.Trim();
+            var normalized = string.IsNullOrWhiteSpace(title) ? "Untitled" : title.Trim();
 
-            if (Title.Length > 200)
+            if (normalized.Length > 200)
                 throw new DomainException("Title không được vượt quá 200 ký tự.");
+
+            Title = normalized;
+        }
+
+        private string? NormalizeContent(string? content)
+        {
+            if (string.IsNullOrWhiteSpace(content)) return null;
+            return content.Trim();
         }
 
         private void RegisterModification(int userId)
         {
+            if (userId <= 0)
+                throw new DomainException("UserId không hợp lệ.");
+
             LastModifiedBy = userId;
             MarkUpdated();
         }

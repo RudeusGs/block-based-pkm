@@ -31,7 +31,6 @@ namespace server
 
             // Swagger UI
             app.UseCustomSwaggerUI();
-
             // Middleware
             app.UseHttpsRedirection();
             app.UseRouting();
