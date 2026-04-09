@@ -77,12 +77,9 @@ namespace server.Service.Services
                 if (page == null)
                     return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
 
-                var workspaceOwnerId = await _dataContext.Set<Workspace>()
-                    .Where(w => w.Id == page.WorkspaceId)
-                    .Select(w => w.OwnerId)
-                    .FirstOrDefaultAsync(ct);
+                var isWorkspaceOwner = await _permissionService.IsWorkspaceOwnerAsync(page.WorkspaceId, userId, ct);
 
-                if (workspaceOwnerId != userId && page.CreatedBy != userId)
+                if (!isWorkspaceOwner && page.CreatedBy != userId)
                     return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 if (!string.IsNullOrWhiteSpace(model.Title))
@@ -115,12 +112,9 @@ namespace server.Service.Services
                 if (page == null)
                     return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
 
-                var workspaceOwnerId = await _dataContext.Set<Workspace>()
-                    .Where(w => w.Id == page.WorkspaceId)
-                    .Select(w => w.OwnerId)
-                    .FirstOrDefaultAsync(ct);
+                var isWorkspaceOwner = await _permissionService.IsWorkspaceOwnerAsync(page.WorkspaceId, userId, ct);
 
-                if (workspaceOwnerId != userId && page.CreatedBy != userId)
+                if (!isWorkspaceOwner && page.CreatedBy != userId)
                     return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 var allDescendantIds = new HashSet<int>();
@@ -199,23 +193,15 @@ namespace server.Service.Services
                 if (!await _permissionService.HasWorkspaceAccessAsync(workspaceId, userId, ct))
                     return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
-                paging ??= new PagingRequest();
-
                 var query = _dataContext.Set<Page>()
                     .AsNoTracking()
                     .Where(p => p.WorkspaceId == workspaceId &&
                                 p.ParentPageId == null &&
                                 !p.IsDeleted &&
-                                !p.IsArchived);
+                                !p.IsArchived)
+                    .OrderByDescending(p => p.CreatedDate);
 
-                var total = await query.CountAsync(ct);
-                var items = await query
-                    .OrderByDescending(p => p.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync(ct);
-
-                return ApiResult.Success(new { Items = items, Total = total });
+                return await GetPagedAsync(query, paging, ct);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception) { return ApiResult.Fail("Lỗi lấy danh sách", "SERVER_ERROR"); }
@@ -260,8 +246,6 @@ namespace server.Service.Services
                 if (!await _permissionService.HasWorkspaceAccessAsync(workspaceId, userId, ct))
                     return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
-                paging ??= new PagingRequest();
-
                 var query = _dataContext.Set<Page>()
                     .AsNoTracking()
                     .Where(p => p.WorkspaceId == workspaceId && !p.IsDeleted && !p.IsArchived);
@@ -269,14 +253,9 @@ namespace server.Service.Services
                 if (!string.IsNullOrWhiteSpace(keyword))
                     query = query.Where(p => p.Title.Contains(keyword.Trim()));
 
-                var total = await query.CountAsync(ct);
-                var items = await query
-                    .OrderByDescending(p => p.CreatedDate)
-                    .Skip((paging.PageNumber - 1) * paging.PageSize)
-                    .Take(paging.PageSize)
-                    .ToListAsync(ct);
+                var orderedQuery = query.OrderByDescending(p => p.CreatedDate);
 
-                return ApiResult.Success(new { Items = items, Total = total });
+                return await GetPagedAsync(orderedQuery, paging, ct);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception) { return ApiResult.Fail("Lỗi tìm kiếm", "SERVER_ERROR"); }

@@ -23,6 +23,13 @@ namespace server.Controllers
             return FromApiResult(result);
         }
 
+        [HttpPost("tasks/{taskId:int}/assignees/{userId:int}")]
+        public async Task<IActionResult> AssignSingle(int taskId, int userId)
+        {
+            var result = await _service.AssignTaskAsync(taskId, userId);
+            return FromApiResult(result);
+        }
+
         [HttpDelete("tasks/{taskId:int}/assignees/{userId:int}")]
         public async Task<IActionResult> Unassign(int taskId, int userId)
         {

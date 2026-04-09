@@ -66,5 +66,12 @@ namespace server.Controllers
 
             return FromApiResult(result);
         }
+
+        [HttpGet("{pageId:int}/sub-pages")]
+        public async Task<IActionResult> GetSubPages(int pageId, CancellationToken ct)
+        {
+            var result = await _pageService.GetSubPagesAsync(pageId, ct);
+            return FromApiResult(result);
+        }
     }
 }

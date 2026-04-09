@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
 using server.Domain.Enums;
 using server.Infrastructure.Persistence;
@@ -105,12 +105,6 @@ namespace server.Service.Services
 
                 task.UpdateDetails(title, model.Description, priority, model.DueDate);
 
-                if (model.Status.HasValue)
-                {
-                    if (model.Status == StatusWorkTask.Done) task.Complete();
-                    else if (model.Status == StatusWorkTask.ToDo) task.ReOpen();
-                }
-
                 await SaveChangesAsync(ct);
 
                 await ServiceHelper.SafeNotifyAsync(
@@ -119,6 +113,12 @@ namespace server.Service.Services
                     "TaskUpdated",
                     new { TaskId = task.Id }
                 );
+
+                if (model.Status.HasValue)
+                {
+                    var statusResult = await ChangeStatus(taskId, model.Status.Value, ct);
+                    if (!statusResult.IsSuccess) return statusResult;
+                }
 
                 return ApiResult.Success(task, "Cập nhật thành công");
             }
@@ -140,11 +140,9 @@ namespace server.Service.Services
                 if (task == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
+                var isOwner = await _permissionService.IsWorkspaceOwnerAsync(task.WorkspaceId, userId, ct);
 
-                if (workspace?.OwnerId != userId)
+                if (!isOwner)
                     return ApiResult.Fail("Chỉ owner được xóa", "FORBIDDEN");
 
                 task.SoftDelete();
@@ -193,7 +191,7 @@ namespace server.Service.Services
                 .Where(t => t.WorkspaceId == workspaceId && !t.IsDeleted)
                 .OrderByDescending(t => t.Id);
 
-            return await GetPaged(query, paging, ct);
+            return await GetPagedAsync(query, paging, ct);
         }
 
         public async Task<ApiResult> GetTasksByStatusAsync(int workspaceId, StatusWorkTask status, PagingRequest? paging = null, CancellationToken ct = default)
@@ -203,7 +201,7 @@ namespace server.Service.Services
                 .Where(t => t.WorkspaceId == workspaceId && t.Status == status && !t.IsDeleted)
                 .OrderByDescending(t => t.Id);
 
-            return await GetPaged(query, paging, ct);
+            return await GetPagedAsync(query, paging, ct);
         }
 
         // private
@@ -234,20 +232,6 @@ namespace server.Service.Services
             );
 
             return ApiResult.Success(task);
-        }
-
-        private async Task<ApiResult> GetPaged(IQueryable<WorkTask> query, PagingRequest? paging, CancellationToken ct)
-        {
-            paging ??= new PagingRequest();
-
-            var total = await query.CountAsync(ct);
-
-            var items = await query
-                .Skip((paging.PageNumber - 1) * paging.PageSize)
-                .Take(paging.PageSize)
-                .ToListAsync(ct);
-
-            return ApiResult.Success(new { Total = total, Items = items });
         }
     }
 }

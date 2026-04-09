@@ -14,14 +14,17 @@ namespace server.Service.Services
     public class TaskCommentService : BaseService, ITaskCommentService
     {
         private readonly IRealtimeNotifier _notifier;
+        private readonly IPermissionService _permissionService;
 
         public TaskCommentService(
             DataContext dataContext,
             IUserService userService,
-            IRealtimeNotifier notifier
+            IRealtimeNotifier notifier,
+            IPermissionService permissionService
         ) : base(dataContext, userService)
         {
             _notifier = notifier;
+            _permissionService = permissionService;
         }
 
         public async Task<ApiResult> AddCommentAsync(AddCommentModel model, CancellationToken ct = default)
@@ -245,18 +248,12 @@ namespace server.Service.Services
                 if (userId <= 0)
                     return ApiResult.Fail("INVALID_INPUT");
 
-                var pageNumber = paging?.PageNumber > 0 ? paging.PageNumber : 1;
-                var pageSize = paging?.PageSize > 0 ? Math.Min(paging.PageSize, 100) : 10;
-
                 var query = _dataContext.Set<TaskComment>()
                     .AsNoTracking()
                     .Where(c => c.UserId == userId && !c.IsDeleted)
                     .OrderByDescending(c => c.CreatedDate);
 
-                var total = await query.CountAsync(ct);
-                var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync(ct);
-
-                return ApiResult.Success(new { Items = items, TotalCount = total, PageNumber = pageNumber, PageSize = pageSize }, "OK");
+                return await GetPagedAsync(query, paging, ct);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception) { return ApiResult.Fail("Có lỗi xảy ra", "SERVER_ERROR"); }
@@ -267,24 +264,22 @@ namespace server.Service.Services
 
         private async Task<TaskContext> GetTaskContextAsync(int taskId, int userId, CancellationToken ct)
         {
-            var result = await (
-                from t  in _dataContext.Set<WorkTask>()
-                join w  in _dataContext.Set<Workspace>() on t.WorkspaceId equals w.Id
-                where t.Id == taskId
-                select new { WorkspaceId = w.Id, OwnerId = w.OwnerId }
-            ).AsNoTracking().FirstOrDefaultAsync(ct);
+            var task = await _dataContext.Set<WorkTask>()
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == taskId, ct);
 
-            if (result == null)
+            if (task == null)
                 return new TaskContext(0, false, ApiResult.Fail("Task không tồn tại", "NOT_FOUND"));
 
-            var isOwner   = result.OwnerId == userId;
-            var isMember  = isOwner || await _dataContext.Set<WorkspaceMember>()
-                .AnyAsync(m => m.WorkspaceId == result.WorkspaceId && m.UserId == userId, ct);
+            var isOwner = await _permissionService.IsWorkspaceOwnerAsync(task.WorkspaceId, userId, ct);
+            if (isOwner)
+                return new TaskContext(task.WorkspaceId, true, null);
 
-            if (!isMember)
+            var hasAccess = await _permissionService.HasWorkspaceAccessAsync(task.WorkspaceId, userId, ct);
+            if (!hasAccess)
                 return new TaskContext(0, false, ApiResult.Fail("Không có quyền", "FORBIDDEN"));
 
-            return new TaskContext(result.WorkspaceId, isOwner, null);
+            return new TaskContext(task.WorkspaceId, false, null);
         }
     }
 }

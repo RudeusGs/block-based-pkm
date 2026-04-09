@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using server.Domain.Base;
 using server.Domain.Entities;
 using server.Domain.Enums;
@@ -13,8 +13,16 @@ namespace server.Service.Services
 {
     public class WorkspaceMemberService : BaseService, IWorkspaceMemberService
     {
-        public WorkspaceMemberService(DataContext dataContext, IUserService userService)
-            : base(dataContext, userService) { }
+        private readonly IPermissionService _permissionService;
+
+        public WorkspaceMemberService(
+            DataContext dataContext, 
+            IUserService userService,
+            IPermissionService permissionService
+        ) : base(dataContext, userService)
+        {
+            _permissionService = permissionService;
+        }
 
         public async Task<ApiResult> AddMemberAsync(AddWorkspaceMemberModel model, CancellationToken ct = default)
         {
@@ -23,11 +31,8 @@ namespace server.Service.Services
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == model.WorkspaceId, ct);
-                if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (workspace.OwnerId != currentUserId) return ApiResult.Fail("Bạn không có quyền thêm thành viên", "FORBIDDEN");
+                if (!await _permissionService.IsWorkspaceOwnerAsync(model.WorkspaceId, currentUserId, ct))
+                    return ApiResult.Fail("Bạn không có quyền thêm thành viên hoặc Workspace không tồn tại", "FORBIDDEN");
 
                 var user = await _dataContext.Set<User>()
                     .FirstOrDefaultAsync(x => x.Email == model.UserEmail.Trim(), ct);
@@ -64,10 +69,8 @@ namespace server.Service.Services
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
-                var hasAccess = await _dataContext.Set<WorkspaceMember>()
-                    .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId, ct)
-                    || await _dataContext.Set<Workspace>().AnyAsync(w => w.Id == workspaceId && w.OwnerId == currentUserId, ct);
-                if (!hasAccess) return ApiResult.Fail("Bạn không có quyền xem danh sách này", "FORBIDDEN");
+                if (!await _permissionService.HasWorkspaceAccessAsync(workspaceId, currentUserId, ct))
+                    return ApiResult.Fail("Bạn không có quyền xem danh sách này", "FORBIDDEN");
 
                 var members = await (from m in _dataContext.Set<WorkspaceMember>()
                                      join u in _dataContext.Set<User>() on m.UserId equals u.Id
@@ -101,12 +104,12 @@ namespace server.Service.Services
             {
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
-                var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId, ct);
-                if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-                if (userId == workspace.OwnerId) return ApiResult.Fail("Không thể xóa chủ sở hữu", "FORBIDDEN");
-                if (currentUserId != workspace.OwnerId && currentUserId != userId)
+                var isOwner = await _permissionService.IsWorkspaceOwnerAsync(workspaceId, currentUserId, ct);
+                if (!isOwner && currentUserId != userId)
                     return ApiResult.Fail("Bạn không có quyền thực hiện hành động này", "FORBIDDEN");
+
+                if (await _permissionService.IsWorkspaceOwnerAsync(workspaceId, userId, ct))
+                    return ApiResult.Fail("Không thể xóa chủ sở hữu", "FORBIDDEN");
 
                 var member = await _dataContext.Set<WorkspaceMember>()
                     .FirstOrDefaultAsync(m => m.WorkspaceId == workspaceId && m.UserId == userId, ct);
@@ -135,11 +138,8 @@ namespace server.Service.Services
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(w => w.Id == workspaceId, ct);
-
-                if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-                if (workspace.OwnerId != currentUserId) return ApiResult.Fail("Chỉ chủ sở hữu mới có thể thay đổi vai trò", "FORBIDDEN");
+                if (!await _permissionService.IsWorkspaceOwnerAsync(workspaceId, currentUserId, ct))
+                    return ApiResult.Fail("Chỉ chủ sở hữu mới có thể thay đổi vai trò hoặc Workspace không tồn tại", "FORBIDDEN");
 
                 var member = await _dataContext.Set<WorkspaceMember>()
                     .FirstOrDefaultAsync(m => m.WorkspaceId == workspaceId && m.UserId == userId, ct);
