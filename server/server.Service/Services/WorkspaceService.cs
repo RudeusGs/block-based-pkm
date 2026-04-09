@@ -19,26 +19,29 @@ namespace server.Service.Services
             using var transaction = await _dataContext.Database.BeginTransactionAsync(ct);
             try
             {
-                var ownerId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
-                if (ownerId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                var workspace = new Workspace(model.Name?.Trim()!, ownerId, model.Description?.Trim());
+                var workspace = new Workspace(model.Name!, userId, model.Description);
+
                 _dataContext.Set<Workspace>().Add(workspace);
                 await SaveChangesAsync(ct);
 
-                var member = WorkspaceMember.CreateAsOwner(workspace.Id, ownerId);
+                var member = WorkspaceMember.CreateAsOwner(workspace.Id, userId);
                 _dataContext.Set<WorkspaceMember>().Add(member);
-                await SaveChangesAsync(ct);
 
+                await SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
+
                 return ApiResult.Success(workspace, "Tạo workspace thành công");
             }
             catch (DomainException ex)
             {
+                await transaction.RollbackAsync(ct);
                 return ApiResult.Fail(ex.Message, "VALIDATION_ERROR");
             }
             catch (OperationCanceledException)
             {
+                await transaction.RollbackAsync(ct);
                 return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception ex)
@@ -53,11 +56,15 @@ namespace server.Service.Services
             try
             {
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
-                var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(x => x.Id == id, ct);
 
-                if (workspace == null) return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
-                if (workspace.OwnerId != userId) return ApiResult.Fail("Forbidden", "FORBIDDEN");
+                var workspace = await _dataContext.Set<Workspace>()
+                    .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
+
+                if (workspace == null)
+                    return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
+
+                if (workspace.OwnerId != userId)
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 workspace.UpdateInformation(model.Name!, model.Description);
                 await SaveChangesAsync(ct);
@@ -83,23 +90,27 @@ namespace server.Service.Services
             using var transaction = await _dataContext.Database.BeginTransactionAsync(ct);
             try
             {
-                var userId = _userService.UserId;
-                var workspace = await _dataContext.Set<Workspace>().FindAsync(new object[] { workspaceId }, ct);
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                if (workspace == null) return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
-                if (workspace.OwnerId != userId) return ApiResult.Fail("Forbidden", "FORBIDDEN");
+                var workspace = await _dataContext.Set<Workspace>()
+                    .FirstOrDefaultAsync(x => x.Id == workspaceId && !x.IsDeleted, ct);
 
-                var members = _dataContext.Set<WorkspaceMember>().Where(x => x.WorkspaceId == workspaceId);
-                _dataContext.RemoveRange(members);
-                _dataContext.Set<Workspace>().Remove(workspace);
+                if (workspace == null)
+                    return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
+
+                if (workspace.OwnerId != userId)
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
+
+                workspace.SoftDelete();
 
                 await SaveChangesAsync(ct);
                 await transaction.CommitAsync(ct);
 
-                return ApiResult.Success(null, "Đã xóa hoàn toàn Workspace");
+                return ApiResult.Success(null, "Đã xóa Workspace");
             }
             catch (OperationCanceledException)
             {
+                await transaction.RollbackAsync(ct);
                 return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception ex)
@@ -109,21 +120,25 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> GetAllByUserIdAsync(int userId, PagingRequest paging, CancellationToken ct = default)
+        public async Task<ApiResult> GetAllByUserIdAsync(PagingRequest paging, CancellationToken ct = default)
         {
             try
             {
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
                 var pageNumber = paging?.PageNumber > 0 ? paging.PageNumber : 1;
                 var pageSize = paging?.PageSize > 0 ? Math.Min(paging.PageSize, 100) : 10;
 
                 var query = _dataContext.Set<WorkspaceMember>()
-                    .Where(x => x.UserId == userId)
+                    .Where(x => x.UserId == userId && !x.Workspace!.IsDeleted)
                     .Select(x => x.Workspace)
                     .AsNoTracking()
                     .OrderByDescending(x => x!.CreatedDate);
 
                 var total = await query.CountAsync(ct);
-                var items = await query.Skip((pageNumber - 1) * pageSize).Take(pageSize).ToListAsync(ct);
+                var items = await query
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(new
                 {
@@ -131,7 +146,7 @@ namespace server.Service.Services
                     TotalCount = total,
                     PageNumber = pageNumber,
                     PageSize = pageSize
-                }, "Lấy danh sách thành công");
+                });
             }
             catch (OperationCanceledException)
             {
@@ -147,9 +162,10 @@ namespace server.Service.Services
         {
             try
             {
-                var userId = _userService.UserId;
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
                 var workspace = await _dataContext.Set<WorkspaceMember>()
-                    .Where(x => x.UserId == userId && x.WorkspaceId == id)
+                    .Where(x => x.UserId == userId && x.WorkspaceId == id && !x.Workspace!.IsDeleted)
                     .Select(x => x.Workspace)
                     .AsNoTracking()
                     .FirstOrDefaultAsync(ct);

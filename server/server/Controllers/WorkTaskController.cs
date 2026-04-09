@@ -27,9 +27,9 @@ namespace server.Controllers
         }
 
         [HttpPut("{taskId:int}")]
-        public async Task<IActionResult> Update([FromBody] UpdateWorkTaskModel model, CancellationToken ct)
+        public async Task<IActionResult> Update(int taskId, [FromBody] UpdateWorkTaskModel model, CancellationToken ct)
         {
-            var result = await _taskService.UpdateTaskAsync(model, ct);
+            var result = await _taskService.UpdateTaskAsync(taskId, model, ct);
             return FromApiResult(result);
         }
 
@@ -54,31 +54,10 @@ namespace server.Controllers
             return FromApiResult(result);
         }
 
-        [HttpGet("workspace/{workspaceId:int}/search")]
-        public async Task<IActionResult> Search(int workspaceId, [FromQuery] string? q, [FromQuery] PagingRequest? paging, CancellationToken ct)
-        {
-            var result = await _taskService.SearchTasksAsync(workspaceId, q ?? string.Empty, paging, ct);
-            return FromApiResult(result);
-        }
-
         [HttpGet("workspace/{workspaceId:int}/status")]
         public async Task<IActionResult> GetByStatus(int workspaceId, [FromQuery] StatusWorkTask status, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
             var result = await _taskService.GetTasksByStatusAsync(workspaceId, status, paging, ct);
-            return FromApiResult(result);
-        }
-
-        [HttpGet("workspace/{workspaceId:int}/overdue")]
-        public async Task<IActionResult> GetOverdue(int workspaceId, [FromQuery] PagingRequest? paging, CancellationToken ct)
-        {
-            var result = await _taskService.GetOverdueTasksAsync(workspaceId, paging, ct);
-            return FromApiResult(result);
-        }
-
-        [HttpGet("workspace/{workspaceId:int}/recommended")]
-        public async Task<IActionResult> GetRecommended(int workspaceId, [FromQuery] int limit = 5, CancellationToken ct = default)
-        {
-            var result = await _taskService.GetRecommendedTasksAsync(workspaceId, limit, ct);
             return FromApiResult(result);
         }
 
@@ -96,11 +75,5 @@ namespace server.Controllers
             return FromApiResult(result);
         }
 
-        [HttpGet("workspace/{workspaceId:int}/statistics")]
-        public async Task<IActionResult> GetStatistics(int workspaceId, CancellationToken ct)
-        {
-            var result = await _taskService.GetTaskStatisticsAsync(workspaceId, ct);
-            return FromApiResult(result);
-        }
     }
 }

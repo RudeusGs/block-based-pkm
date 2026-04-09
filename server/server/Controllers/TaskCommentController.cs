@@ -26,16 +26,16 @@ namespace server.Controllers
         }
 
         [HttpPut("{commentId:int}")]
-        public async Task<IActionResult> Update([FromBody] UpdateCommentModel model, CancellationToken ct)
+        public async Task<IActionResult> Update(int commentId, [FromBody] UpdateCommentModel model, CancellationToken ct)
         {
-            var result = await _service.UpdateCommentAsync(model, ct);
+            var result = await _service.UpdateCommentAsync(commentId, model, ct);
             return FromApiResult(result);
         }
 
         [HttpDelete("{commentId:int}")]
         public async Task<IActionResult> Delete(int commentId, CancellationToken ct)
         {
-            var result = await _service.DeleteCommentAsync(commentId, ct);
+            var result = await _service.SoftDeleteCommentAsync(commentId, ct);
             return FromApiResult(result);
         }
 

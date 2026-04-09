@@ -1,63 +1,78 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
+using server.Domain.Base;
+using server.Domain.Entities;
 using server.Infrastructure.Persistence;
+using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
 using server.Service.Models;
 using server.Service.Models.Page;
-using server.Domain.Entities;
 
 namespace server.Service.Services
 {
     public class PageService : BaseService, IPageService
     {
-        public PageService(DataContext dataContext, IUserService userService)
-            : base(dataContext, userService)
+        private readonly IPermissionService _permissionService;
+
+        public PageService(
+            DataContext dataContext,
+            IUserService userService,
+            IPermissionService permissionService
+        ) : base(dataContext, userService)
         {
+            _permissionService = permissionService;
         }
 
-        public async Task<ApiResult> CreatePageAsync(AddPageModel model, int userId, CancellationToken ct = default)
+        public async Task<ApiResult> CreatePageAsync(AddPageModel model, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0 || currentUserId != userId)
-                    return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .Select(w => new { w.Id, w.OwnerId })
-                    .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId, ct);
+                if (!await _permissionService.HasWorkspaceAccessAsync(model.WorkspaceId, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
+                if (model.ParentPageId.HasValue)
+                {
+                    var parentActive = await _dataContext.Set<Page>()
+                        .AnyAsync(p =>
+                            p.Id == model.ParentPageId &&
+                            p.WorkspaceId == model.WorkspaceId &&
+                            !p.IsDeleted &&
+                            !p.IsArchived, ct);
 
-                var isMember = await _dataContext.Set<WorkspaceMember>()
-                    .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == model.WorkspaceId && m.UserId == currentUserId, ct);
+                    if (!parentActive)
+                        return ApiResult.Fail("Parent không hợp lệ hoặc đã bị vô hiệu hóa", "INVALID_PARENT");
+                }
 
-                if (workspace.OwnerId != currentUserId && !isMember)
-                    return ApiResult.Fail("Bạn không có quyền tạo trang trong workspace này", "FORBIDDEN");
+                var page = new Page(model.Title, model.WorkspaceId, userId, model.ParentPageId);
 
-                var page = new Page(model.Title, model.WorkspaceId, currentUserId);
+                if (model.Content != null)
+                    page.UpdateContent(model.Content, userId);
+
+                if (model.Icon != null || model.CoverImage != null)
+                    page.UpdateAppearance(model.Icon, model.CoverImage, userId);
 
                 _dataContext.Set<Page>().Add(page);
-                await _dataContext.SaveChangesAsync(ct);
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(page, "Tạo trang thành công");
             }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi tạo trang", "SERVER_ERROR", new[] { ex.Message });
-            }
+            catch (DomainException ex) { return ApiResult.Fail(ex.Message, "VALIDATION_ERROR"); }
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi khi tạo trang", "SERVER_ERROR"); }
         }
 
-        public async Task<ApiResult> UpdatePageAsync(UpdatePageModel model, CancellationToken ct = default)
+        public async Task<ApiResult> UpdatePageAsync(int pageId, UpdatePageModel model, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
                 var page = await _dataContext.Set<Page>()
-                    .FirstOrDefaultAsync(p => p.Id == model.PageId, ct);
+                    .FirstOrDefaultAsync(p => p.Id == pageId && !p.IsDeleted && !p.IsArchived, ct);
 
                 if (page == null)
                     return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
@@ -67,27 +82,35 @@ namespace server.Service.Services
                     .Select(w => w.OwnerId)
                     .FirstOrDefaultAsync(ct);
 
-                if (workspaceOwnerId != currentUserId && page.CreatedBy != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền cập nhật trang này", "FORBIDDEN");
+                if (workspaceOwnerId != userId && page.CreatedBy != userId)
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
-                page.UpdateTitle(model.Title, currentUserId);
+                if (!string.IsNullOrWhiteSpace(model.Title))
+                    page.UpdateTitle(model.Title, userId);
 
-                await _dataContext.SaveChangesAsync(ct);
-                return ApiResult.Success(page, "Cập nhật trang thành công");
+                if (model.Content != null)
+                    page.UpdateContent(model.Content, userId);
+
+                if (model.Icon != null || model.CoverImage != null)
+                    page.UpdateAppearance(model.Icon, model.CoverImage, userId);
+
+                await SaveChangesAsync(ct);
+
+                return ApiResult.Success(page, "Cập nhật thành công");
             }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi cập nhật trang", "SERVER_ERROR", new[] { ex.Message });
-            }
+            catch (DomainException ex) { return ApiResult.Fail(ex.Message, "VALIDATION_ERROR"); }
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi khi cập nhật", "SERVER_ERROR"); }
         }
 
         public async Task<ApiResult> DeletePageAsync(int pageId, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
                 var page = await _dataContext.Set<Page>()
-                    .FirstOrDefaultAsync(p => p.Id == pageId, ct);
+                    .FirstOrDefaultAsync(p => p.Id == pageId && !p.IsDeleted && !p.IsArchived, ct);
 
                 if (page == null)
                     return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
@@ -97,121 +120,166 @@ namespace server.Service.Services
                     .Select(w => w.OwnerId)
                     .FirstOrDefaultAsync(ct);
 
-                if (workspaceOwnerId != currentUserId && page.CreatedBy != currentUserId)
-                    return ApiResult.Fail("Bạn không có quyền xóa trang này", "FORBIDDEN");
+                if (workspaceOwnerId != userId && page.CreatedBy != userId)
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
-                page.Archive(currentUserId);
+                var allDescendantIds = new HashSet<int>();
+                var frontier = new Queue<int>(new[] { pageId });
 
-                await _dataContext.SaveChangesAsync(ct);
+                while (frontier.Count > 0)
+                {
+                    var currentBatch = new List<int>();
+                    while (frontier.Count > 0) currentBatch.Add(frontier.Dequeue());
 
-                return ApiResult.Success(null, "Xóa trang thành công");
+                    var childIds = await _dataContext.Set<Page>()
+                        .Where(p => p.ParentPageId.HasValue &&
+                                    currentBatch.Contains(p.ParentPageId.Value) &&
+                                    !p.IsDeleted && !p.IsArchived)
+                        .Select(p => p.Id)
+                        .ToListAsync(ct);
+
+                    foreach (var id in childIds)
+                    {
+                        if (allDescendantIds.Add(id))
+                            frontier.Enqueue(id);
+                    }
+                }
+
+                if (allDescendantIds.Count > 0)
+                {
+                    var descendants = await _dataContext.Set<Page>()
+                        .Where(p => allDescendantIds.Contains(p.Id))
+                        .ToListAsync(ct);
+
+                    foreach (var desc in descendants)
+                        desc.Archive(userId);
+                }
+
+                page.Archive(userId);
+
+                await SaveChangesAsync(ct);
+
+                return ApiResult.Success(new { ArchivedCount = allDescendantIds.Count + 1 }, "Đã archive page và toàn bộ con");
             }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Có lỗi khi xóa trang", "SERVER_ERROR", new[] { ex.Message });
-            }
+            catch (DomainException ex) { return ApiResult.Fail(ex.Message, "VALIDATION_ERROR"); }
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi khi xóa", "SERVER_ERROR"); }
         }
 
         public async Task<ApiResult> GetPageByIdAsync(int pageId, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
                 var page = await _dataContext.Set<Page>()
                     .AsNoTracking()
-                    .Where(p => p.Id == pageId && !p.IsArchived)
-                    .FirstOrDefaultAsync(ct);
+                    .FirstOrDefaultAsync(p => p.Id == pageId && !p.IsDeleted && !p.IsArchived, ct);
 
                 if (page == null)
                     return ApiResult.Fail("Page không tồn tại", "NOT_FOUND");
 
-                bool hasAccess = await HasAccessToWorkspace(page.WorkspaceId, currentUserId, ct);
-                if (!hasAccess)
-                    return ApiResult.Fail("Bạn không có quyền xem trang này", "FORBIDDEN");
+                if (!await _permissionService.HasWorkspaceAccessAsync(page.WorkspaceId, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 return ApiResult.Success(page);
             }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message });
-            }
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR"); }
         }
 
         public async Task<ApiResult> GetPagesByWorkspaceAsync(int workspaceId, PagingRequest? paging = null, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (!await HasAccessToWorkspace(workspaceId, currentUserId, ct))
-                    return ApiResult.Fail("Không có quyền truy cập", "FORBIDDEN");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
+                if (!await _permissionService.HasWorkspaceAccessAsync(workspaceId, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 paging ??= new PagingRequest();
 
                 var query = _dataContext.Set<Page>()
                     .AsNoTracking()
-                    .Where(p => p.WorkspaceId == workspaceId && !p.IsArchived);
+                    .Where(p => p.WorkspaceId == workspaceId &&
+                                p.ParentPageId == null &&
+                                !p.IsDeleted &&
+                                !p.IsArchived);
 
                 var total = await query.CountAsync(ct);
                 var items = await query
-                    .OrderByDescending(p => p.Id)
+                    .OrderByDescending(p => p.CreatedDate)
                     .Skip((paging.PageNumber - 1) * paging.PageSize)
                     .Take(paging.PageSize)
                     .ToListAsync(ct);
 
-                return ApiResult.Success(new { Total = total, Items = items });
+                return ApiResult.Success(new { Items = items, Total = total });
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi lấy danh sách", "SERVER_ERROR"); }
+        }
+
+        public async Task<ApiResult> GetSubPagesAsync(int parentPageId, CancellationToken ct = default)
+        {
+            try
             {
-                return ApiResult.Fail("Lỗi lấy danh sách trang", "SERVER_ERROR", new[] { ex.Message });
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
+                var parent = await _dataContext.Set<Page>()
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.Id == parentPageId && !p.IsDeleted && !p.IsArchived, ct);
+
+                if (parent == null)
+                    return ApiResult.Fail("Page không tồn tại hoặc đã bị vô hiệu hóa", "NOT_FOUND");
+
+                if (!await _permissionService.HasWorkspaceAccessAsync(parent.WorkspaceId, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
+
+                var subPages = await _dataContext.Set<Page>()
+                    .AsNoTracking()
+                    .Where(p => p.ParentPageId == parentPageId && !p.IsDeleted && !p.IsArchived)
+                    .OrderByDescending(p => p.CreatedDate)
+                    .ToListAsync(ct);
+
+                return ApiResult.Success(subPages);
             }
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi lấy sub-pages", "SERVER_ERROR"); }
         }
 
         public async Task<ApiResult> SearchPagesAsync(int workspaceId, string keyword, PagingRequest? paging = null, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (!await HasAccessToWorkspace(workspaceId, currentUserId, ct))
-                    return ApiResult.Fail("Không có quyền truy cập", "FORBIDDEN");
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(userId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
+                if (!await _permissionService.HasWorkspaceAccessAsync(workspaceId, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
+
+                paging ??= new PagingRequest();
 
                 var query = _dataContext.Set<Page>()
                     .AsNoTracking()
-                    .Where(p => p.WorkspaceId == workspaceId && !p.IsArchived);
+                    .Where(p => p.WorkspaceId == workspaceId && !p.IsDeleted && !p.IsArchived);
 
                 if (!string.IsNullOrWhiteSpace(keyword))
-                {
-                    var kw = keyword.Trim().ToLower();
-                    query = query.Where(p => p.Title.ToLower().Contains(kw));
-                }
+                    query = query.Where(p => p.Title.Contains(keyword.Trim()));
 
-                paging ??= new PagingRequest();
                 var total = await query.CountAsync(ct);
                 var items = await query
-                    .OrderByDescending(p => p.Id)
+                    .OrderByDescending(p => p.CreatedDate)
                     .Skip((paging.PageNumber - 1) * paging.PageSize)
                     .Take(paging.PageSize)
                     .ToListAsync(ct);
 
-                return ApiResult.Success(new { Total = total, Items = items });
+                return ApiResult.Success(new { Items = items, Total = total });
             }
-            catch (Exception ex)
-            {
-                return ApiResult.Fail("Lỗi tìm kiếm", "SERVER_ERROR", new[] { ex.Message });
-            }
-        }
-
-        private async Task<bool> HasAccessToWorkspace(int workspaceId, int userId, CancellationToken ct)
-        {
-            var workspace = await _dataContext.Set<Workspace>()
-                .AsNoTracking()
-                .Select(w => new { w.Id, w.OwnerId })
-                .FirstOrDefaultAsync(w => w.Id == workspaceId, ct);
-
-            if (workspace == null) return false;
-            if (workspace.OwnerId == userId) return true;
-
-            return await _dataContext.Set<WorkspaceMember>()
-                .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == userId, ct);
+            catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
+            catch (Exception) { return ApiResult.Fail("Lỗi tìm kiếm", "SERVER_ERROR"); }
         }
     }
 }

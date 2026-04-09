@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using server.Domain.Enums;
 using server.Service.Interfaces;
 using server.Service.Models.WorkspaceMember;
 
@@ -51,9 +52,9 @@ namespace server.Controllers
         /// Cập nhật role thành viên
         /// </summary>
         [HttpPut("{workspaceId:int}/users/{userId:int}")]
-        public async Task<IActionResult> UpdateRole([FromBody] UpdateWorkspaceMemberModel model, CancellationToken ct)
+        public async Task<IActionResult> UpdateRole(int workspaceId, int userId, [FromBody] RoomRole role, CancellationToken ct)
         {
-            var result = await _workspaceMemberService.UpdateMemberRoleAsync(model, ct);
+            var result = await _workspaceMemberService.UpdateMemberRoleAsync(workspaceId, userId, role, ct);
             return FromApiResult(result);
         }
     }

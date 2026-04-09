@@ -29,18 +29,6 @@ public class Workspace : EntityBase
         MarkUpdated();
     }
 
-    public void TransferOwnership(int newOwnerId)
-    {
-        if (newOwnerId <= 0)
-            throw new DomainException("Chủ sở hữu mới không hợp lệ.");
-
-        if (OwnerId == newOwnerId)
-            return;
-
-        OwnerId = newOwnerId;
-        MarkUpdated();
-    }
-
     private void SetName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))

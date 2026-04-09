@@ -48,16 +48,13 @@ namespace server.Controllers
         [HttpGet("my")]
         public async Task<IActionResult> GetMyWorkspaces(CancellationToken ct, [FromQuery] int pageNumber = 1, [FromQuery] int pageSize = 10)
         {
-            if (!this.TryGetUserId(out var userId))
-                return this.FailUnauthorized();
-
             var paging = new PagingRequest
             {
                 PageNumber = pageNumber,
                 PageSize = pageSize
             };
 
-            var result = await _workspaceService.GetAllByUserIdAsync(userId, paging, ct);
+            var result = await _workspaceService.GetAllByUserIdAsync(paging, ct);
             return FromApiResult(result);
         }
     }

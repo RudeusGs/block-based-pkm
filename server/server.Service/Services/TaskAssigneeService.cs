@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using server.Domain.Base;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
 using server.Infrastructure.Realtime.Interfaces;
@@ -22,7 +23,6 @@ namespace server.Service.Services
             _notifier = notifier;
         }
 
-        // ================= ASSIGN =================
         public async Task<ApiResult> AssignTaskAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
@@ -32,44 +32,51 @@ namespace server.Service.Services
 
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                var task = await _dataContext.Set<WorkTask>()
-                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+                var item = await (from t in _dataContext.Set<WorkTask>()
+                                  join w in _dataContext.Set<Workspace>() on t.WorkspaceId equals w.Id
+                                  where t.Id == taskId
+                                  select new { Task = t, Workspace = w })
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(ct);
 
-                if (task == null)
+                if (item == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (workspace.OwnerId != currentUserId)
+                if (item.Workspace.OwnerId != currentUserId)
                     return ApiResult.Fail("Chỉ owner mới được assign", "FORBIDDEN");
 
-                var isMember = await _dataContext.Set<WorkspaceMember>()
+                var isMemberTask = _dataContext.Set<WorkspaceMember>()
                     .AsNoTracking()
-                    .AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == userId, ct);
+                    .AnyAsync(m => m.WorkspaceId == item.Workspace.Id && m.UserId == userId, ct);
 
-                if (!isMember)
-                    return ApiResult.Fail("User không thuộc workspace", "VALIDATION_ERROR");
-
-                var exists = await _dataContext.Set<TaskAssignee>()
+                var alreadyAssignedTask = _dataContext.Set<TaskAssignee>()
+                    .AsNoTracking()
                     .AnyAsync(a => a.TaskId == taskId && a.UserId == userId, ct);
 
-                if (exists)
+                await Task.WhenAll(isMemberTask, alreadyAssignedTask);
+
+                if (!isMemberTask.Result)
+                    return ApiResult.Fail("User không thuộc workspace", "VALIDATION_ERROR");
+
+                if (alreadyAssignedTask.Result)
                     return ApiResult.Fail("Đã assign rồi", "ALREADY_ASSIGNED");
 
                 var assignee = new TaskAssignee(taskId, userId);
-
                 _dataContext.Set<TaskAssignee>().Add(assignee);
                 await SaveChangesAsync(ct);
 
-                await ServiceHelper.SafeNotifyAsync(_notifier, workspace.Id, "TaskAssigneeAdded",
+                await ServiceHelper.SafeNotifyAsync(_notifier, item.Workspace.Id, "TaskAssigneeAdded",
                     new { TaskId = taskId, UserId = userId });
 
                 return ApiResult.Success(assignee, "Assign thành công");
+            }
+            catch (DomainException ex)
+            {
+                return ApiResult.Fail(ex.Message, "VALIDATION_ERROR");
+            }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception)
             {
@@ -86,47 +93,57 @@ namespace server.Service.Services
 
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                var task = await _dataContext.Set<WorkTask>()
+                var item = await (from t in _dataContext.Set<WorkTask>()
+                                  join w in _dataContext.Set<Workspace>() on t.WorkspaceId equals w.Id
+                                  where t.Id == taskId
+                                  select new { Task = t, Workspace = w })
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+                    .FirstOrDefaultAsync(ct);
 
-                if (task == null)
+                if (item == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
-                if (workspace == null)
-                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
-
-                if (workspace.OwnerId != currentUserId)
+                if (item.Workspace.OwnerId != currentUserId)
                     return ApiResult.Fail("Chỉ owner mới được assign", "FORBIDDEN");
 
                 var validUserIds = await _dataContext.Set<WorkspaceMember>()
-                    .Where(m => m.WorkspaceId == workspace.Id && userIds.Contains(m.UserId))
+                    .AsNoTracking()
+                    .Where(m => m.WorkspaceId == item.Workspace.Id && userIds.Contains(m.UserId))
                     .Select(m => m.UserId)
                     .ToListAsync(ct);
 
+                if (!validUserIds.Any())
+                {
+                    return ApiResult.Success(new { Added = 0 }, "Assign nhiều user thành công");
+                }
+
                 var existed = await _dataContext.Set<TaskAssignee>()
+                    .AsNoTracking()
                     .Where(a => a.TaskId == taskId && validUserIds.Contains(a.UserId))
                     .Select(a => a.UserId)
                     .ToListAsync(ct);
 
                 var toAdd = validUserIds.Except(existed).ToList();
 
-                var assignees = toAdd.Select(uid => new TaskAssignee(taskId, uid)).ToList();
-
-                if (assignees.Any())
+                if (toAdd.Any())
                 {
+                    var assignees = toAdd.Select(uid => new TaskAssignee(taskId, uid));
                     _dataContext.Set<TaskAssignee>().AddRange(assignees);
                     await SaveChangesAsync(ct);
+
+                    await ServiceHelper.SafeNotifyAsync(_notifier, item.Workspace.Id, "TaskAssigneesAdded",
+                        new { TaskId = taskId, UserIds = toAdd });
                 }
 
-                await ServiceHelper.SafeNotifyAsync(_notifier, workspace.Id, "TaskAssigneesAdded",
-                    new { TaskId = taskId, UserIds = toAdd });
-
                 return ApiResult.Success(new { Added = toAdd.Count }, "Assign nhiều user thành công");
+            }
+            catch (DomainException ex)
+            {
+                return ApiResult.Fail(ex.Message, "VALIDATION_ERROR");
+            }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception)
             {
@@ -140,17 +157,17 @@ namespace server.Service.Services
             {
                 var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
-                var task = await _dataContext.Set<WorkTask>()
-                    .FirstOrDefaultAsync(t => t.Id == taskId, ct);
+                var item = await (from t in _dataContext.Set<WorkTask>()
+                                  join w in _dataContext.Set<Workspace>() on t.WorkspaceId equals w.Id
+                                  where t.Id == taskId
+                                  select new { Task = t, Workspace = w })
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(ct);
 
-                if (task == null)
+                if (item == null)
                     return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
 
-                var workspace = await _dataContext.Set<Workspace>()
-                    .AsNoTracking()
-                    .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
-                if (workspace.OwnerId != currentUserId)
+                if (item.Workspace.OwnerId != currentUserId)
                     return ApiResult.Fail("Chỉ owner mới được unassign", "FORBIDDEN");
 
                 var entity = await _dataContext.Set<TaskAssignee>()
@@ -162,10 +179,18 @@ namespace server.Service.Services
                 _dataContext.Set<TaskAssignee>().Remove(entity);
                 await SaveChangesAsync(ct);
 
-                await ServiceHelper.SafeNotifyAsync(_notifier, workspace.Id, "TaskAssigneeRemoved",
+                await ServiceHelper.SafeNotifyAsync(_notifier, item.Workspace.Id, "TaskAssigneeRemoved",
                     new { TaskId = taskId, UserId = userId });
 
                 return ApiResult.Success(null, "Unassign thành công");
+            }
+            catch (DomainException ex)
+            {
+                return ApiResult.Fail(ex.Message, "VALIDATION_ERROR");
+            }
+            catch (OperationCanceledException)
+            {
+                return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED");
             }
             catch (Exception)
             {
@@ -189,7 +214,8 @@ namespace server.Service.Services
                 var workspace = await _dataContext.Set<Workspace>()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
+                if (workspace == null)
+                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
                 var isMember = await _dataContext.Set<WorkspaceMember>()
                     .AnyAsync(m => m.WorkspaceId == workspace.Id && m.UserId == currentUserId, ct);
 
@@ -233,11 +259,13 @@ namespace server.Service.Services
 
                 var task = await _dataContext.Set<WorkTask>()
                     .FirstOrDefaultAsync(t => t.Id == taskId, ct);
-
+                if (task == null)
+                    return ApiResult.Fail("Task không tồn tại", "NOT_FOUND");
                 var workspace = await _dataContext.Set<Workspace>()
                     .AsNoTracking()
                     .FirstOrDefaultAsync(w => w.Id == task.WorkspaceId, ct);
-
+                if (workspace == null)
+                    return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
                 if (workspace.OwnerId != currentUserId)
                     return ApiResult.Fail("Chỉ owner mới được clear", "FORBIDDEN");
 

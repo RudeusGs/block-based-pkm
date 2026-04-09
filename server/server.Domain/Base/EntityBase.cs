@@ -9,13 +9,13 @@
 
         public bool IsDeleted { get; private set; }
         public DateTime? DeletedDate { get; private set; }
-
-        public byte[] RowVersion { get; private set; } = default!;
+        public byte[] RowVersion { get; private set; }
 
         protected EntityBase()
         {
             CreatedDate = DateTime.UtcNow;
             IsDeleted = false;
+            RowVersion = Array.Empty<byte>();
         }
 
         public void MarkUpdated()

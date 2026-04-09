@@ -1,7 +1,7 @@
+using server.Infrastructure.Cors;
 using server.Infrastructure.Realtime;
 using server.Infrastructure.Swagger;
 using server.Service.Configurations;
-using server.Infrastructure.Cors;
 namespace server
 {
     public class Program
@@ -18,14 +18,11 @@ namespace server
 
             // CORS Config
             builder.Services.AddCustomCors(builder.Configuration);
-
             // Custom DI
             builder.Services.AddInfrastructureServices(builder.Configuration);
             builder.Services.AddApplicationServices();
-
             // SignalR
             builder.Services.AddSignalR();
-
             // Build App
             var app = builder.Build();
 
