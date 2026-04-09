@@ -1,9 +1,10 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using server.Domain.Base;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
 using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
+using server.Service.Interfaces;
 using server.Service.Models;
 using server.Service.Models.Workspace;
 
@@ -11,8 +12,16 @@ namespace server.Service.Services
 {
     public class WorkspaceService : BaseService, IWorkspaceService
     {
-        public WorkspaceService(DataContext dataContext, IUserService userService)
-            : base(dataContext, userService) { }
+        private readonly IPermissionService _permissionService;
+
+        public WorkspaceService(
+            DataContext dataContext, 
+            IUserService userService,
+            IPermissionService permissionService
+        ) : base(dataContext, userService)
+        {
+            _permissionService = permissionService;
+        }
 
         public async Task<ApiResult> CreateWorkspaceAsync(AddWorkspaceModel model, CancellationToken ct = default)
         {
@@ -57,14 +66,14 @@ namespace server.Service.Services
             {
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
+                if (!await _permissionService.IsWorkspaceOwnerAsync(id, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
+
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, ct);
 
                 if (workspace == null)
                     return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
-
-                if (workspace.OwnerId != userId)
-                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 workspace.UpdateInformation(model.Name!, model.Description);
                 await SaveChangesAsync(ct);
@@ -92,14 +101,14 @@ namespace server.Service.Services
             {
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
 
+                if (!await _permissionService.IsWorkspaceOwnerAsync(workspaceId, userId, ct))
+                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
+
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(x => x.Id == workspaceId && !x.IsDeleted, ct);
 
                 if (workspace == null)
                     return ApiResult.Fail("Không tìm thấy Workspace", "NOT_FOUND");
-
-                if (workspace.OwnerId != userId)
-                    return ApiResult.Fail("Forbidden", "FORBIDDEN");
 
                 workspace.SoftDelete();
 
@@ -125,28 +134,13 @@ namespace server.Service.Services
             try
             {
                 var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
-                var pageNumber = paging?.PageNumber > 0 ? paging.PageNumber : 1;
-                var pageSize = paging?.PageSize > 0 ? Math.Min(paging.PageSize, 100) : 10;
-
                 var query = _dataContext.Set<WorkspaceMember>()
                     .Where(x => x.UserId == userId && !x.Workspace!.IsDeleted)
                     .Select(x => x.Workspace)
                     .AsNoTracking()
                     .OrderByDescending(x => x!.CreatedDate);
 
-                var total = await query.CountAsync(ct);
-                var items = await query
-                    .Skip((pageNumber - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync(ct);
-
-                return ApiResult.Success(new
-                {
-                    Items = items,
-                    TotalCount = total,
-                    PageNumber = pageNumber,
-                    PageSize = pageSize
-                });
+                return await GetPagedAsync(query, paging, ct);
             }
             catch (OperationCanceledException)
             {

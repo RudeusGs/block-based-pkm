@@ -66,5 +66,19 @@ namespace server.Controllers
             var result = await _service.GetCommentsByUserAsync(userId, paging, ct);
             return FromApiResult(result);
         }
+
+        [HttpPut("{commentId:int}/restore")]
+        public async Task<IActionResult> Restore(int commentId, CancellationToken ct)
+        {
+            var result = await _service.RestoreCommentAsync(commentId, ct);
+            return FromApiResult(result);
+        }
+
+        [HttpGet("{commentId:int}/replies")]
+        public async Task<IActionResult> GetReplies(int commentId, CancellationToken ct)
+        {
+            var result = await _service.GetRepliesAsync(commentId, ct);
+            return FromApiResult(result);
+        }
     }
 }

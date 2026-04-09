@@ -1,5 +1,7 @@
-﻿using server.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+using server.Infrastructure.Persistence;
 using server.Service.Common.IServices;
+using server.Service.Models;
 
 namespace server.Service.Services
 {
@@ -87,6 +89,20 @@ namespace server.Service.Services
         protected async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
         {
             return await _dataContext.SaveChangesAsync(cancellationToken);
+        }
+
+        protected async Task<ApiResult> GetPagedAsync<T>(IQueryable<T> query, PagingRequest? paging, CancellationToken ct) where T : class
+        {
+            paging ??= new PagingRequest();
+
+            var total = await query.CountAsync(ct);
+
+            var items = await query
+                .Skip((paging.PageNumber - 1) * paging.PageSize)
+                .Take(paging.PageSize)
+                .ToListAsync(ct);
+
+            return ApiResult.Success(new { Total = total, Items = items });
         }
 
         #region Ví dụ sử dụng (tham khảo)
