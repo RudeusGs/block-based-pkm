@@ -3,8 +3,6 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using System.Linq;
-using System.Threading.Tasks;
 
 public static class AuthenticationServiceCollection
 {

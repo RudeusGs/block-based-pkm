@@ -1,7 +1,9 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using server.Domain.Base;
 using server.Domain.Entities;
+using server.Domain.Enums;
 using server.Infrastructure.Persistence;
+using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
 using server.Service.Models;
@@ -18,8 +20,8 @@ namespace server.Service.Services
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(x => x.Id == model.WorkspaceId, ct);
@@ -59,8 +61,9 @@ namespace server.Service.Services
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+
                 var hasAccess = await _dataContext.Set<WorkspaceMember>()
                     .AnyAsync(m => m.WorkspaceId == workspaceId && m.UserId == currentUserId, ct)
                     || await _dataContext.Set<Workspace>().AnyAsync(w => w.Id == workspaceId && w.OwnerId == currentUserId, ct);
@@ -96,8 +99,8 @@ namespace server.Service.Services
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
                 var workspace = await _dataContext.Set<Workspace>()
                     .FirstOrDefaultAsync(w => w.Id == workspaceId, ct);
                 if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
@@ -125,24 +128,24 @@ namespace server.Service.Services
             }
         }
 
-        public async Task<ApiResult> UpdateMemberRoleAsync(UpdateWorkspaceMemberModel model, CancellationToken ct = default)
+        public async Task<ApiResult> UpdateMemberRoleAsync(int workspaceId, int userId, RoomRole role, CancellationToken ct = default)
         {
             try
             {
-                var currentUserId = _userService.UserId;
-                if (currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
+                var currentUserId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+                if(currentUserId <= 0) return ApiResult.Fail("Unauthorized", "UNAUTHORIZED");
 
                 var workspace = await _dataContext.Set<Workspace>()
-                    .FirstOrDefaultAsync(w => w.Id == model.WorkspaceId, ct);
+                    .FirstOrDefaultAsync(w => w.Id == workspaceId, ct);
 
                 if (workspace == null) return ApiResult.Fail("Workspace không tồn tại", "NOT_FOUND");
                 if (workspace.OwnerId != currentUserId) return ApiResult.Fail("Chỉ chủ sở hữu mới có thể thay đổi vai trò", "FORBIDDEN");
 
                 var member = await _dataContext.Set<WorkspaceMember>()
-                    .FirstOrDefaultAsync(m => m.Id == model.WorkspaceMemberId, ct);
+                    .FirstOrDefaultAsync(m => m.WorkspaceId == workspaceId && m.UserId == userId, ct);
 
                 if (member == null) return ApiResult.Fail("Thành viên không tồn tại", "NOT_FOUND");
-                member.AssignRole(model.Role);
+                member.AssignRole(role);
 
                 await SaveChangesAsync(ct);
 

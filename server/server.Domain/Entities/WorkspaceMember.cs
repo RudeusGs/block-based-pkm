@@ -26,6 +26,7 @@ namespace server.Domain.Entities
         }
 
         /// <summary>
+        /// Design Pattern: Factory Method - Tạo một thành viên mới với vai trò chủ sở hữu (GroupLeader) mặc định. Điều này đảm bảo rằng khi tạo thành viên mới cho một workspace, nếu đó là chủ sở hữu, họ sẽ tự động được gán vai trò GroupLeader mà không cần phải gọi phương thức AssignRole sau đó.
         /// Factory Method dành riêng cho việc ghi đè vai trò của chủ sở hữu khi tạo thành viên mới. Chủ sở hữu sẽ luôn có vai trò GroupLeader. 
         /// </summary>
         public static WorkspaceMember CreateAsOwner(int workspaceId, int ownerId)

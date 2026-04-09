@@ -18,8 +18,6 @@ namespace server.Controllers
         [HttpPost("tasks/{taskId:int}/assignees")]
         public async Task<IActionResult> Assign(int taskId, [FromBody] List<int> userIds)
         {
-            if (!this.TryGetUserId(out var currentUserId))
-                return this.FailUnauthorized();
 
             var result = await _service.AssignTaskToMultipleUsersAsync(taskId, userIds);
             return FromApiResult(result);
@@ -28,8 +26,6 @@ namespace server.Controllers
         [HttpDelete("tasks/{taskId:int}/assignees/{userId:int}")]
         public async Task<IActionResult> Unassign(int taskId, int userId)
         {
-            if (!this.TryGetUserId(out var currentUserId))
-                return this.FailUnauthorized();
 
             var result = await _service.UnassignTaskAsync(taskId, userId);
             return FromApiResult(result);
@@ -38,8 +34,6 @@ namespace server.Controllers
         [HttpDelete("tasks/{taskId:int}/assignees")]
         public async Task<IActionResult> UnassignAll(int taskId)
         {
-            if (!this.TryGetUserId(out var currentUserId))
-                return this.FailUnauthorized();
 
             var result = await _service.UnassignTaskFromAllAsync(taskId);
             return FromApiResult(result);

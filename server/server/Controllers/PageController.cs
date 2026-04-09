@@ -1,11 +1,13 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Service.Interfaces;
+using server.Service.Models;
 using server.Service.Models.Page;
 
 namespace server.Controllers
 {
     [Authorize]
+    [ApiController]
     [Route("api/pages")]
     public class PageController : BaseController
     {
@@ -17,43 +19,50 @@ namespace server.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create([FromBody] AddPageModel model)
+        public async Task<IActionResult> Create([FromBody] AddPageModel model, CancellationToken ct)
         {
-            if (!this.TryGetUserId(out var userId))
-                return this.FailUnauthorized();
-
-            var result = await _pageService.CreatePageAsync(model, userId);
+            var result = await _pageService.CreatePageAsync(model, ct);
             return FromApiResult(result, StatusCodes.Status201Created);
         }
 
-        [HttpPut("{pageId:int}")] 
-        public async Task<IActionResult> Update([FromBody] UpdatePageModel model)
+        [HttpPut("{pageId:int}")]
+        public async Task<IActionResult> Update(int pageId, [FromBody] UpdatePageModel model, CancellationToken ct)
         {
-            var result = await _pageService.UpdatePageAsync(model);
+            var result = await _pageService.UpdatePageAsync(pageId, model, ct);
             return FromApiResult(result);
         }
 
         [HttpDelete("{pageId:int}")]
-        public async Task<IActionResult> Delete(int pageId)
+        public async Task<IActionResult> Delete(int pageId, CancellationToken ct)
         {
-            var result = await _pageService.DeletePageAsync(pageId);
+            var result = await _pageService.DeletePageAsync(pageId, ct);
             return FromApiResult(result);
         }
 
         [HttpGet("{pageId:int}")]
-        public async Task<IActionResult> GetById(int pageId)
+        public async Task<IActionResult> GetById(int pageId, CancellationToken ct)
         {
-            var result = await _pageService.GetPageByIdAsync(pageId);
+            var result = await _pageService.GetPageByIdAsync(pageId, ct);
             return FromApiResult(result);
         }
 
         [HttpGet("workspace/{workspaceId:int}")]
-        public async Task<IActionResult> GetByWorkspace(int workspaceId, [FromQuery] string? q = null)
+        public async Task<IActionResult> GetByWorkspace(
+            int workspaceId,
+            [FromQuery] string? q,
+            [FromQuery] int pageNumber = 1,
+            [FromQuery] int pageSize = 10,
+            CancellationToken ct = default)
         {
-            var keyword = q ?? string.Empty;
-            var result = string.IsNullOrEmpty(keyword)
-                ? await _pageService.GetPagesByWorkspaceAsync(workspaceId)
-                : await _pageService.SearchPagesAsync(workspaceId, keyword);
+            var paging = new PagingRequest
+            {
+                PageNumber = pageNumber,
+                PageSize = pageSize
+            };
+
+            var result = string.IsNullOrWhiteSpace(q)
+                ? await _pageService.GetPagesByWorkspaceAsync(workspaceId, paging, ct)
+                : await _pageService.SearchPagesAsync(workspaceId, q, paging, ct);
 
             return FromApiResult(result);
         }

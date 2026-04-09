@@ -18,8 +18,4 @@
 	  <ProjectReference Include="..\server.Service\server.Service.csproj" />
 	</ItemGroup>
 
-	<ItemGroup>
-	  <Folder Include="Infrastructure\Authentication\" />
-	</ItemGroup>
-
 </Project>
