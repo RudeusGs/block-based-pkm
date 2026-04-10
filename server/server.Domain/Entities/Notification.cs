@@ -1,3 +1,4 @@
+using server.Domain.Base;
 using server.Domain.Enums;
 using System.ComponentModel.DataAnnotations.Schema;
 

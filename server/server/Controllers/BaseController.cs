@@ -1,5 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using server.Service.Models;
+using System.Security.Claims;
 
 namespace server.Controllers
 {
@@ -32,6 +33,23 @@ namespace server.Controllers
         /// </summary>
         protected string TraceId =>
             HttpContext?.TraceIdentifier ?? Guid.NewGuid().ToString("N");
+
+        /// <summary>
+        /// Lấy ID của người dùng hiện tại từ token. Trả về null nếu không tồn tại.
+        /// </summary>
+        protected int? CurrentUserId
+        {
+            get
+            {
+                var userIdStr = User.FindFirstValue(System.Security.Claims.ClaimTypes.NameIdentifier);
+                return int.TryParse(userIdStr, out int userId) ? userId : null;
+            }
+        }
+
+        /// <summary>
+        /// Lấy tên của người dùng hiện tại từ token.
+        /// </summary>
+        protected string CurrentUserName => User.FindFirstValue(System.Security.Claims.ClaimTypes.Name) ?? "Unknown User";
 
         /// <summary>
         /// Trả về response thành công theo chuẩn ApiResult.

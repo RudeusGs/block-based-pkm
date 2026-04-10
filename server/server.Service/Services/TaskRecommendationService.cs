@@ -14,22 +14,32 @@ namespace server.Service.Services
     {
         private readonly IUserTaskPreferenceService _preferenceService;
         private readonly IRealtimeNotifier _notifier;
+        private readonly server.Infrastructure.Cache.IRedisCacheService _redisCacheService;
 
         public TaskRecommendationService(
             DataContext dataContext,
             IUserService userService,
             IUserTaskPreferenceService preferenceService,
-            IRealtimeNotifier notifier)
+            IRealtimeNotifier notifier,
+            server.Infrastructure.Cache.IRedisCacheService redisCacheService)
             : base(dataContext, userService)
         {
             _preferenceService = preferenceService;
             _notifier = notifier;
+            _redisCacheService = redisCacheService;
         }
 
         public async Task<ApiResult> GenerateRecommendationsAsync(int userId, int workspaceId)
         {
             try
             {
+                string cacheKey = $"recommendation:user:{userId}:workspace:{workspaceId}";
+                var cachedRecs = await _redisCacheService.GetAsync<List<TaskRecommendation>>(cacheKey);
+                if (cachedRecs != null && cachedRecs.Any())
+                {
+                    return ApiResult.Success(cachedRecs);
+                }
+
                 // 1. Kiểm tra cấu hình gợi ý của User
                 var prefResult = await _preferenceService.GetPreferenceAsync(userId, workspaceId);
                 if (!prefResult.IsSuccess || prefResult.Data is not UserTaskPreference pref)
@@ -155,6 +165,9 @@ namespace server.Service.Services
                 {
                     await SaveChangesAsync();
                     
+                    // Ghi đè vào Redis Cache (TTL = 1 hour)
+                    await _redisCacheService.SetAsync(cacheKey, recommendations, TimeSpan.FromHours(1));
+
                     // Gửi thông báo thời gian thực ngay khi có gợi ý mới
                     await ServiceHelper.SafeNotifyAsync(
                         _notifier,
@@ -203,6 +216,10 @@ namespace server.Service.Services
 
                 rec.Accept();
                 await SaveChangesAsync();
+
+                // Xóa Cache để lần sau hệ thống tự động sinh Task mới
+                await _redisCacheService.RemoveAsync($"recommendation:user:{rec.UserId}:workspace:{rec.WorkspaceId}");
+
                 return ApiResult.Success(rec);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
@@ -218,6 +235,9 @@ namespace server.Service.Services
 
                 rec.Reject();
                 await SaveChangesAsync();
+
+                await _redisCacheService.RemoveAsync($"recommendation:user:{rec.UserId}:workspace:{rec.WorkspaceId}");
+
                 return ApiResult.Success(rec);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
@@ -236,6 +256,9 @@ namespace server.Service.Services
 
                 rec.MarkCompleted();
                 await SaveChangesAsync();
+
+                await _redisCacheService.RemoveAsync($"recommendation:user:{rec.UserId}:workspace:{rec.WorkspaceId}");
+
                 return ApiResult.Success(rec);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
