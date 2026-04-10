@@ -16,18 +16,21 @@ namespace server.Service.Services
         private readonly IRealtimeNotifier _notifier;
         private readonly IPermissionService _permissionService;
         private readonly IActivityLogService _activityLogService;
+        private readonly INotificationService _notificationService;
 
         public TaskCommentService(
             DataContext dataContext,
             IUserService userService,
             IRealtimeNotifier notifier,
             IPermissionService permissionService,
-            IActivityLogService activityLogService
+            IActivityLogService activityLogService,
+            INotificationService notificationService
         ) : base(dataContext, userService)
         {
             _notifier = notifier;
             _permissionService = permissionService;
             _activityLogService = activityLogService;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResult> AddCommentAsync(AddCommentModel model, CancellationToken ct = default)
@@ -56,6 +59,44 @@ namespace server.Service.Services
                 await SaveChangesAsync(ct);
 
                 await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Create", "TaskComment", comment.Id);
+
+                if (parent != null)
+                {
+                    if (parent.UserId != userId)
+                    {
+                        await _notificationService.PushNotificationAsync(
+                            parent.UserId,
+                            ctx.WorkspaceId,
+                            server.Domain.Enums.NotificationType.TaskMentioned,
+                            "Có người trả lời bình luận",
+                            "Ai đó đã trả lời bình luận của bạn trên một công việc.",
+                            comment.Id.ToString(),
+                            "TaskComment");
+                    }
+                }
+                else
+                {
+                    var assignees = await _dataContext.Set<TaskAssignee>()
+                        .AsNoTracking()
+                        .Where(a => a.TaskId == model.TaskId)
+                        .Select(a => a.UserId)
+                        .ToListAsync(ct);
+
+                    foreach (var assigneeId in assignees)
+                    {
+                        if (assigneeId != userId)
+                        {
+                            await _notificationService.PushNotificationAsync(
+                                assigneeId,
+                                ctx.WorkspaceId,
+                                server.Domain.Enums.NotificationType.TaskMentioned,
+                                "Bình luận mới",
+                                "Có bình luận mới trên công việc bạn đang theo dõi.",
+                                comment.TaskId.ToString(),
+                                "WorkTask");
+                        }
+                    }
+                }
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, ctx.WorkspaceId, "TaskCommentAdded", new
                 {

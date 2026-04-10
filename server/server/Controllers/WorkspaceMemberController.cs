@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Domain.Enums;
 using server.Service.Interfaces;
@@ -55,6 +55,17 @@ namespace server.Controllers
         public async Task<IActionResult> UpdateRole(int workspaceId, int userId, [FromBody] RoomRole role, CancellationToken ct)
         {
             var result = await _workspaceMemberService.UpdateMemberRoleAsync(workspaceId, userId, role, ct);
+            return FromApiResult(result);
+        }
+
+        /// <summary>
+        /// Tự rời khỏi workspace
+        /// </summary>
+        [HttpDelete("{workspaceId:int}/leave")]
+        public async Task<IActionResult> LeaveWorkspace(int workspaceId, CancellationToken ct)
+        {
+            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
+            var result = await _workspaceMemberService.RemoveMemberAsync(workspaceId, userId, ct);
             return FromApiResult(result);
         }
     }
