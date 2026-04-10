@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection;
 using server.Service.Common.IServices;
 using server.Service.Common.Services;
 using server.Service.Interfaces;
@@ -36,6 +36,11 @@ namespace server.Service.Configurations
             services.AddScoped<ITaskAssigneeService, TaskAssigneeService>();
             services.AddScoped<ITaskCommentService, TaskCommentService>();
             services.AddScoped<IPermissionService, PermissionService>();
+            services.AddScoped<IActivityLogService, ActivityLogService>();
+            services.AddScoped<ITaskPerformanceMetricService, TaskPerformanceMetricService>();
+            services.AddScoped<IUserTaskHistoryService, UserTaskHistoryService>();
+            services.AddScoped<IUserTaskPreferenceService, UserTaskPreferenceService>();
+            services.AddScoped<ITaskRecommendationService, TaskRecommendationService>();
             #endregion
 
             return services;

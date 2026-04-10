@@ -137,6 +137,39 @@ namespace server.Domain.Entities
             MarkUpdated();
         }
 
+        public void UpdateRecommendationInterval(int intervalMinutes)
+        {
+            if (intervalMinutes <= 0) throw new DomainException("Interval must be > 0.");
+            RecommendationIntervalMinutes = intervalMinutes;
+            MarkUpdated();
+        }
+
+        public void UpdateMaxRecommendations(int maxCount)
+        {
+            if (maxCount <= 0) throw new DomainException("Max count must be > 0.");
+            MaxRecommendationsPerSession = maxCount;
+            MarkUpdated();
+        }
+
+        public void UpdateMinPriority(PriorityWorkTask minPriority)
+        {
+            MinPriorityForRecommendation = minPriority;
+            MarkUpdated();
+        }
+
+        public void ResetToDefault()
+        {
+            WorkDayStartHour = 8;
+            WorkDayEndHour = 18;
+            MaxRecommendationsPerSession = 3;
+            RecommendationSensitivity = 50;
+            RecommendationIntervalMinutes = 30;
+            EnableAutoRecommendation = true;
+            MinPriorityForRecommendation = PriorityWorkTask.Medium;
+            PreferredDaysOfWeek = JsonSerializer.Serialize(new[] { 1, 2, 3, 4, 5 });
+            MarkUpdated();
+        }
+
         /// <summary>
         /// Parse JSON → List<int>
         /// </summary>

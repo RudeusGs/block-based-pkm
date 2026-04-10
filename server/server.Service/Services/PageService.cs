@@ -13,14 +13,17 @@ namespace server.Service.Services
     public class PageService : BaseService, IPageService
     {
         private readonly IPermissionService _permissionService;
+        private readonly IActivityLogService _activityLogService;
 
         public PageService(
             DataContext dataContext,
             IUserService userService,
-            IPermissionService permissionService
+            IPermissionService permissionService,
+            IActivityLogService activityLogService
         ) : base(dataContext, userService)
         {
             _permissionService = permissionService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<ApiResult> CreatePageAsync(AddPageModel model, CancellationToken ct = default)
@@ -57,6 +60,8 @@ namespace server.Service.Services
                 _dataContext.Set<Page>().Add(page);
                 await SaveChangesAsync(ct);
 
+                await _activityLogService.LogActivityAsync(model.WorkspaceId, userId, "Create", "Page", page.Id);
+
                 return ApiResult.Success(page, "Tạo trang thành công");
             }
             catch (DomainException ex) { return ApiResult.Fail(ex.Message, "VALIDATION_ERROR"); }
@@ -92,6 +97,8 @@ namespace server.Service.Services
                     page.UpdateAppearance(model.Icon, model.CoverImage, userId);
 
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(page.WorkspaceId, userId, "Update", "Page", page.Id);
 
                 return ApiResult.Success(page, "Cập nhật thành công");
             }
@@ -152,6 +159,8 @@ namespace server.Service.Services
                 page.Archive(userId);
 
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(page.WorkspaceId, userId, "Archive", "Page", page.Id);
 
                 return ApiResult.Success(new { ArchivedCount = allDescendantIds.Count + 1 }, "Đã archive page và toàn bộ con");
             }

@@ -14,16 +14,22 @@ namespace server.Service.Services
     {
         private readonly IRealtimeNotifier _notifier;
         private readonly IPermissionService _permissionService;
+        private readonly ITaskPerformanceMetricService _taskPerformanceMetricService;
+        private readonly IActivityLogService _activityLogService;
 
         public TaskAssigneeService(
             DataContext dataContext,
             IUserService userService,
             IRealtimeNotifier notifier,
-            IPermissionService permissionService
+            IPermissionService permissionService,
+            ITaskPerformanceMetricService taskPerformanceMetricService,
+            IActivityLogService activityLogService
         ) : base(dataContext, userService)
         {
             _notifier = notifier;
             _permissionService = permissionService;
+            _taskPerformanceMetricService = taskPerformanceMetricService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<ApiResult> AssignTaskAsync(int taskId, int userId, CancellationToken ct = default)
@@ -55,6 +61,10 @@ namespace server.Service.Services
                 var assignee = new TaskAssignee(taskId, userId);
                 _dataContext.Set<TaskAssignee>().Add(assignee);
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id);
+
+                await _taskPerformanceMetricService.CreateMetricAsync(taskId, userId, task!.WorkspaceId);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task.WorkspaceId, "TaskAssigneeAdded",
                     new { TaskId = taskId, UserId = userId });
@@ -108,9 +118,15 @@ namespace server.Service.Services
 
                 if (toAdd.Any())
                 {
-                    var assignees = toAdd.Select(uid => new TaskAssignee(taskId, uid));
+                    var assignees = toAdd.Select(uid => new TaskAssignee(taskId, uid)).ToList();
                     _dataContext.Set<TaskAssignee>().AddRange(assignees);
                     await SaveChangesAsync(ct);
+
+                    foreach (var assignee in assignees)
+                    {
+                        await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id);
+                        await _taskPerformanceMetricService.CreateMetricAsync(taskId, assignee.UserId, task.WorkspaceId);
+                    }
 
                     await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneesAdded",
                         new { TaskId = taskId, UserIds = toAdd });
@@ -149,6 +165,8 @@ namespace server.Service.Services
 
                 _dataContext.Set<TaskAssignee>().Remove(entity);
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Unassign", "TaskAssignee", entity.Id);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneeRemoved",
                     new { TaskId = taskId, UserId = userId });
@@ -227,8 +245,14 @@ namespace server.Service.Services
                     .Where(a => a.TaskId == taskId)
                     .ToListAsync(ct);
 
+                var entityIds = list.Select(a => a.Id).ToList();
                 _dataContext.Set<TaskAssignee>().RemoveRange(list);
                 await SaveChangesAsync(ct);
+
+                foreach (var id in entityIds)
+                {
+                    await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Unassign", "TaskAssignee", id);
+                }
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneesCleared",
                     new { TaskId = taskId });
@@ -368,6 +392,8 @@ namespace server.Service.Services
                 }
 
                 await SaveChangesAsync(ct);
+
+                await _taskPerformanceMetricService.CreateMetricAsync(taskId, newUserId, task!.WorkspaceId);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskReassigned",
                     new { TaskId = taskId, OldUserId = oldUserId, NewUserId = newUserId });

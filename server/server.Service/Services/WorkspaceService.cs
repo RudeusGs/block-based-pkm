@@ -13,14 +13,17 @@ namespace server.Service.Services
     public class WorkspaceService : BaseService, IWorkspaceService
     {
         private readonly IPermissionService _permissionService;
+        private readonly IActivityLogService _activityLogService;
 
         public WorkspaceService(
             DataContext dataContext, 
             IUserService userService,
-            IPermissionService permissionService
+            IPermissionService permissionService,
+            IActivityLogService activityLogService
         ) : base(dataContext, userService)
         {
             _permissionService = permissionService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<ApiResult> CreateWorkspaceAsync(AddWorkspaceModel model, CancellationToken ct = default)
@@ -39,6 +42,9 @@ namespace server.Service.Services
                 _dataContext.Set<WorkspaceMember>().Add(member);
 
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(workspace.Id, userId, "Create", "Workspace", workspace.Id);
+
                 await transaction.CommitAsync(ct);
 
                 return ApiResult.Success(workspace, "Tạo workspace thành công");
@@ -78,6 +84,8 @@ namespace server.Service.Services
                 workspace.UpdateInformation(model.Name!, model.Description);
                 await SaveChangesAsync(ct);
 
+                await _activityLogService.LogActivityAsync(workspace.Id, userId, "Update", "Workspace", workspace.Id);
+
                 return ApiResult.Success(workspace, "Cập nhật thành công");
             }
             catch (DomainException ex)
@@ -113,6 +121,9 @@ namespace server.Service.Services
                 workspace.SoftDelete();
 
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(workspaceId, userId, "Delete", "Workspace", workspace.Id);
+
                 await transaction.CommitAsync(ct);
 
                 return ApiResult.Success(null, "Đã xóa Workspace");
