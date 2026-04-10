@@ -12,6 +12,7 @@ namespace server.Infrastructure.Realtime
         {
             services.AddSingleton<IUserIdProvider, NameIdentifierUserIdProvider>();
             services.AddSingleton<IRealtimeNotifier, RealtimeNotifier>();
+            services.AddSingleton<IPresenceService, PresenceService>();
             return services;
         }
     }

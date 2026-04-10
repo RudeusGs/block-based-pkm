@@ -37,7 +37,7 @@ namespace server.Service.Services
                 var totalCount = await query.CountAsync();
 
                 var notifications = await query
-                    .OrderByDescending(n => n.CreatedAtUtc)
+                    .OrderByDescending(n => n.CreatedDate)
                     .Skip((pageIndex - 1) * pageSize)
                     .Take(pageSize)
                     .ToListAsync();

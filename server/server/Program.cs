@@ -21,8 +21,7 @@ namespace server
             // Custom DI
             builder.Services.AddInfrastructureServices(builder.Configuration);
             builder.Services.AddApplicationServices();
-            // SignalR
-            builder.Services.AddSignalR();
+            
             // Build App
             var app = builder.Build();
 
