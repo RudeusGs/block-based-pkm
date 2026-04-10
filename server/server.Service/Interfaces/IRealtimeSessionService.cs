@@ -10,7 +10,7 @@ namespace server.Service.Interfaces
         /// <summary>
         /// Tạo session khi user connect.
         /// </summary>
-        Task<ApiResult> CreateSessionAsync(int userId, int workspaceId, int? pageId = null);
+        Task<ApiResult> CreateSessionAsync(int userId, int workspaceId, string connectionId, int? pageId = null);
 
         /// <summary>
         /// Cập nhật session (LastPing).

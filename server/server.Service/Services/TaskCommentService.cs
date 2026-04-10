@@ -15,16 +15,19 @@ namespace server.Service.Services
     {
         private readonly IRealtimeNotifier _notifier;
         private readonly IPermissionService _permissionService;
+        private readonly IActivityLogService _activityLogService;
 
         public TaskCommentService(
             DataContext dataContext,
             IUserService userService,
             IRealtimeNotifier notifier,
-            IPermissionService permissionService
+            IPermissionService permissionService,
+            IActivityLogService activityLogService
         ) : base(dataContext, userService)
         {
             _notifier = notifier;
             _permissionService = permissionService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<ApiResult> AddCommentAsync(AddCommentModel model, CancellationToken ct = default)
@@ -51,6 +54,8 @@ namespace server.Service.Services
                 var comment = new TaskComment(model.TaskId, userId, model.Content, parent);
                 _dataContext.Set<TaskComment>().Add(comment);
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Create", "TaskComment", comment.Id);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, ctx.WorkspaceId, "TaskCommentAdded", new
                 {
@@ -89,6 +94,8 @@ namespace server.Service.Services
                 comment.UpdateContent(model.Content, userId);
                 await SaveChangesAsync(ct);
 
+                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Update", "TaskComment", comment.Id);
+
                 await ServiceHelper.SafeNotifyAsync(_notifier, ctx.WorkspaceId, "TaskCommentUpdated", new
                 {
                     TaskId    = comment.TaskId,
@@ -126,6 +133,8 @@ namespace server.Service.Services
 
                 comment.SoftDelete(comment.UserId);
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Delete", "TaskComment", comment.Id);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, ctx.WorkspaceId, "TaskCommentDeleted", new
                 {

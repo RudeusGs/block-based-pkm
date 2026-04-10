@@ -15,16 +15,22 @@ namespace server.Service.Services
     {
         private readonly IRealtimeNotifier _notifier;
         private readonly IPermissionService _permissionService;
+        private readonly ITaskPerformanceMetricService _taskPerformanceMetricService;
+        private readonly IActivityLogService _activityLogService;
 
         public WorkTaskService(
             DataContext dataContext,
             IUserService userService,
             IRealtimeNotifier notifier,
-            IPermissionService permissionService
+            IPermissionService permissionService,
+            ITaskPerformanceMetricService taskPerformanceMetricService,
+            IActivityLogService activityLogService
         ) : base(dataContext, userService)
         {
             _notifier = notifier;
             _permissionService = permissionService;
+            _taskPerformanceMetricService = taskPerformanceMetricService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<ApiResult> CreateTaskAsync(AddWorkTaskModel model, CancellationToken ct = default)
@@ -63,6 +69,10 @@ namespace server.Service.Services
 
                 _dataContext.Set<WorkTask>().Add(task);
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Create", "WorkTask", task.Id);
+
+                await _taskPerformanceMetricService.CreateMetricAsync(task.Id, userId, task.WorkspaceId);
 
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
@@ -107,6 +117,8 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
+                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Update", "WorkTask", task.Id);
+
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
                     task.WorkspaceId,
@@ -147,6 +159,8 @@ namespace server.Service.Services
 
                 task.SoftDelete();
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Delete", "WorkTask", task.Id);
 
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
@@ -219,10 +233,27 @@ namespace server.Service.Services
             if (!await _permissionService.HasWorkspaceAccessAsync(task.WorkspaceId, userId, ct))
                 return ApiResult.Fail("Không có quyền", "FORBIDDEN");
 
-            if (status == StatusWorkTask.Done) task.Complete();
-            else task.ReOpen();
+            if (status == StatusWorkTask.Done)
+            {
+                task.Complete();
+                await _taskPerformanceMetricService.UpdateMetricOnCompletionAsync(
+                    new server.Service.Models.TaskPerformanceMetric.UpdateMetricOnCompletionModel
+                    {
+                        TaskId = taskId,
+                        UserId = userId,
+                        DurationMinutes = 0
+                    });
+            }
+            else
+            {
+                task.ReOpen();
+                await _taskPerformanceMetricService.UpdateMetricOnAbandonmentAsync(taskId, userId);
+            }
 
             await SaveChangesAsync(ct);
+
+            string action = status == StatusWorkTask.Done ? "Complete" : "Reopen";
+            await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, action, "WorkTask", task.Id);
 
             await ServiceHelper.SafeNotifyAsync(
                 _notifier,

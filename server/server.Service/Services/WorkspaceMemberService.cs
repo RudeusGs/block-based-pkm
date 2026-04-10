@@ -14,14 +14,17 @@ namespace server.Service.Services
     public class WorkspaceMemberService : BaseService, IWorkspaceMemberService
     {
         private readonly IPermissionService _permissionService;
+        private readonly IActivityLogService _activityLogService;
 
         public WorkspaceMemberService(
             DataContext dataContext, 
             IUserService userService,
-            IPermissionService permissionService
+            IPermissionService permissionService,
+            IActivityLogService activityLogService
         ) : base(dataContext, userService)
         {
             _permissionService = permissionService;
+            _activityLogService = activityLogService;
         }
 
         public async Task<ApiResult> AddMemberAsync(AddWorkspaceMemberModel model, CancellationToken ct = default)
@@ -46,6 +49,9 @@ namespace server.Service.Services
                 var member = new WorkspaceMember(model.WorkspaceId, user.Id);
                 _dataContext.Set<WorkspaceMember>().Add(member);
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(model.WorkspaceId, currentUserId, "Create", "WorkspaceMember", member.Id);
+
                 return ApiResult.Success(null, "Thêm thành viên thành công");
             }
             catch (DomainException ex)
@@ -119,6 +125,8 @@ namespace server.Service.Services
                 _dataContext.Set<WorkspaceMember>().Remove(member);
                 await SaveChangesAsync(ct);
 
+                await _activityLogService.LogActivityAsync(workspaceId, currentUserId, "Delete", "WorkspaceMember", member.Id);
+
                 return ApiResult.Success(null, "Xóa thành viên thành công");
             }
             catch (OperationCanceledException)
@@ -148,6 +156,8 @@ namespace server.Service.Services
                 member.AssignRole(role);
 
                 await SaveChangesAsync(ct);
+
+                await _activityLogService.LogActivityAsync(workspaceId, currentUserId, "ChangePermissions", "WorkspaceMember", member.Id);
 
                 return ApiResult.Success(null, "Cập nhật vai trò thành công");
             }
