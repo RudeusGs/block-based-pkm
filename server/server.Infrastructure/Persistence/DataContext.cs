@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
@@ -74,6 +74,11 @@ namespace server.Infrastructure.Persistence
         /// Chỉ số hiệu suất của task (completion rate, avg duration, optimal time, ...).
         /// </summary>
         public DbSet<TaskPerformanceMetric> TaskPerformanceMetrics { get; set; }
+
+        /// <summary>
+        /// Thông báo cho người dùng.
+        /// </summary>
+        public DbSet<Notification> Notifications { get; set; }
     }
 }
 

@@ -41,6 +41,7 @@ namespace server.Service.Configurations
             services.AddScoped<IUserTaskHistoryService, UserTaskHistoryService>();
             services.AddScoped<IUserTaskPreferenceService, UserTaskPreferenceService>();
             services.AddScoped<ITaskRecommendationService, TaskRecommendationService>();
+            services.AddScoped<INotificationService, NotificationService>();
             #endregion
 
             return services;

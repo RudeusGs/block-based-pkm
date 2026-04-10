@@ -16,6 +16,7 @@ namespace server.Service.Services
         private readonly IPermissionService _permissionService;
         private readonly ITaskPerformanceMetricService _taskPerformanceMetricService;
         private readonly IActivityLogService _activityLogService;
+        private readonly INotificationService _notificationService;
 
         public TaskAssigneeService(
             DataContext dataContext,
@@ -23,13 +24,15 @@ namespace server.Service.Services
             IRealtimeNotifier notifier,
             IPermissionService permissionService,
             ITaskPerformanceMetricService taskPerformanceMetricService,
-            IActivityLogService activityLogService
+            IActivityLogService activityLogService,
+            INotificationService notificationService
         ) : base(dataContext, userService)
         {
             _notifier = notifier;
             _permissionService = permissionService;
             _taskPerformanceMetricService = taskPerformanceMetricService;
             _activityLogService = activityLogService;
+            _notificationService = notificationService;
         }
 
         public async Task<ApiResult> AssignTaskAsync(int taskId, int userId, CancellationToken ct = default)
@@ -65,6 +68,15 @@ namespace server.Service.Services
                 await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id);
 
                 await _taskPerformanceMetricService.CreateMetricAsync(taskId, userId, task!.WorkspaceId);
+
+                await _notificationService.PushNotificationAsync(
+                    userId, 
+                    task.WorkspaceId, 
+                    server.Domain.Enums.NotificationType.TaskAssigned, 
+                    "Bạn được phân công công việc", 
+                    $"Bạn đã được giao một công việc mới: {task.Title}", 
+                    taskId.ToString(), 
+                    "WorkTask");
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task.WorkspaceId, "TaskAssigneeAdded",
                     new { TaskId = taskId, UserId = userId });
@@ -126,6 +138,15 @@ namespace server.Service.Services
                     {
                         await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id);
                         await _taskPerformanceMetricService.CreateMetricAsync(taskId, assignee.UserId, task.WorkspaceId);
+                        
+                        await _notificationService.PushNotificationAsync(
+                            assignee.UserId, 
+                            task.WorkspaceId, 
+                            server.Domain.Enums.NotificationType.TaskAssigned, 
+                            "Bạn được phân công công việc", 
+                            $"Bạn đã được giao một công việc mới: {task.Title}", 
+                            taskId.ToString(), 
+                            "WorkTask");
                     }
 
                     await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneesAdded",
