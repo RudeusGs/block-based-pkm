@@ -1,8 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using server.Domain.Base;
 using server.Domain.Entities;
+using server.Domain.Enums;
 using server.Infrastructure.Persistence;
-using server.Infrastructure.Realtime.Interfaces;
+using server.Domain.Realtime;
 using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
@@ -58,7 +59,7 @@ namespace server.Service.Services
                 _dataContext.Set<TaskComment>().Add(comment);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Create", "TaskComment", comment.Id);
+                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Create", "TaskComment", comment.Id, null, ct);
 
                 if (parent != null)
                 {
@@ -67,11 +68,12 @@ namespace server.Service.Services
                         await _notificationService.PushNotificationAsync(
                             parent.UserId,
                             ctx.WorkspaceId,
-                            server.Domain.Enums.NotificationType.TaskMentioned,
+                            NotificationType.TaskMentioned,
                             "Có người trả lời bình luận",
                             "Ai đó đã trả lời bình luận của bạn trên một công việc.",
                             comment.Id.ToString(),
-                            "TaskComment");
+                            "TaskComment",
+                            ct);
                     }
                 }
                 else
@@ -89,11 +91,12 @@ namespace server.Service.Services
                             await _notificationService.PushNotificationAsync(
                                 assigneeId,
                                 ctx.WorkspaceId,
-                                server.Domain.Enums.NotificationType.TaskMentioned,
+                                NotificationType.TaskMentioned,
                                 "Bình luận mới",
                                 "Có bình luận mới trên công việc bạn đang theo dõi.",
                                 comment.TaskId.ToString(),
-                                "WorkTask");
+                                "WorkTask",
+                                ct);
                         }
                     }
                 }
@@ -135,7 +138,7 @@ namespace server.Service.Services
                 comment.UpdateContent(model.Content, userId);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Update", "TaskComment", comment.Id);
+                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Update", "TaskComment", comment.Id, null, ct);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, ctx.WorkspaceId, "TaskCommentUpdated", new
                 {
@@ -175,7 +178,7 @@ namespace server.Service.Services
                 comment.SoftDelete(comment.UserId);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Delete", "TaskComment", comment.Id);
+                await _activityLogService.LogActivityAsync(ctx.WorkspaceId, userId, "Delete", "TaskComment", comment.Id, null, ct);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, ctx.WorkspaceId, "TaskCommentDeleted", new
                 {

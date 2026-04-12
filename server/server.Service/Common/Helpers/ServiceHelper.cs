@@ -1,4 +1,4 @@
-﻿using server.Infrastructure.Realtime.Interfaces;
+﻿using server.Domain.Realtime;
 using server.Service.Common.IServices;
 
 namespace server.Service.Common.Helpers

@@ -16,7 +16,7 @@ namespace server.Service.Services
         {
         }
 
-        public async Task<ApiResult> LogActivityAsync(int workspaceId, int userId, string action, string entityType, int entityId, string? metadata = null)
+        public async Task<ApiResult> LogActivityAsync(int workspaceId, int userId, string action, string entityType, int entityId, string? metadata = null, CancellationToken ct = default)
         {
             try
             {
@@ -30,7 +30,7 @@ namespace server.Service.Services
 
                 var log = new ActivityLog(workspaceId, userId, actionEnum, entityTypeEnum, entityId, description, metadata, null);
                 _dataContext.ActivityLogs.Add(log);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(log);
             }
@@ -38,14 +38,14 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetWorkspaceActivityLogsAsync(int workspaceId)
+        public async Task<ApiResult> GetWorkspaceActivityLogsAsync(int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var logs = await _dataContext.ActivityLogs
                     .Where(l => l.WorkspaceId == workspaceId)
                     .OrderByDescending(l => l.OccurredAt)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(logs);
             }
@@ -53,14 +53,14 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetUserActivityLogsAsync(int userId, int workspaceId)
+        public async Task<ApiResult> GetUserActivityLogsAsync(int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var logs = await _dataContext.ActivityLogs
                     .Where(l => l.UserId == userId && l.WorkspaceId == workspaceId)
                     .OrderByDescending(l => l.OccurredAt)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(logs);
             }
@@ -68,7 +68,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetEntityActivityLogsAsync(string entityType, int entityId)
+        public async Task<ApiResult> GetEntityActivityLogsAsync(string entityType, int entityId, CancellationToken ct = default)
         {
             try
             {
@@ -78,7 +78,7 @@ namespace server.Service.Services
                 var logs = await _dataContext.ActivityLogs
                     .Where(l => l.EntityType == typeEnum && l.EntityId == entityId)
                     .OrderByDescending(l => l.OccurredAt)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(logs);
             }
@@ -86,7 +86,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetActivityLogsByActionAsync(int workspaceId, string action)
+        public async Task<ApiResult> GetActivityLogsByActionAsync(int workspaceId, string action, CancellationToken ct = default)
         {
             try
             {
@@ -96,7 +96,7 @@ namespace server.Service.Services
                 var logs = await _dataContext.ActivityLogs
                     .Where(l => l.WorkspaceId == workspaceId && l.Action == actionEnum)
                     .OrderByDescending(l => l.OccurredAt)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(logs);
             }
@@ -104,14 +104,14 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetActivityLogsByDateRangeAsync(GetActivityLogDateRangeModel model)
+        public async Task<ApiResult> GetActivityLogsByDateRangeAsync(GetActivityLogDateRangeModel model, CancellationToken ct = default)
         {
             try
             {
                 var logs = await _dataContext.ActivityLogs
                     .Where(l => l.WorkspaceId == model.WorkspaceId && l.OccurredAt >= model.StartDate && l.OccurredAt <= model.EndDate)
                     .OrderByDescending(l => l.OccurredAt)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(logs);
             }
@@ -119,7 +119,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetRecentActivityLogsAsync(int workspaceId, int limit = 10)
+        public async Task<ApiResult> GetRecentActivityLogsAsync(int workspaceId, int limit = 10, CancellationToken ct = default)
         {
             try
             {
@@ -127,7 +127,7 @@ namespace server.Service.Services
                     .Where(l => l.WorkspaceId == workspaceId)
                     .OrderByDescending(l => l.OccurredAt)
                     .Take(limit)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(logs);
             }
@@ -135,32 +135,32 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> DeleteActivityLogAsync(int logId)
+        public async Task<ApiResult> DeleteActivityLogAsync(int logId, CancellationToken ct = default)
         {
             try
             {
-                var log = await _dataContext.ActivityLogs.FindAsync(logId);
+                var log = await _dataContext.ActivityLogs.FindAsync(new object[] { logId }, ct);
                 if (log == null) return ApiResult.Fail("Log not found.");
 
                 _dataContext.ActivityLogs.Remove(log);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
                 return ApiResult.Success(true);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> DeleteOldActivityLogsAsync(int workspaceId, int daysOld)
+        public async Task<ApiResult> DeleteOldActivityLogsAsync(int workspaceId, int daysOld, CancellationToken ct = default)
         {
             try
             {
                 var cutoff = DateTime.UtcNow.AddDays(-daysOld);
                 var oldLogs = await _dataContext.ActivityLogs
                     .Where(l => l.WorkspaceId == workspaceId && l.OccurredAt < cutoff)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 _dataContext.ActivityLogs.RemoveRange(oldLogs);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(new { DeletedCount = oldLogs.Count });
             }
@@ -168,7 +168,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetActivityStatsAsync(int workspaceId)
+        public async Task<ApiResult> GetActivityStatsAsync(int workspaceId, CancellationToken ct = default)
         {
             try
             {
@@ -180,7 +180,7 @@ namespace server.Service.Services
                         Action = g.Key.ToString(),
                         Count = g.Count()
                     })
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(stats);
             }

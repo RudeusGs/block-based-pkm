@@ -16,19 +16,19 @@ namespace server.Service.Services
         {
         }
 
-        public async Task<ApiResult> CreatePreferenceAsync(int userId, int workspaceId)
+        public async Task<ApiResult> CreatePreferenceAsync(int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var existing = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (existing != null)
                     return ApiResult.Fail("Cấu hình đã tồn tại.");
 
                 var pref = new UserTaskPreference(userId, workspaceId);
                 _dataContext.UserTaskPreferences.Add(pref);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -36,19 +36,18 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetPreferenceAsync(int userId, int workspaceId)
+        public async Task<ApiResult> GetPreferenceAsync(int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null)
                 {
-                    // Tự động tạo mặc định nếu chưa có
                     pref = new UserTaskPreference(userId, workspaceId);
                     _dataContext.UserTaskPreferences.Add(pref);
-                    await SaveChangesAsync();
+                    await SaveChangesAsync(ct);
                 }
 
                 return ApiResult.Success(pref);
@@ -57,12 +56,12 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdatePreferenceAsync(int userId, int workspaceId, UpdateUserTaskPreferenceModel model)
+        public async Task<ApiResult> UpdatePreferenceAsync(int userId, int workspaceId, UpdateUserTaskPreferenceModel model, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
@@ -78,24 +77,24 @@ namespace server.Service.Services
                     pref.UpdateMinPriority(minPriority);
                 }
 
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
                 return ApiResult.Success(pref);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateWorkHoursAsync(UpdateWorkHoursModel model)
+        public async Task<ApiResult> UpdateWorkHoursAsync(UpdateWorkHoursModel model, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == model.UserId && p.WorkspaceId == model.WorkspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == model.UserId && p.WorkspaceId == model.WorkspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.UpdateWorkHours(model.StartHour, model.EndHour);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -103,17 +102,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdatePreferredDaysAsync(UpdatePreferredDaysModel model)
+        public async Task<ApiResult> UpdatePreferredDaysAsync(UpdatePreferredDaysModel model, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == model.UserId && p.WorkspaceId == model.WorkspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == model.UserId && p.WorkspaceId == model.WorkspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.SetPreferredDays(model.DaysOfWeek);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -121,17 +120,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateSensitivityAsync(int userId, int workspaceId, int sensitivity)
+        public async Task<ApiResult> UpdateSensitivityAsync(int userId, int workspaceId, int sensitivity, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.UpdateSensitivity(sensitivity);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -139,19 +138,19 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateMinPriorityAsync(int userId, int workspaceId, string minPriorityStr)
+        public async Task<ApiResult> UpdateMinPriorityAsync(int userId, int workspaceId, string minPriorityStr, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 if (Enum.TryParse<PriorityWorkTask>(minPriorityStr, true, out var minPriority))
                 {
                     pref.UpdateMinPriority(minPriority);
-                    await SaveChangesAsync();
+                    await SaveChangesAsync(ct);
                     return ApiResult.Success(pref);
                 }
 
@@ -161,17 +160,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateRecommendationIntervalAsync(int userId, int workspaceId, int intervalMinutes)
+        public async Task<ApiResult> UpdateRecommendationIntervalAsync(int userId, int workspaceId, int intervalMinutes, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.UpdateRecommendationInterval(intervalMinutes);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -179,17 +178,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> ToggleAutoRecommendationAsync(int userId, int workspaceId)
+        public async Task<ApiResult> ToggleAutoRecommendationAsync(int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.SetAutoRecommendation(!pref.EnableAutoRecommendation);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(new { Enabled = pref.EnableAutoRecommendation });
             }
@@ -197,17 +196,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateMaxRecommendationsAsync(int userId, int workspaceId, int maxCount)
+        public async Task<ApiResult> UpdateMaxRecommendationsAsync(int userId, int workspaceId, int maxCount, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.UpdateMaxRecommendations(maxCount);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -215,17 +214,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> ResetToDefaultAsync(int userId, int workspaceId)
+        public async Task<ApiResult> ResetToDefaultAsync(int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 if (pref == null) return ApiResult.Fail("Không tìm thấy cấu hình.");
 
                 pref.ResetToDefault();
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(pref);
             }
@@ -233,13 +232,13 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> IsAutoRecommendationEnabledAsync(int userId, int workspaceId)
+        public async Task<ApiResult> IsAutoRecommendationEnabledAsync(int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var pref = await _dataContext.UserTaskPreferences
                     .AsNoTracking()
-                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId);
+                    .FirstOrDefaultAsync(p => p.UserId == userId && p.WorkspaceId == workspaceId, ct);
 
                 bool isEnabled = pref?.EnableAutoRecommendation ?? false;
                 return ApiResult.Success(isEnabled);

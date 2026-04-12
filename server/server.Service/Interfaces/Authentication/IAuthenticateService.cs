@@ -1,23 +1,14 @@
 ﻿using server.Service.Models;
 using server.Service.Models.Authenticate;
 
-namespace server.Service.Interfaces
+namespace server.Service.Interfaces.Authentication
 {
     public interface IAuthenticateService
     {
-        /// <summary>
-        /// Đăng nhập người dùng.
-        /// </summary>
-        Task<ApiResult> Login(LoginModel loginModel);
+        Task<ApiResult> Login(LoginModel loginModel, CancellationToken ct = default);
 
-        /// <summary>
-        /// Đăng ký người dùng mới.
-        /// </summary>
-        Task<ApiResult> Register(RegisterModel registerModel);
+        Task<ApiResult> Register(RegisterModel registerModel, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy vai trò của người dùng.
-        /// </summary>
-        Task<ApiResult> GetRoleUser(int id); 
+        Task<ApiResult> GetRoleUser(int id, CancellationToken ct = default);
     }
 }

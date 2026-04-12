@@ -25,11 +25,10 @@ namespace server.Service.Services.Authentication
             _logger = logger;
         }
 
-        /// <summary>
-        /// Đảm bảo vai trò người dùng thường tồn tại, nếu không thì tạo mới.
-        /// </summary>
-        public async Task EnsureRegularRoleExistsAsync()
+        public async Task EnsureRegularRoleExistsAsync(CancellationToken ct = default)
         {
+            ct.ThrowIfCancellationRequested();
+
             if (!await _roleManager.RoleExistsAsync(RoleConstants.REGULAR_USER))
             {
                 var result = await _roleManager.CreateAsync(new IdentityRole<int>(RoleConstants.REGULAR_USER));
@@ -42,15 +41,12 @@ namespace server.Service.Services.Authentication
             }
         }
 
-        /// <summary>
-        /// Đảm bảo các vai trò hệ thống tồn tại (Admin, User...).
-        /// </summary>
-        public async Task EnsureRolesExistAsync()
+        public async Task EnsureRolesExistAsync(CancellationToken ct = default)
         {
-            // Ensure regular user role
-            await EnsureRegularRoleExistsAsync();
+            await EnsureRegularRoleExistsAsync(ct);
 
-            // Ensure admin role
+            ct.ThrowIfCancellationRequested();
+
             if (!await _roleManager.RoleExistsAsync(RoleConstants.ADMIN))
             {
                 var result = await _roleManager.CreateAsync(new IdentityRole<int>(RoleConstants.ADMIN));
@@ -63,11 +59,10 @@ namespace server.Service.Services.Authentication
             }
         }
 
-        /// <summary>
-        /// Gán vai trò người dùng thường cho người dùng.
-        /// </summary>
-        public async Task<(bool succeeded, List<string> errors)> AddToRegularRoleAsync(int userId)
+        public async Task<(bool succeeded, List<string> errors)> AddToRegularRoleAsync(int userId, CancellationToken ct = default)
         {
+            ct.ThrowIfCancellationRequested();
+
             var user = await _userManager.FindByIdAsync(userId.ToString());
             if (user == null)
                 return (false, new List<string> { "Người dùng không tồn tại." });

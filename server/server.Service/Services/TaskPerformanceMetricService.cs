@@ -16,18 +16,18 @@ namespace server.Service.Services
         {
         }
 
-        public async Task<ApiResult> CreateMetricAsync(int taskId, int userId, int workspaceId)
+        public async Task<ApiResult> CreateMetricAsync(int taskId, int userId, int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var metric = await _dataContext.TaskPerformanceMetrics
-                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId);
+                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId, ct);
 
                 if (metric == null)
                 {
                     metric = new TaskPerformanceMetric(taskId, userId, workspaceId);
                     _dataContext.TaskPerformanceMetrics.Add(metric);
-                    await SaveChangesAsync();
+                    await SaveChangesAsync(ct);
                 }
 
                 return ApiResult.Success(metric);
@@ -36,12 +36,12 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetMetricAsync(int taskId, int userId)
+        public async Task<ApiResult> GetMetricAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var metric = await _dataContext.TaskPerformanceMetrics
-                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId);
+                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId, ct);
 
                 if (metric == null)
                     return ApiResult.Fail("Metric not found.");
@@ -52,17 +52,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateMetricOnCompletionAsync(UpdateMetricOnCompletionModel model)
+        public async Task<ApiResult> UpdateMetricOnCompletionAsync(UpdateMetricOnCompletionModel model, CancellationToken ct = default)
         {
             try
             {
                 var metric = await _dataContext.TaskPerformanceMetrics
-                    .FirstOrDefaultAsync(m => m.TaskId == model.TaskId && m.UserId == model.UserId);
+                    .FirstOrDefaultAsync(m => m.TaskId == model.TaskId && m.UserId == model.UserId, ct);
 
                 if (metric != null)
                 {
                     metric.RecordCompletion(DateTime.UtcNow);
-                    await SaveChangesAsync();
+                    await SaveChangesAsync(ct);
                     return ApiResult.Success(metric);
                 }
 
@@ -72,17 +72,17 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> UpdateMetricOnAbandonmentAsync(int taskId, int userId)
+        public async Task<ApiResult> UpdateMetricOnAbandonmentAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var metric = await _dataContext.TaskPerformanceMetrics
-                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId);
+                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId, ct);
 
                 if (metric != null)
                 {
                     metric.RecordAbandonment();
-                    await SaveChangesAsync();
+                    await SaveChangesAsync(ct);
                     return ApiResult.Success(metric);
                 }
 
@@ -92,12 +92,12 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetCompletionRateAsync(int taskId, int userId)
+        public async Task<ApiResult> GetCompletionRateAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var metric = await _dataContext.TaskPerformanceMetrics
-                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId);
+                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId, ct);
 
                 if (metric == null)
                     return ApiResult.Success(0);
@@ -111,13 +111,13 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetAverageDurationAsync(int taskId, int userId)
+        public async Task<ApiResult> GetAverageDurationAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var histories = await _dataContext.UserTaskHistories
                     .Where(h => h.TaskId == taskId && h.UserId == userId && h.Status == StatusUserTaskHistory.Completed)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 if (!histories.Any())
                     return ApiResult.Success(0);
@@ -129,13 +129,13 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetOptimalCompletionHourAsync(int taskId, int userId)
+        public async Task<ApiResult> GetOptimalCompletionHourAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var completedHistories = await _dataContext.UserTaskHistories
                     .Where(h => h.TaskId == taskId && h.UserId == userId && h.Status == StatusUserTaskHistory.Completed && h.CompletedAt.HasValue)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 if (!completedHistories.Any())
                     return ApiResult.Success(null);
@@ -152,13 +152,13 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetOptimalDayOfWeekAsync(int taskId, int userId)
+        public async Task<ApiResult> GetOptimalDayOfWeekAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var completedHistories = await _dataContext.UserTaskHistories
                     .Where(h => h.TaskId == taskId && h.UserId == userId && h.Status == StatusUserTaskHistory.Completed && h.CompletedAt.HasValue)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 if (!completedHistories.Any())
                     return ApiResult.Success(null);
@@ -175,7 +175,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetCompletionTrendAsync(int taskId, int userId)
+        public async Task<ApiResult> GetCompletionTrendAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
@@ -188,7 +188,7 @@ namespace server.Service.Services
                         CompletedAt = h.CompletedAt,
                         DurationMinutes = h.DurationMinutes
                     })
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(histories);
             }
@@ -196,12 +196,12 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetDaysSinceLastCompletionAsync(int taskId, int userId)
+        public async Task<ApiResult> GetDaysSinceLastCompletionAsync(int taskId, int userId, CancellationToken ct = default)
         {
             try
             {
                 var metric = await _dataContext.TaskPerformanceMetrics
-                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId);
+                    .FirstOrDefaultAsync(m => m.TaskId == taskId && m.UserId == userId, ct);
 
                 if (metric == null || !metric.LastCompletedAt.HasValue)
                     return ApiResult.Success(null);
@@ -213,20 +213,20 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> RecalculateAllMetricsAsync(int workspaceId)
+        public async Task<ApiResult> RecalculateAllMetricsAsync(int workspaceId, CancellationToken ct = default)
         {
             try
             {
                 var histories = await _dataContext.UserTaskHistories
                     .Where(h => _dataContext.Tasks.Any(t => t.Id == h.TaskId && t.WorkspaceId == workspaceId))
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 var grouped = histories.GroupBy(h => new { h.TaskId, h.UserId });
-                
+
                 foreach (var group in grouped)
                 {
                     var metric = await _dataContext.TaskPerformanceMetrics
-                        .FirstOrDefaultAsync(m => m.TaskId == group.Key.TaskId && m.UserId == group.Key.UserId);
+                        .FirstOrDefaultAsync(m => m.TaskId == group.Key.TaskId && m.UserId == group.Key.UserId, ct);
 
                     if (metric == null)
                     {
@@ -235,20 +235,20 @@ namespace server.Service.Services
                     }
                 }
 
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
                 return ApiResult.Success(true);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetTopPerformingTasksAsync(int userId, int workspaceId, int limit = 10)
+        public async Task<ApiResult> GetTopPerformingTasksAsync(int userId, int workspaceId, int limit = 10, CancellationToken ct = default)
         {
             try
             {
                 var metrics = await _dataContext.TaskPerformanceMetrics
                     .Where(m => m.UserId == userId && m.WorkspaceId == workspaceId)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 var result = metrics
                     .Select(m => new
@@ -269,13 +269,13 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetLowPerformingTasksAsync(int userId, int workspaceId, int limit = 10)
+        public async Task<ApiResult> GetLowPerformingTasksAsync(int userId, int workspaceId, int limit = 10, CancellationToken ct = default)
         {
             try
             {
                 var metrics = await _dataContext.TaskPerformanceMetrics
                     .Where(m => m.UserId == userId && m.WorkspaceId == workspaceId)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 var result = metrics
                     .Select(m => new

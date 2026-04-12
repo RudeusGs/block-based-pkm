@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
 using server.Domain.Entities;
-using server.Service.Interfaces;
 using server.Service.Interfaces.Authentication;
 using server.Service.Models;
 using server.Service.Models.Authenticate;
@@ -33,13 +32,12 @@ namespace server.Service.Services.Authentication
             _logger = logger;
         }
 
-        /// <summary>
-        /// Đăng nhập người dùng.
-        /// </summary>
-        public async Task<ApiResult> Login(LoginModel model)
+        public async Task<ApiResult> Login(LoginModel model, CancellationToken ct = default)
         {
             try
             {
+                ct.ThrowIfCancellationRequested();
+
                 if (string.IsNullOrWhiteSpace(model.UserName) || string.IsNullOrWhiteSpace(model.Password))
                     return ApiResult.Fail("Tên đăng nhập hoặc mật khẩu không được để trống.", errorCode: "VALIDATION_ERROR");
 
@@ -65,13 +63,12 @@ namespace server.Service.Services.Authentication
             }
         }
 
-        /// <summary>
-        /// Đăng ký người dùng mới với vai trò người dùng thường.
-        /// </summary>
-        public async Task<ApiResult> Register(RegisterModel model)
+        public async Task<ApiResult> Register(RegisterModel model, CancellationToken ct = default)
         {
             try
             {
+                ct.ThrowIfCancellationRequested();
+
                 if (string.IsNullOrWhiteSpace(model.UserName) ||
                     string.IsNullOrWhiteSpace(model.Email) ||
                     string.IsNullOrWhiteSpace(model.Password))
@@ -103,8 +100,8 @@ namespace server.Service.Services.Authentication
 
                 try
                 {
-                    await _roleManagementService.EnsureRegularRoleExistsAsync();
-                    var (roleSucceeded, roleErrors) = await _roleManagementService.AddToRegularRoleAsync(user.Id);
+                    await _roleManagementService.EnsureRegularRoleExistsAsync(ct);
+                    var (roleSucceeded, roleErrors) = await _roleManagementService.AddToRegularRoleAsync(user.Id, ct);
                     if (!roleSucceeded)
                         return ApiResult.Fail("Gán vai trò người dùng thất bại.", errorCode: "ADD_ROLE_FAILED", errors: roleErrors);
                 }
@@ -132,13 +129,12 @@ namespace server.Service.Services.Authentication
             }
         }
 
-        /// <summary>
-        /// Lấy vai trò của người dùng.
-        /// </summary>
-        public async Task<ApiResult> GetRoleUser(int id)
+        public async Task<ApiResult> GetRoleUser(int id, CancellationToken ct = default)
         {
             try
             {
+                ct.ThrowIfCancellationRequested();
+
                 var user = await _userManager.FindByIdAsync(id.ToString());
                 if (user is null)
                     return ApiResult.Fail("Người dùng không tồn tại.", errorCode: "USER_NOT_FOUND");

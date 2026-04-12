@@ -43,7 +43,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(workspace.Id, userId, "Create", "Workspace", workspace.Id);
+                await _activityLogService.LogActivityAsync(workspace.Id, userId, "Create", "Workspace", workspace.Id, null, ct);
 
                 await transaction.CommitAsync(ct);
 
@@ -84,7 +84,7 @@ namespace server.Service.Services
                 workspace.UpdateInformation(model.Name!, model.Description);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(workspace.Id, userId, "Update", "Workspace", workspace.Id);
+                await _activityLogService.LogActivityAsync(workspace.Id, userId, "Update", "Workspace", workspace.Id, null, ct);
 
                 return ApiResult.Success(workspace, "Cập nhật thành công");
             }
@@ -122,7 +122,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(workspaceId, userId, "Delete", "Workspace", workspace.Id);
+                await _activityLogService.LogActivityAsync(workspaceId, userId, "Delete", "Workspace", workspace.Id, null, ct);
 
                 await transaction.CommitAsync(ct);
 

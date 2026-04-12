@@ -50,7 +50,7 @@ namespace server.Service.Services
                 _dataContext.Set<WorkspaceMember>().Add(member);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(model.WorkspaceId, currentUserId, "Create", "WorkspaceMember", member.Id);
+                await _activityLogService.LogActivityAsync(model.WorkspaceId, currentUserId, "Create", "WorkspaceMember", member.Id, null, ct);
 
                 return ApiResult.Success(null, "Thêm thành viên thành công");
             }
@@ -125,7 +125,7 @@ namespace server.Service.Services
                 _dataContext.Set<WorkspaceMember>().Remove(member);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(workspaceId, currentUserId, "Delete", "WorkspaceMember", member.Id);
+                await _activityLogService.LogActivityAsync(workspaceId, currentUserId, "Delete", "WorkspaceMember", member.Id, null, ct);
 
                 return ApiResult.Success(null, "Xóa thành viên thành công");
             }
@@ -157,7 +157,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(workspaceId, currentUserId, "ChangePermissions", "WorkspaceMember", member.Id);
+                await _activityLogService.LogActivityAsync(workspaceId, currentUserId, "ChangePermissions", "WorkspaceMember", member.Id, null, ct);
 
                 return ApiResult.Success(null, "Cập nhật vai trò thành công");
             }

@@ -8,64 +8,28 @@ namespace server.Service.Interfaces
     /// </summary>
     public interface IUserTaskPreferenceService
     {
-        /// <summary>
-        /// Tạo tùy chỉnh mới (default values).
-        /// </summary>
-        Task<ApiResult> CreatePreferenceAsync(int userId, int workspaceId);
+        Task<ApiResult> CreatePreferenceAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy tùy chỉnh của user.
-        /// </summary>
-        Task<ApiResult> GetPreferenceAsync(int userId, int workspaceId);
+        Task<ApiResult> GetPreferenceAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật tùy chỉnh của user.
-        /// </summary>
-        Task<ApiResult> UpdatePreferenceAsync(int userId, int workspaceId, UpdateUserTaskPreferenceModel model);
+        Task<ApiResult> UpdatePreferenceAsync(int userId, int workspaceId, UpdateUserTaskPreferenceModel model, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật giờ làm việc.
-        /// </summary>
-        Task<ApiResult> UpdateWorkHoursAsync(UpdateWorkHoursModel model);
+        Task<ApiResult> UpdateWorkHoursAsync(UpdateWorkHoursModel model, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật ngày ưu tiên (Mon-Fri, ...).
-        /// </summary>
-        Task<ApiResult> UpdatePreferredDaysAsync(UpdatePreferredDaysModel model);
+        Task<ApiResult> UpdatePreferredDaysAsync(UpdatePreferredDaysModel model, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật độ nhạy của gợi ý (0-100).
-        /// </summary>
-        Task<ApiResult> UpdateSensitivityAsync(int userId, int workspaceId, int sensitivity);
+        Task<ApiResult> UpdateSensitivityAsync(int userId, int workspaceId, int sensitivity, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật mức độ ưu tiên tối thiểu.
-        /// </summary>
-        Task<ApiResult> UpdateMinPriorityAsync(int userId, int workspaceId, string minPriority);
+        Task<ApiResult> UpdateMinPriorityAsync(int userId, int workspaceId, string minPriority, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật khoảng cách giữa gợi ý.
-        /// </summary>
-        Task<ApiResult> UpdateRecommendationIntervalAsync(int userId, int workspaceId, int intervalMinutes);
+        Task<ApiResult> UpdateRecommendationIntervalAsync(int userId, int workspaceId, int intervalMinutes, CancellationToken ct = default);
 
-        /// <summary>
-        /// Bật/tắt tính năng auto recommendation.
-        /// </summary>
-        Task<ApiResult> ToggleAutoRecommendationAsync(int userId, int workspaceId);
+        Task<ApiResult> ToggleAutoRecommendationAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Cập nhật số lượng gợi ý tối đa.
-        /// </summary>
-        Task<ApiResult> UpdateMaxRecommendationsAsync(int userId, int workspaceId, int maxCount);
+        Task<ApiResult> UpdateMaxRecommendationsAsync(int userId, int workspaceId, int maxCount, CancellationToken ct = default);
 
-        /// <summary>
-        /// Reset tùy chỉnh về mặc định.
-        /// </summary>
-        Task<ApiResult> ResetToDefaultAsync(int userId, int workspaceId);
+        Task<ApiResult> ResetToDefaultAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Kiểm tra user có bật auto recommendation không.
-        /// </summary>
-        Task<ApiResult> IsAutoRecommendationEnabledAsync(int userId, int workspaceId);
+        Task<ApiResult> IsAutoRecommendationEnabledAsync(int userId, int workspaceId, CancellationToken ct = default);
     }
 }
