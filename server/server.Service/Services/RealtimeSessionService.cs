@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
-using server.Infrastructure.Realtime.Interfaces;
+using server.Domain.Realtime;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
 using server.Service.Models;

@@ -1,4 +1,6 @@
+using server.Infrastructure;
 using server.Infrastructure.Cors;
+using server.Infrastructure.Persistence;
 using server.Infrastructure.Realtime;
 using server.Infrastructure.Swagger;
 using server.Service.Configurations;
@@ -18,9 +20,15 @@ namespace server
 
             // CORS Config
             builder.Services.AddCustomCors(builder.Configuration);
-            // Custom DI
-            builder.Services.AddInfrastructureServices(builder.Configuration);
+
+            // Persistence (EF Core only — safe for design-time tools and migrations)
+            builder.Services.AddPersistenceLayer(builder.Configuration);
+            // Identity + JWT (depends on DbContext, not on Redis/SignalR)
+            builder.Services.AddCoreInfrastructure(builder.Configuration);
+            // Application / business services
             builder.Services.AddApplicationServices();
+            // Optional: Redis backplane, cache, presence; falls back to in-memory when Redis is unavailable
+            builder.Services.AddRealtimeInfrastructure(builder.Configuration);
             
             // Build App
             var app = builder.Build();

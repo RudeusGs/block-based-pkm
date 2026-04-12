@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
 using server.Domain.Enums;
 using server.Infrastructure.Persistence;
-using server.Infrastructure.Realtime.Interfaces;
+using server.Domain.Realtime;
 using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
@@ -70,9 +70,9 @@ namespace server.Service.Services
                 _dataContext.Set<WorkTask>().Add(task);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Create", "WorkTask", task.Id);
+                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Create", "WorkTask", task.Id, null, ct);
 
-                await _taskPerformanceMetricService.CreateMetricAsync(task.Id, userId, task.WorkspaceId);
+                await _taskPerformanceMetricService.CreateMetricAsync(task.Id, userId, task.WorkspaceId, ct);
 
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
@@ -117,7 +117,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Update", "WorkTask", task.Id);
+                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Update", "WorkTask", task.Id, null, ct);
 
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
@@ -160,7 +160,7 @@ namespace server.Service.Services
                 task.SoftDelete();
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Delete", "WorkTask", task.Id);
+                await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, "Delete", "WorkTask", task.Id, null, ct);
 
                 await ServiceHelper.SafeNotifyAsync(
                     _notifier,
@@ -242,18 +242,18 @@ namespace server.Service.Services
                         TaskId = taskId,
                         UserId = userId,
                         DurationMinutes = 0
-                    });
+                    }, ct);
             }
             else
             {
                 task.ReOpen();
-                await _taskPerformanceMetricService.UpdateMetricOnAbandonmentAsync(taskId, userId);
+                await _taskPerformanceMetricService.UpdateMetricOnAbandonmentAsync(taskId, userId, ct);
             }
 
             await SaveChangesAsync(ct);
 
             string action = status == StatusWorkTask.Done ? "Complete" : "Reopen";
-            await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, action, "WorkTask", task.Id);
+            await _activityLogService.LogActivityAsync(task.WorkspaceId, userId, action, "WorkTask", task.Id, null, ct);
 
             await ServiceHelper.SafeNotifyAsync(
                 _notifier,

@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using server.Domain.Entities;
 using server.Domain.Enums;
 using server.Infrastructure.Persistence;
-using server.Infrastructure.Realtime.Interfaces;
+using server.Domain.Realtime;
 using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
@@ -23,7 +23,7 @@ namespace server.Service.Services
             _notifier = notifier;
         }
 
-        public async Task<ApiResult> GetNotificationsAsync(int userId, int? workspaceId, int pageIndex = 1, int pageSize = 20)
+        public async Task<ApiResult> GetNotificationsAsync(int userId, int? workspaceId, int pageIndex = 1, int pageSize = 20, CancellationToken ct = default)
         {
             try
             {
@@ -34,13 +34,13 @@ namespace server.Service.Services
                     query = query.Where(n => n.WorkspaceId == workspaceId.Value);
                 }
 
-                var totalCount = await query.CountAsync();
+                var totalCount = await query.CountAsync(ct);
 
                 var notifications = await query
                     .OrderByDescending(n => n.CreatedDate)
                     .Skip((pageIndex - 1) * pageSize)
                     .Take(pageSize)
-                    .ToListAsync();
+                    .ToListAsync(ct);
 
                 return ApiResult.Success(new
                 {
@@ -54,7 +54,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetUnreadCountAsync(int userId, int? workspaceId)
+        public async Task<ApiResult> GetUnreadCountAsync(int userId, int? workspaceId, CancellationToken ct = default)
         {
             try
             {
@@ -65,23 +65,23 @@ namespace server.Service.Services
                     query = query.Where(n => n.WorkspaceId == workspaceId.Value);
                 }
 
-                var count = await query.CountAsync();
+                var count = await query.CountAsync(ct);
                 return ApiResult.Success(count);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> MarkAsReadAsync(int notificationId, int userId)
+        public async Task<ApiResult> MarkAsReadAsync(int notificationId, int userId, CancellationToken ct = default)
         {
             try
             {
-                var notification = await _dataContext.Notifications.FindAsync(notificationId);
+                var notification = await _dataContext.Notifications.FindAsync(new object[] { notificationId }, ct);
                 if (notification == null) return ApiResult.Fail("Không tìm thấy thông báo");
                 if (notification.UserId != userId) return ApiResult.Fail("Không có quyền");
 
                 notification.MarkAsRead();
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
                 return ApiResult.Success(true);
             }
@@ -89,7 +89,7 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> MarkAllAsReadAsync(int userId, int? workspaceId)
+        public async Task<ApiResult> MarkAllAsReadAsync(int userId, int? workspaceId, CancellationToken ct = default)
         {
             try
             {
@@ -98,14 +98,14 @@ namespace server.Service.Services
                 if (workspaceId.HasValue)
                     query = query.Where(n => n.WorkspaceId == workspaceId.Value);
 
-                var unread = await query.ToListAsync();
+                var unread = await query.ToListAsync(ct);
                 foreach (var n in unread)
                 {
                     n.MarkAsRead();
                 }
 
                 if (unread.Any())
-                    await SaveChangesAsync();
+                    await SaveChangesAsync(ct);
 
                 return ApiResult.Success(true);
             }
@@ -114,21 +114,22 @@ namespace server.Service.Services
         }
 
         public async Task<ApiResult> PushNotificationAsync(
-            int userId, 
-            int? workspaceId, 
-            NotificationType type, 
-            string title, 
-            string message, 
-            string? referenceId = null, 
-            string? referenceType = null)
+            int userId,
+            int? workspaceId,
+            NotificationType type,
+            string title,
+            string message,
+            string? referenceId = null,
+            string? referenceType = null,
+            CancellationToken ct = default)
         {
             try
             {
                 var notification = new Notification(userId, workspaceId, type, title, message, referenceId, referenceType);
                 _dataContext.Notifications.Add(notification);
-                await SaveChangesAsync();
+                await SaveChangesAsync(ct);
 
-                if (workspaceId.HasValue) 
+                if (workspaceId.HasValue)
                 {
                     await ServiceHelper.SafeNotifyAsync(
                         _notifier,

@@ -60,7 +60,7 @@ namespace server.Service.Services
                 _dataContext.Set<Page>().Add(page);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(model.WorkspaceId, userId, "Create", "Page", page.Id);
+                await _activityLogService.LogActivityAsync(model.WorkspaceId, userId, "Create", "Page", page.Id, null, ct);
 
                 return ApiResult.Success(page, "Tạo trang thành công");
             }
@@ -98,7 +98,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(page.WorkspaceId, userId, "Update", "Page", page.Id);
+                await _activityLogService.LogActivityAsync(page.WorkspaceId, userId, "Update", "Page", page.Id, null, ct);
 
                 return ApiResult.Success(page, "Cập nhật thành công");
             }
@@ -160,7 +160,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(page.WorkspaceId, userId, "Archive", "Page", page.Id);
+                await _activityLogService.LogActivityAsync(page.WorkspaceId, userId, "Archive", "Page", page.Id, null, ct);
 
                 return ApiResult.Success(new { ArchivedCount = allDescendantIds.Count + 1 }, "Đã archive page và toàn bộ con");
             }

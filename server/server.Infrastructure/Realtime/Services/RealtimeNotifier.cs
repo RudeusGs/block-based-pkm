@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.SignalR;
+using server.Domain.Realtime;
 using server.Infrastructure.Realtime.Hubs;
-using server.Infrastructure.Realtime.Interfaces;
 
 namespace server.Infrastructure.Realtime.Services
 {
@@ -21,7 +21,7 @@ namespace server.Infrastructure.Realtime.Services
                     .Group(WorkspaceHub.GetWorkspaceGroupName(workspaceId))
                     .SendAsync(eventName, payload);
             }
-            catch(Exception ex)
+            catch
             {
                 return;
             }

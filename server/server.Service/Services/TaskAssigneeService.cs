@@ -2,7 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using server.Domain.Base;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
-using server.Infrastructure.Realtime.Interfaces;
+using server.Domain.Realtime;
 using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
@@ -47,27 +47,24 @@ namespace server.Service.Services
                 var (task, error) = await GetTaskAndEnsureOwnerAsync(taskId, currentUserId, "assign", ct);
                 if (error != null) return error;
 
-                var isMemberTask = _permissionService.HasWorkspaceAccessAsync(task!.WorkspaceId, userId, ct);
-
-                var alreadyAssignedTask = _dataContext.Set<TaskAssignee>()
+                var isMember = await _permissionService.HasWorkspaceAccessAsync(task!.WorkspaceId, userId, ct);
+                var alreadyAssigned = await _dataContext.Set<TaskAssignee>()
                     .AsNoTracking()
                     .AnyAsync(a => a.TaskId == taskId && a.UserId == userId, ct);
 
-                await Task.WhenAll(isMemberTask, alreadyAssignedTask);
-
-                if (!isMemberTask.Result)
+                if (!isMember)
                     return ApiResult.Fail("User không hợp lệ", "VALIDATION_ERROR");
 
-                if (alreadyAssignedTask.Result)
+                if (alreadyAssigned)
                     return ApiResult.Fail("Đã assign rồi", "ALREADY_ASSIGNED");
 
                 var assignee = new TaskAssignee(taskId, userId);
                 _dataContext.Set<TaskAssignee>().Add(assignee);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id);
+                await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id, null, ct);
 
-                await _taskPerformanceMetricService.CreateMetricAsync(taskId, userId, task!.WorkspaceId);
+                await _taskPerformanceMetricService.CreateMetricAsync(taskId, userId, task!.WorkspaceId, ct);
 
                 await _notificationService.PushNotificationAsync(
                     userId, 
@@ -76,7 +73,8 @@ namespace server.Service.Services
                     "Bạn được phân công công việc", 
                     $"Bạn đã được giao một công việc mới: {task.Title}", 
                     taskId.ToString(), 
-                    "WorkTask");
+                    "WorkTask",
+                    ct);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task.WorkspaceId, "TaskAssigneeAdded",
                     new { TaskId = taskId, UserId = userId });
@@ -136,8 +134,8 @@ namespace server.Service.Services
 
                     foreach (var assignee in assignees)
                     {
-                        await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id);
-                        await _taskPerformanceMetricService.CreateMetricAsync(taskId, assignee.UserId, task.WorkspaceId);
+                        await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Assign", "TaskAssignee", assignee.Id, null, ct);
+                        await _taskPerformanceMetricService.CreateMetricAsync(taskId, assignee.UserId, task.WorkspaceId, ct);
                         
                         await _notificationService.PushNotificationAsync(
                             assignee.UserId, 
@@ -146,7 +144,8 @@ namespace server.Service.Services
                             "Bạn được phân công công việc", 
                             $"Bạn đã được giao một công việc mới: {task.Title}", 
                             taskId.ToString(), 
-                            "WorkTask");
+                            "WorkTask",
+                            ct);
                     }
 
                     await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneesAdded",
@@ -187,7 +186,7 @@ namespace server.Service.Services
                 _dataContext.Set<TaskAssignee>().Remove(entity);
                 await SaveChangesAsync(ct);
 
-                await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Unassign", "TaskAssignee", entity.Id);
+                await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Unassign", "TaskAssignee", entity.Id, null, ct);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneeRemoved",
                     new { TaskId = taskId, UserId = userId });
@@ -272,7 +271,7 @@ namespace server.Service.Services
 
                 foreach (var id in entityIds)
                 {
-                    await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Unassign", "TaskAssignee", id);
+                    await _activityLogService.LogActivityAsync(task!.WorkspaceId, currentUserId, "Unassign", "TaskAssignee", id, null, ct);
                 }
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskAssigneesCleared",
@@ -414,7 +413,7 @@ namespace server.Service.Services
 
                 await SaveChangesAsync(ct);
 
-                await _taskPerformanceMetricService.CreateMetricAsync(taskId, newUserId, task!.WorkspaceId);
+                await _taskPerformanceMetricService.CreateMetricAsync(taskId, newUserId, task!.WorkspaceId, ct);
 
                 await ServiceHelper.SafeNotifyAsync(_notifier, task!.WorkspaceId, "TaskReassigned",
                     new { TaskId = taskId, OldUserId = oldUserId, NewUserId = newUserId });

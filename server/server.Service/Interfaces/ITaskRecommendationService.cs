@@ -8,65 +8,28 @@ namespace server.Service.Interfaces
     /// </summary>
     public interface ITaskRecommendationService
     {
-        /// <summary>
-        /// Tính toán và sinh gợi ý task cho user tại thời điểm hiện tại.
-        /// Dựa trên RecommendationWeight, OptimalHourOfDay, PreferredDaysOfWeek.
-        /// </summary>
-        Task<ApiResult> GenerateRecommendationsAsync(int userId, int workspaceId);
+        Task<ApiResult> GenerateRecommendationsAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy gợi ý task pending cho user.
-        /// </summary>
-        Task<ApiResult> GetPendingRecommendationsAsync(int userId, int workspaceId);
+        Task<ApiResult> GetPendingRecommendationsAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// User chấp nhận gợi ý task.
-        /// </summary>
-        Task<ApiResult> AcceptRecommendationAsync(int recommendationId);
+        Task<ApiResult> AcceptRecommendationAsync(int recommendationId, CancellationToken ct = default);
 
-        /// <summary>
-        /// User từ chối gợi ý task.
-        /// </summary>
-        Task<ApiResult> RejectRecommendationAsync(int recommendationId);
+        Task<ApiResult> RejectRecommendationAsync(int recommendationId, CancellationToken ct = default);
 
-        /// <summary>
-        /// User hoàn thành task từ gợi ý.
-        /// </summary>
-        Task<ApiResult> CompleteRecommendationAsync(int recommendationId);
+        Task<ApiResult> CompleteRecommendationAsync(int recommendationId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy lịch sử gợi ý cho user.
-        /// </summary>
-        Task<ApiResult> GetRecommendationHistoryAsync(int userId, int workspaceId);
+        Task<ApiResult> GetRecommendationHistoryAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy gợi ý cụ thể.
-        /// </summary>
-        Task<ApiResult> GetRecommendationByIdAsync(int recommendationId);
+        Task<ApiResult> GetRecommendationByIdAsync(int recommendationId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy hiệu quả gợi ý (acceptance rate).
-        /// </summary>
-        Task<ApiResult> GetRecommendationEffectivenessAsync(int userId, int workspaceId);
+        Task<ApiResult> GetRecommendationEffectivenessAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Xóa gợi ý hết hạn.
-        /// </summary>
-        Task<ApiResult> CleanupExpiredRecommendationsAsync();
+        Task<ApiResult> CleanupExpiredRecommendationsAsync(CancellationToken ct = default);
 
-        /// <summary>
-        /// Tính lại trọng số gợi ý cho tất cả task (cron job).
-        /// </summary>
-        Task<ApiResult> RecalculateWeightsAsync(int workspaceId);
+        Task<ApiResult> RecalculateWeightsAsync(int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy top task được recommend nhiều nhất.
-        /// </summary>
-        Task<ApiResult> GetTopRecommendedTasksAsync(int workspaceId, int limit = 10);
+        Task<ApiResult> GetTopRecommendedTasksAsync(int workspaceId, int limit = 10, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy task có hiệu suất gợi ý cao nhất.
-        /// </summary>
-        Task<ApiResult> GetHighestScoringTasksAsync(int userId, int limit = 5);
+        Task<ApiResult> GetHighestScoringTasksAsync(int userId, int limit = 5, CancellationToken ct = default);
     }
 }

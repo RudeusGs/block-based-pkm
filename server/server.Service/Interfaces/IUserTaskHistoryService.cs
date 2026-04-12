@@ -9,69 +9,30 @@ namespace server.Service.Interfaces
     /// </summary>
     public interface IUserTaskHistoryService
     {
-        /// <summary>
-        /// Record task hoàn thành.
-        /// </summary>
-        Task<ApiResult> RecordCompletionAsync(RecordTaskCompletionModel model, int userId);
+        Task<ApiResult> RecordCompletionAsync(RecordTaskCompletionModel model, int userId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Record task bị abandon (user bắt đầu nhưng không hoàn thành).
-        /// </summary>
-        Task<ApiResult> RecordAbandonmentAsync(RecordAbandonmentModel model, int userId);
+        Task<ApiResult> RecordAbandonmentAsync(RecordAbandonmentModel model, int userId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Record task skipped (user skip task).
-        /// </summary>
-        Task<ApiResult> RecordSkipAsync(RecordSkipModel model, int userId);
+        Task<ApiResult> RecordSkipAsync(RecordSkipModel model, int userId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy tất cả lịch sử task của user.
-        /// </summary>
-        Task<ApiResult> GetUserTaskHistoryAsync(int userId);
+        Task<ApiResult> GetUserTaskHistoryAsync(int userId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy lịch sử task của user trong workspace.
-        /// </summary>
-        Task<ApiResult> GetUserTaskHistoryByWorkspaceAsync(int userId, int workspaceId);
+        Task<ApiResult> GetUserTaskHistoryByWorkspaceAsync(int userId, int workspaceId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy lịch sử hoàn thành của task.
-        /// </summary>
-        Task<ApiResult> GetTaskHistoryAsync(int taskId);
+        Task<ApiResult> GetTaskHistoryAsync(int taskId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy lịch sử task trong khoảng thời gian.
-        /// </summary>
-        Task<ApiResult> GetHistoryByDateRangeAsync(GetHistoryDateRangeModel model);
+        Task<ApiResult> GetHistoryByDateRangeAsync(GetHistoryDateRangeModel model, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy thời gian hoàn thành trung bình của task.
-        /// </summary>
-        Task<ApiResult> GetAverageDurationAsync(int taskId);
+        Task<ApiResult> GetAverageDurationAsync(int taskId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy thời gian hoàn thành trung bình của user.
-        /// </summary>
-        Task<ApiResult> GetUserAverageDurationAsync(int userId);
+        Task<ApiResult> GetUserAverageDurationAsync(int userId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy tần suất hoàn thành task (bao lần).
-        /// </summary>
-        Task<ApiResult> GetCompletionCountAsync(int taskId);
+        Task<ApiResult> GetCompletionCountAsync(int taskId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy tỷ lệ hoàn thành task.
-        /// </summary>
-        Task<ApiResult> GetCompletionRateAsync(int taskId);
+        Task<ApiResult> GetCompletionRateAsync(int taskId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Xóa lịch sử (cleanup cũ).
-        /// </summary>
-        Task<ApiResult> DeleteHistoryAsync(int historyId);
+        Task<ApiResult> DeleteHistoryAsync(int historyId, CancellationToken ct = default);
 
-        /// <summary>
-        /// Lấy hoàn thành gần đây nhất.
-        /// </summary>
-        Task<ApiResult> GetRecentCompletionsAsync(int userId, int limit = 10);
+        Task<ApiResult> GetRecentCompletionsAsync(int userId, int limit = 10, CancellationToken ct = default);
     }
 }
