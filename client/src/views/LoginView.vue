@@ -55,7 +55,7 @@
             </div>
 
             <button type="submit" class="btn btn-black w-100 py-3 fw-bold rounded-3 mb-4" :disabled="isSubmitting">
-              <span v-if="!isSubmitting">Sign In</span>
+              <span v-if="!isSubmitting"><a class="text-signin" href="/app">Sign In</a></span>
               <span v-else class="spinner-border spinner-border-sm"></span>
             </button>
           </form>
@@ -161,7 +161,10 @@ const handleLogin = async () => {
 .shadow-premium { 
   box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.05), 0 20px 40px -15px rgba(0,0,0,0.03); 
 }
-
+.text-signin{
+  text-decoration: none;
+  color: #ffffff;
+}
 /* Form Elements */
 .form-label-custom { font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: #666; margin-bottom: 6px; display: block; }
 .input-group-custom { position: relative; }
