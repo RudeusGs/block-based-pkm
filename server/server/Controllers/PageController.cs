@@ -50,19 +50,14 @@ namespace server.Controllers
         public async Task<IActionResult> GetByWorkspace(
             int workspaceId,
             [FromQuery] string? q,
-            [FromQuery] int pageNumber = 1,
-            [FromQuery] int pageSize = 10,
+            [FromQuery] PagingRequest? paging,
             CancellationToken ct = default)
         {
-            var paging = new PagingRequest
-            {
-                PageNumber = pageNumber,
-                PageSize = pageSize
-            };
+            var effectivePaging = paging ?? new PagingRequest { PageNumber = 1, PageSize = 10 };
 
             var result = string.IsNullOrWhiteSpace(q)
-                ? await _pageService.GetPagesByWorkspaceAsync(workspaceId, paging, ct)
-                : await _pageService.SearchPagesAsync(workspaceId, q, paging, ct);
+                ? await _pageService.GetPagesByWorkspaceAsync(workspaceId, effectivePaging, ct)
+                : await _pageService.SearchPagesAsync(workspaceId, q, effectivePaging, ct);
 
             return FromApiResult(result);
         }
