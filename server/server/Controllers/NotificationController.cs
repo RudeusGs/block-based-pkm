@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using server.Service.Interfaces;
+using server.Service.Models;
 
 namespace server.Controllers
 {
@@ -17,31 +18,27 @@ namespace server.Controllers
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetNotifications([FromQuery] int? workspaceId, [FromQuery] int pageIndex = 1, [FromQuery] int pageSize = 20, CancellationToken ct = default)
+        public async Task<IActionResult> GetNotifications([FromQuery] int? workspaceId, [FromQuery] PagingRequest? paging, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-            return FromApiResult(await _notificationService.GetNotificationsAsync(userId, workspaceId, pageIndex, pageSize, ct));
+            return FromApiResult(await _notificationService.GetNotificationsAsync(workspaceId, paging, ct));
         }
 
         [HttpGet("unread-count")]
         public async Task<IActionResult> GetUnreadCount([FromQuery] int? workspaceId, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-            return FromApiResult(await _notificationService.GetUnreadCountAsync(userId, workspaceId, ct));
+            return FromApiResult(await _notificationService.GetUnreadCountAsync(workspaceId, ct));
         }
 
         [HttpPut("{notificationId:int}/read")]
         public async Task<IActionResult> MarkAsRead(int notificationId, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-            return FromApiResult(await _notificationService.MarkAsReadAsync(notificationId, userId, ct));
+            return FromApiResult(await _notificationService.MarkAsReadAsync(notificationId, ct));
         }
 
         [HttpPut("read-all")]
         public async Task<IActionResult> MarkAllAsRead([FromQuery] int? workspaceId, CancellationToken ct)
         {
-            var userId = int.Parse(User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? "0");
-            return FromApiResult(await _notificationService.MarkAllAsReadAsync(userId, workspaceId, ct));
+            return FromApiResult(await _notificationService.MarkAllAsReadAsync(workspaceId, ct));
         }
     }
 }

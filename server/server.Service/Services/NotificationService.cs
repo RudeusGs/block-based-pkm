@@ -23,41 +23,32 @@ namespace server.Service.Services
             _notifier = notifier;
         }
 
-        public async Task<ApiResult> GetNotificationsAsync(int userId, int? workspaceId, int pageIndex = 1, int pageSize = 20, CancellationToken ct = default)
+        public async Task<ApiResult> GetNotificationsAsync(int? workspaceId, PagingRequest? paging = null, CancellationToken ct = default)
         {
             try
             {
-                var query = _dataContext.Notifications.Where(n => n.UserId == userId);
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
+                var query = _dataContext.Notifications
+                    .Where(n => n.UserId == userId);
 
                 if (workspaceId.HasValue)
-                {
                     query = query.Where(n => n.WorkspaceId == workspaceId.Value);
-                }
 
-                var totalCount = await query.CountAsync(ct);
+                var ordered = query.OrderByDescending(n => n.CreatedDate);
 
-                var notifications = await query
-                    .OrderByDescending(n => n.CreatedDate)
-                    .Skip((pageIndex - 1) * pageSize)
-                    .Take(pageSize)
-                    .ToListAsync(ct);
-
-                return ApiResult.Success(new
-                {
-                    Items = notifications,
-                    TotalCount = totalCount,
-                    PageIndex = pageIndex,
-                    PageSize = pageSize
-                });
+                return await GetPagedAsync(ordered, paging, ct);
             }
             catch (OperationCanceledException) { return ApiResult.Fail("Tác vụ đã bị hủy", "CANCELED"); }
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> GetUnreadCountAsync(int userId, int? workspaceId, CancellationToken ct = default)
+        public async Task<ApiResult> GetUnreadCountAsync(int? workspaceId, CancellationToken ct = default)
         {
             try
             {
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
                 var query = _dataContext.Notifications.Where(n => n.UserId == userId && !n.IsRead);
 
                 if (workspaceId.HasValue)
@@ -72,10 +63,12 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> MarkAsReadAsync(int notificationId, int userId, CancellationToken ct = default)
+        public async Task<ApiResult> MarkAsReadAsync(int notificationId, CancellationToken ct = default)
         {
             try
             {
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
                 var notification = await _dataContext.Notifications.FindAsync(new object[] { notificationId }, ct);
                 if (notification == null) return ApiResult.Fail("Không tìm thấy thông báo");
                 if (notification.UserId != userId) return ApiResult.Fail("Không có quyền");
@@ -89,10 +82,12 @@ namespace server.Service.Services
             catch (Exception ex) { return ApiResult.Fail("Lỗi hệ thống", "SERVER_ERROR", new[] { ex.Message }); }
         }
 
-        public async Task<ApiResult> MarkAllAsReadAsync(int userId, int? workspaceId, CancellationToken ct = default)
+        public async Task<ApiResult> MarkAllAsReadAsync(int? workspaceId, CancellationToken ct = default)
         {
             try
             {
+                var userId = ServiceHelper.GetCurrentUserIdOrThrow(_userService);
+
                 var query = _dataContext.Notifications.Where(n => n.UserId == userId && !n.IsRead);
 
                 if (workspaceId.HasValue)
