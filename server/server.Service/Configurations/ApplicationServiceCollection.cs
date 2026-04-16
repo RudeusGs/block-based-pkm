@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using server.Application.Interfaces;
+using server.Application.Services;
 using server.Service.Common.IServices;
 using server.Service.Common.Services;
 using server.Service.Interfaces;
@@ -42,6 +44,7 @@ namespace server.Service.Configurations
             services.AddScoped<IUserTaskPreferenceService, UserTaskPreferenceService>();
             services.AddScoped<ITaskRecommendationService, TaskRecommendationService>();
             services.AddScoped<INotificationService, NotificationService>();
+            services.AddScoped<IBlockService, BlockService>();
             #endregion
 
             return services;

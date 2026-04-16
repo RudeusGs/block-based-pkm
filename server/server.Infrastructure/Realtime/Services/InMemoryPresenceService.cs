@@ -2,10 +2,6 @@ using System.Collections.Concurrent;
 using server.Domain.Realtime;
 
 namespace server.Infrastructure.Realtime.Services;
-
-/// <summary>
-/// Process-local presence and locks when Redis is not used. Suitable for single-instance dev.
-/// </summary>
 public sealed class InMemoryPresenceService : IPresenceService
 {
     private readonly ConcurrentDictionary<string, PresenceUserModel> _pagePresence = new();

@@ -79,6 +79,10 @@ namespace server.Infrastructure.Persistence
         /// Thông báo cho người dùng.
         /// </summary>
         public DbSet<Notification> Notifications { get; set; }
+        /// <summary>
+        /// Chứa các block nội dung của một trang, hỗ trợ cấu trúc phân cấp (parent-child) để tạo thành cây block.
+        /// </summary>
+        public DbSet<Block> Blocks { get; set; }
     }
 }
 
