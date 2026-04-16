@@ -2,7 +2,7 @@
 using server.Domain.Realtime;
 using server.Service.Common.Helpers;
 
-namespace server.Application.Helpers.Blocks
+namespace server.Application.Common.Helpers.Blocks
 {
     public static class BlockRealtimeHelper
     {

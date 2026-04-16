@@ -3,7 +3,7 @@ using server.Domain.Base;
 using server.Domain.Entities;
 using server.Infrastructure.Persistence;
 
-namespace server.Application.Helpers.Blocks
+namespace server.Application.Common.Helpers.Blocks
 {
     public static class BlockTreeHelper
     {
