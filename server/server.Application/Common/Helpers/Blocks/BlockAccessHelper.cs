@@ -7,7 +7,7 @@ using server.Service.Common.Helpers;
 using server.Service.Common.IServices;
 using server.Service.Interfaces;
 
-namespace server.Application.Helpers.Blocks
+namespace server.Application.Common.Helpers.Blocks
 {
     public static class BlockAccessHelper
     {

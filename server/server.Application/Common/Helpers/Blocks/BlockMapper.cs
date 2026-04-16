@@ -2,7 +2,7 @@
 using server.Domain.Enums;
 using server.Service.Models.Block;
 
-namespace server.Application.Helpers.Blocks
+namespace server.Application.Common.Helpers.Blocks
 {
     public static class BlockMapper
     {

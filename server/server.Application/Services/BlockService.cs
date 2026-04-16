@@ -1,5 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using server.Application.Helpers.Blocks;
+using server.Application.Common.Helpers.Blocks;
 using server.Application.Interfaces;
 using server.Domain.Base;
 using server.Domain.Entities;
