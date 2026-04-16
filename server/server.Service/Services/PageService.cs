@@ -90,9 +90,6 @@ namespace server.Service.Services
                 if (!string.IsNullOrWhiteSpace(model.Title))
                     page.UpdateTitle(model.Title, userId);
 
-                if (model.Content != null)
-                    page.UpdateContent(model.Content, userId);
-
                 if (model.Icon != null || model.CoverImage != null)
                     page.UpdateAppearance(model.Icon, model.CoverImage, userId);
 

@@ -5,9 +5,6 @@ using server.Domain.Caching;
 
 namespace server.Infrastructure.Cache;
 
-/// <summary>
-/// Process-local cache used when Redis is unavailable or not configured.
-/// </summary>
 public sealed class InMemoryCacheService : IRedisCacheService
 {
     private readonly ConcurrentDictionary<string, CacheEntry> _store = new();

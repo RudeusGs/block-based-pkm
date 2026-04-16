@@ -8,8 +8,6 @@ namespace server.Domain.Entities
         public int? ParentPageId { get; private set; }
 
         public string Title { get; private set; }
-        public string? Content { get; private set; }
-
         public string? Icon { get; private set; }
         public string? CoverImage { get; private set; }
 
@@ -55,8 +53,6 @@ namespace server.Domain.Entities
         {
             EnsureNotDeleted();
             EnsureNotArchived();
-
-            Content = NormalizeContent(newContent);
             RegisterModification(userId);
         }
 
@@ -135,12 +131,6 @@ namespace server.Domain.Entities
                 throw new DomainException("Title không được vượt quá 200 ký tự.");
 
             Title = normalized;
-        }
-
-        private string? NormalizeContent(string? content)
-        {
-            if (string.IsNullOrWhiteSpace(content)) return null;
-            return content.Trim();
         }
 
         private string? NormalizeString(string? value)
