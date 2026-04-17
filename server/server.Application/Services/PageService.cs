@@ -51,9 +51,6 @@ namespace server.Service.Services
 
                 var page = new Page(model.Title, model.WorkspaceId, userId, model.ParentPageId);
 
-                if (model.Content != null)
-                    page.UpdateContent(model.Content, userId);
-
                 if (model.Icon != null || model.CoverImage != null)
                     page.UpdateAppearance(model.Icon, model.CoverImage, userId);
 
