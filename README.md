@@ -435,9 +435,9 @@ https://localhost:7135/
 ```text
 /hubs/workspace
 ```
-# 🚀 Báo cáo Load Testing - Hệ thống Collaborative
+# Báo cáo Load Testing - Hệ thống Collaborative
 
-## 🛠 Công nghệ sử dụng
+## Công nghệ sử dụng
 - ASP.NET Core Web API
 - PostgreSQL
 - Redis (Realtime Presence & Lock)
@@ -445,7 +445,7 @@ https://localhost:7135/
 
 ---
 
-## 📊 Kịch bản kiểm thử
+## Kịch bản kiểm thử
 
 ### 1. Hiệu năng đọc (Workspace API)
 - Endpoint: `GET /api/workspaces/my`
