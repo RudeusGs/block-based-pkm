@@ -435,3 +435,70 @@ https://localhost:7135/
 ```text
 /hubs/workspace
 ```
+# 🚀 Báo cáo Load Testing - Hệ thống Collaborative
+
+## 🛠 Công nghệ sử dụng
+- ASP.NET Core Web API
+- PostgreSQL
+- Redis (Realtime Presence & Lock)
+- k6 (Load Testing)
+
+---
+
+## 📊 Kịch bản kiểm thử
+
+### 1. Hiệu năng đọc (Workspace API)
+- Endpoint: `GET /api/workspaces/my`
+- Số user: ~80 concurrent
+
+**Kết quả:**
+- Trung bình (avg): ~66ms
+- P95: ~180ms
+- Tỉ lệ lỗi: 0%
+
+---
+
+### 2. Hiệu năng realtime (Presence & Lock - Redis)
+- Endpoint:
+  - `POST /api/presence/heartbeat/{pageId}`
+  - `GET /api/presence/active-users/{pageId}`
+- Số user: ~80 concurrent
+
+**Kết quả:**
+- Trung bình (avg): ~4ms
+- P95: ~11ms
+- Tỉ lệ lỗi: 0%
+
+---
+
+### 3. Hiệu năng ghi (WorkTask API)
+- Endpoint:
+  - `PUT /api/work-tasks/{id}`
+  - `POST /complete`
+  - `POST /reopen`
+- Số user: ~60 concurrent
+
+**Kết quả:**
+- Trung bình (avg): ~200–250ms
+- P95: ~400–500ms
+- Tỉ lệ lỗi: có conflict (do nhiều user cập nhật cùng lúc)
+
+---
+
+## Hạn chế hiện tại
+
+- Kết quả đo trong môi trường local (chưa tính độ trễ mạng thực tế)
+- Có thể xảy ra conflict khi nhiều user thao tác cùng lúc trên một task
+
+---
+
+## Tổng kết
+
+Hệ thống có thể:
+- Xử lý tốt read-heavy workload (~80 user)
+- Realtime nhanh và ổn định nhờ Redis
+- Xử lý concurrent write ở mức chấp nhận được (~60 user)
+
+Phù hợp cho các ứng dụng collaborative như:
+- Task management (Trello, Jira mini)
+- Realtime workspace
