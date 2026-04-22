@@ -4,7 +4,6 @@ namespace Pkm.Domain.Tasks;
 
 /// <summary>
 /// TaskAssignee: thể hiện một người được giao vào một task.
-/// CreatedDate chính là thời điểm được assign.
 /// </summary>
 public sealed class TaskAssignee : CreationAuditedEntity
 {

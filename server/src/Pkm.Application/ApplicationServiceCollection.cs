@@ -23,7 +23,16 @@ using Pkm.Application.Features.Pages.Queries.GetPage;
 using Pkm.Application.Features.Pages.Queries.ListSubPages;
 using Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
 using Pkm.Application.Features.Pages.Queries.SearchPages;
+using Pkm.Application.Features.Tasks.Commands.AssignTask;
+using Pkm.Application.Features.Tasks.Commands.ChangeWorkTaskStatus;
+using Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
+using Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
+using Pkm.Application.Features.Tasks.Commands.UnassignTask;
+using Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Application.Features.Tasks.Queries.GetWorkTaskById;
+using Pkm.Application.Features.Tasks.Queries.ListPageTasks;
+using Pkm.Application.Features.Tasks.Queries.ListWorkspaceTasks;
 using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
@@ -91,6 +100,17 @@ public static class ApplicationServiceCollection
         services.AddScoped<AcquireBlockLeaseHandler>();
         services.AddScoped<RenewBlockLeaseHandler>();
         services.AddScoped<ReleaseBlockLeaseHandler>();
+
+        services.AddScoped<CreateWorkTaskHandler>();
+        services.AddScoped<UpdateWorkTaskHandler>();
+        services.AddScoped<DeleteWorkTaskHandler>();
+        services.AddScoped<AssignTaskHandler>();
+        services.AddScoped<UnassignTaskHandler>();
+        services.AddScoped<ChangeWorkTaskStatusHandler>();
+
+        services.AddScoped<GetWorkTaskByIdHandler>();
+        services.AddScoped<ListPageTasksHandler>();
+        services.AddScoped<ListWorkspaceTasksHandler>();
 
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 

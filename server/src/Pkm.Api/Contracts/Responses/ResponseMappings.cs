@@ -1,10 +1,12 @@
 ﻿using Pkm.Api.Contracts.Responses.Auth;
 using Pkm.Api.Contracts.Responses.Blocks;
 using Pkm.Api.Contracts.Responses.Pages;
+using Pkm.Api.Contracts.Responses.Tasks;
 using Pkm.Api.Contracts.Responses.Workspaces;
 using AppAuth = Pkm.Application.Features.Authentication.Models;
 using AppDocuments = Pkm.Application.Features.Documents.Models;
 using AppPages = Pkm.Application.Features.Pages.Models;
+using AppTasks = Pkm.Application.Features.Tasks.Models;
 using AppWorkspaces = Pkm.Application.Features.Workspaces.Models;
 
 namespace Pkm.Api.Contracts.Responses;
@@ -97,6 +99,33 @@ public static class ResponseMappings
             dto.UpdatedDate);
 
     public static PagePagedResultResponse ToResponse(this AppPages.PagePagedResultDto dto)
+        => new(
+            dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
+
+    public static WorkTaskAssigneeResponse ToResponse(this AppTasks.TaskAssigneeDto dto)
+        => new(dto.UserId);
+
+    public static WorkTaskResponse ToResponse(this AppTasks.WorkTaskDto dto)
+        => new(
+            dto.Id,
+            dto.WorkspaceId,
+            dto.PageId,
+            dto.Title,
+            dto.Description,
+            dto.Status.ToString(),
+            dto.Priority.ToString(),
+            dto.DueDate,
+            dto.CreatedById,
+            dto.LastModifiedById,
+            dto.CreatedDate,
+            dto.UpdatedDate,
+            dto.Assignees.Select(x => x.ToResponse()).ToArray());
+
+    public static WorkTaskPagedResultResponse ToResponse(this AppTasks.WorkTaskPagedResultDto dto)
         => new(
             dto.Items.Select(x => x.ToResponse()).ToArray(),
             dto.PageNumber,

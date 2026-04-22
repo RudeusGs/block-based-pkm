@@ -22,7 +22,8 @@ public static class CorsServiceCollection
                 }
 
                 policy.AllowAnyHeader()
-                      .AllowAnyMethod();
+                      .AllowAnyMethod()
+                      .AllowCredentials();
             });
         });
 

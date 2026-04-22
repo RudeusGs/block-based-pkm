@@ -3,7 +3,7 @@
 namespace Pkm.Domain.Tasks;
 
 /// <summary>
-/// WorkTask: đại diện cho một công việc trong hệ thống.
+/// WorkTask: đại diện cho một công việc trong workspace, gắn với một page.
 /// </summary>
 public sealed class WorkTask : EntityBase
 {
@@ -26,7 +26,7 @@ public sealed class WorkTask : EntityBase
 
     private WorkTask() { }
 
-    public WorkTask(
+    private WorkTask(
         Guid id,
         string title,
         Guid workspaceId,
@@ -35,20 +35,44 @@ public sealed class WorkTask : EntityBase
         Guid? pageId = null,
         PriorityWorkTask priority = PriorityWorkTask.Medium,
         string? description = null,
-        DateTimeOffset? dueDate = null) : base(id, now)
+        DateTimeOffset? dueDate = null)
+        : base(id, now)
     {
         DomainGuard.AgainstEmpty(workspaceId, nameof(workspaceId));
         DomainGuard.AgainstEmpty(createdById, nameof(createdById));
 
         WorkspaceId = workspaceId;
-        CreatedById = createdById;
         PageId = pageId;
+        CreatedById = createdById;
 
         Title = TextRules.NormalizeRequired(title, MaxTitleLength, nameof(Title));
         Description = TextRules.NormalizeOptional(description, MaxDescriptionLength, nameof(Description));
         Priority = priority;
         DueDate = dueDate;
         Status = StatusWorkTask.ToDo;
+    }
+
+    public static WorkTask Create(
+        Guid id,
+        string title,
+        Guid workspaceId,
+        Guid createdById,
+        DateTimeOffset now,
+        Guid? pageId = null,
+        PriorityWorkTask priority = PriorityWorkTask.Medium,
+        string? description = null,
+        DateTimeOffset? dueDate = null)
+    {
+        return new WorkTask(
+            id,
+            title,
+            workspaceId,
+            createdById,
+            now,
+            pageId,
+            priority,
+            description,
+            dueDate);
     }
 
     public void UpdateDetails(
@@ -69,7 +93,11 @@ public sealed class WorkTask : EntityBase
         RegisterModification(actorId, now);
     }
 
-    public void ChangeLocation(Guid workspaceId, Guid? pageId, Guid actorId, DateTimeOffset now)
+    public void ChangeLocation(
+        Guid workspaceId,
+        Guid? pageId,
+        Guid actorId,
+        DateTimeOffset now)
     {
         EnsureEditable(actorId);
         DomainGuard.AgainstEmpty(workspaceId, nameof(workspaceId));
@@ -80,42 +108,54 @@ public sealed class WorkTask : EntityBase
         RegisterModification(actorId, now);
     }
 
-    public void Complete(Guid actorId, DateTimeOffset now)
+    public void ChangeStatus(
+        StatusWorkTask newStatus,
+        Guid actorId,
+        DateTimeOffset now)
     {
         EnsureEditable(actorId);
 
-        if (Status == StatusWorkTask.Done) return;
+        if (Status == newStatus)
+            return;
 
-        Status = StatusWorkTask.Done;
+        Status = newStatus;
         RegisterModification(actorId, now);
     }
+
+    public void Start(Guid actorId, DateTimeOffset now)
+        => ChangeStatus(StatusWorkTask.Doing, actorId, now);
+
+    public void Complete(Guid actorId, DateTimeOffset now)
+        => ChangeStatus(StatusWorkTask.Done, actorId, now);
 
     public void ReOpen(Guid actorId, DateTimeOffset now)
+        => ChangeStatus(StatusWorkTask.ToDo, actorId, now);
+
+    public void ChangePriority(
+        PriorityWorkTask priority,
+        Guid actorId,
+        DateTimeOffset now)
     {
         EnsureEditable(actorId);
 
-        if (Status == StatusWorkTask.ToDo) return;
-
-        Status = StatusWorkTask.ToDo;
-        RegisterModification(actorId, now);
-    }
-
-    public void ChangePriority(PriorityWorkTask priority, Guid actorId, DateTimeOffset now)
-    {
-        EnsureEditable(actorId);
-
-        if (Priority == priority) return;
+        if (Priority == priority)
+            return;
 
         Priority = priority;
         RegisterModification(actorId, now);
     }
 
-    public void Reschedule(DateTimeOffset? dueDate, Guid actorId, DateTimeOffset now)
+    public void RecordAssignmentChange(Guid actorId, DateTimeOffset now)
     {
         EnsureEditable(actorId);
-
-        DueDate = dueDate;
         RegisterModification(actorId, now);
+    }
+
+    public void Delete(Guid actorId, DateTimeOffset now)
+    {
+        EnsureEditable(actorId);
+        LastModifiedById = actorId;
+        SoftDelete(now);
     }
 
     private void EnsureEditable(Guid actorId)

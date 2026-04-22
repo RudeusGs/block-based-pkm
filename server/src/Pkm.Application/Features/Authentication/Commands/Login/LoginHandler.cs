@@ -2,7 +2,6 @@ using Pkm.Application.Abstractions.Authentication;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
-using Pkm.Application.Features.Authentication;
 using Pkm.Application.Features.Authentication.Models;
 using Pkm.Domain.Users;
 

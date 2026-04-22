@@ -80,7 +80,7 @@ public sealed class CreateBlockHandler
         if (page.IsArchived)
             return Result.Failure<BlockMutationDto>(DocumentErrors.PageArchived);
 
-        Pkm.Domain.Blocks.Block? parentBlock = null;
+        Block? parentBlock = null;
         if (request.ParentBlockId.HasValue)
         {
             parentBlock = await _blockRepository.GetByIdAsync(request.ParentBlockId.Value, cancellationToken);

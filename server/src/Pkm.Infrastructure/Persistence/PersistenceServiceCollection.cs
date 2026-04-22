@@ -29,7 +29,6 @@ public static class PersistenceServiceCollection
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Repositories
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
         services.AddScoped<IWorkspaceMemberRepository, WorkspaceMemberRepository>();
@@ -38,6 +37,8 @@ public static class PersistenceServiceCollection
         services.AddScoped<IPageRevisionRepository, PageRevisionRepository>();
         services.AddScoped<IBlockOperationRepository, BlockOperationRepository>();
         services.AddScoped<IWorkTaskRepository, WorkTaskRepository>();
+        services.AddScoped<ITaskAssigneeRepository, TaskAssigneeRepository>();
+
         return services;
     }
 }

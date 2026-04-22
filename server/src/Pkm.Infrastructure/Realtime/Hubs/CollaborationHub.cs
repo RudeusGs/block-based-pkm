@@ -39,9 +39,7 @@ public sealed class CollaborationHub : Hub
         _clock = clock;
     }
 
-    public async Task<WorkspaceJoinAck> JoinWorkspace(
-        Guid workspaceId,
-        CancellationToken cancellationToken = default)
+    public async Task<WorkspaceJoinAck> JoinWorkspace(Guid workspaceId)
     {
         if (workspaceId == Guid.Empty)
             throw new HubException("WorkspaceId không hợp lệ.");
@@ -51,20 +49,18 @@ public sealed class CollaborationHub : Hub
         var access = await _workspaceAccessEvaluator.EvaluateAsync(
             workspaceId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Workspace không tồn tại.");
         EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền tham gia workspace này.");
 
         var groupName = RealtimeGroupNames.Workspace(workspaceId);
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName, cancellationToken);
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName, Context.ConnectionAborted);
 
         return new WorkspaceJoinAck(workspaceId, groupName);
     }
 
-    public async Task LeaveWorkspace(
-        Guid workspaceId,
-        CancellationToken cancellationToken = default)
+    public async Task LeaveWorkspace(Guid workspaceId)
     {
         if (workspaceId == Guid.Empty)
             return;
@@ -72,12 +68,10 @@ public sealed class CollaborationHub : Hub
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
             RealtimeGroupNames.Workspace(workspaceId),
-            cancellationToken);
+            Context.ConnectionAborted);
     }
 
-    public async Task<PageJoinAck> JoinPage(
-        Guid pageId,
-        CancellationToken cancellationToken = default)
+    public async Task<PageJoinAck> JoinPage(Guid pageId)
     {
         if (pageId == Guid.Empty)
             throw new HubException("PageId không hợp lệ.");
@@ -87,7 +81,7 @@ public sealed class CollaborationHub : Hub
         var access = await _pageAccessEvaluator.EvaluateAsync(
             pageId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Page không tồn tại.");
         EnsureAllowed(access.CanReadDocument, "Bạn không có quyền tham gia page này.");
@@ -95,12 +89,12 @@ public sealed class CollaborationHub : Hub
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             RealtimeGroupNames.Workspace(access.WorkspaceId),
-            cancellationToken);
+            Context.ConnectionAborted);
 
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
             RealtimeGroupNames.Page(pageId),
-            cancellationToken);
+            Context.ConnectionAborted);
 
         await _pagePresenceService.UpsertAsync(
             pageId,
@@ -108,19 +102,19 @@ public sealed class CollaborationHub : Hub
             userId,
             GetCurrentUserDisplayName(),
             Context.ConnectionId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         var snapshot = await BuildPagePresenceDtoAsync(
             access.WorkspaceId,
             pageId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         await PublishPagePresenceChangedAsync(
             access.WorkspaceId,
             pageId,
             userId,
             snapshot,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         return new PageJoinAck(
             access.WorkspaceId,
@@ -128,9 +122,7 @@ public sealed class CollaborationHub : Hub
             snapshot);
     }
 
-    public async Task<PagePresenceDto> HeartbeatPage(
-        Guid pageId,
-        CancellationToken cancellationToken = default)
+    public async Task<PagePresenceDto> HeartbeatPage(Guid pageId)
     {
         if (pageId == Guid.Empty)
             throw new HubException("PageId không hợp lệ.");
@@ -140,7 +132,7 @@ public sealed class CollaborationHub : Hub
         var access = await _pageAccessEvaluator.EvaluateAsync(
             pageId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Page không tồn tại.");
         EnsureAllowed(access.CanReadDocument, "Bạn không có quyền truy cập page này.");
@@ -151,17 +143,15 @@ public sealed class CollaborationHub : Hub
             userId,
             GetCurrentUserDisplayName(),
             Context.ConnectionId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         return await BuildPagePresenceDtoAsync(
             access.WorkspaceId,
             pageId,
-            cancellationToken);
+            Context.ConnectionAborted);
     }
 
-    public async Task LeavePage(
-        Guid pageId,
-        CancellationToken cancellationToken = default)
+    public async Task LeavePage(Guid pageId)
     {
         if (pageId == Guid.Empty)
             return;
@@ -169,15 +159,15 @@ public sealed class CollaborationHub : Hub
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
             RealtimeGroupNames.Page(pageId),
-            cancellationToken);
+            Context.ConnectionAborted);
 
         var removed = await _pagePresenceService.RemoveConnectionAsync(
             Context.ConnectionId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         await _blockEditLeaseService.ReleaseAllForConnectionAsync(
             Context.ConnectionId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         if (removed is null || removed.PageId != pageId)
             return;
@@ -187,19 +177,17 @@ public sealed class CollaborationHub : Hub
         var snapshot = await BuildPagePresenceDtoAsync(
             removed.WorkspaceId,
             removed.PageId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         await PublishPagePresenceChangedAsync(
             removed.WorkspaceId,
             removed.PageId,
             userId,
             snapshot,
-            cancellationToken);
+            Context.ConnectionAborted);
     }
 
-    public async Task<PagePresenceDto> GetPagePresence(
-        Guid pageId,
-        CancellationToken cancellationToken = default)
+    public async Task<PagePresenceDto> GetPagePresence(Guid pageId)
     {
         if (pageId == Guid.Empty)
             throw new HubException("PageId không hợp lệ.");
@@ -209,7 +197,7 @@ public sealed class CollaborationHub : Hub
         var access = await _pageAccessEvaluator.EvaluateAsync(
             pageId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Page không tồn tại.");
         EnsureAllowed(access.CanReadDocument, "Bạn không có quyền xem presence của page này.");
@@ -217,13 +205,12 @@ public sealed class CollaborationHub : Hub
         return await BuildPagePresenceDtoAsync(
             access.WorkspaceId,
             pageId,
-            cancellationToken);
+            Context.ConnectionAborted);
     }
 
     public async Task<BlockLeaseHubResponse> AcquireBlockLease(
         Guid blockId,
-        string? holderDisplayName = null,
-        CancellationToken cancellationToken = default)
+        string? holderDisplayName = null)
     {
         if (blockId == Guid.Empty)
             throw new HubException("BlockId không hợp lệ.");
@@ -233,7 +220,7 @@ public sealed class CollaborationHub : Hub
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
             blockId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Block không tồn tại.");
         EnsureAllowed(access.CanAcquireLease, "Bạn không có quyền acquire lease của block này.");
@@ -246,7 +233,7 @@ public sealed class CollaborationHub : Hub
             string.IsNullOrWhiteSpace(holderDisplayName)
                 ? GetCurrentUserDisplayName()
                 : holderDisplayName,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         var lease = result.Granted ? result.Lease : result.CurrentHolder;
 
@@ -272,7 +259,7 @@ public sealed class CollaborationHub : Hub
                     OccurredAtUtc: _clock.UtcNow,
                     Revision: null,
                     Payload: payload),
-                cancellationToken);
+                Context.ConnectionAborted);
 
             return new BlockLeaseHubResponse(
                 BlockId: blockId,
@@ -294,9 +281,7 @@ public sealed class CollaborationHub : Hub
             ExpiresAtUtc: lease?.ExpiresAtUtc);
     }
 
-    public async Task<BlockLeaseHubResponse> RenewBlockLease(
-        Guid blockId,
-        CancellationToken cancellationToken = default)
+    public async Task<BlockLeaseHubResponse> RenewBlockLease(Guid blockId)
     {
         if (blockId == Guid.Empty)
             throw new HubException("BlockId không hợp lệ.");
@@ -306,7 +291,7 @@ public sealed class CollaborationHub : Hub
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
             blockId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Block không tồn tại.");
         EnsureAllowed(access.CanAcquireLease, "Bạn không có quyền renew lease của block này.");
@@ -315,7 +300,7 @@ public sealed class CollaborationHub : Hub
             blockId,
             userId,
             Context.ConnectionId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         var lease = result.Granted ? result.Lease : result.CurrentHolder;
 
@@ -329,9 +314,7 @@ public sealed class CollaborationHub : Hub
             ExpiresAtUtc: lease?.ExpiresAtUtc);
     }
 
-    public async Task ReleaseBlockLease(
-        Guid blockId,
-        CancellationToken cancellationToken = default)
+    public async Task ReleaseBlockLease(Guid blockId)
     {
         if (blockId == Guid.Empty)
             throw new HubException("BlockId không hợp lệ.");
@@ -341,20 +324,20 @@ public sealed class CollaborationHub : Hub
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
             blockId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Block không tồn tại.");
         EnsureAllowed(access.CanAcquireLease, "Bạn không có quyền release lease của block này.");
 
         var leaseBeforeRelease = await _blockEditLeaseService.GetCurrentAsync(
             blockId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         await _blockEditLeaseService.ReleaseAsync(
             blockId,
             userId,
             Context.ConnectionId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         if (leaseBeforeRelease is not null &&
             leaseBeforeRelease.UserId == userId &&
@@ -380,13 +363,11 @@ public sealed class CollaborationHub : Hub
                     OccurredAtUtc: _clock.UtcNow,
                     Revision: null,
                     Payload: payload),
-                cancellationToken);
+                Context.ConnectionAborted);
         }
     }
 
-    public async Task<BlockLeaseHubResponse> GetBlockLease(
-        Guid blockId,
-        CancellationToken cancellationToken = default)
+    public async Task<BlockLeaseHubResponse> GetBlockLease(Guid blockId)
     {
         if (blockId == Guid.Empty)
             throw new HubException("BlockId không hợp lệ.");
@@ -396,14 +377,14 @@ public sealed class CollaborationHub : Hub
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
             blockId,
             userId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Block không tồn tại.");
         EnsureAllowed(access.CanReadDocument, "Bạn không có quyền xem lease của block này.");
 
         var lease = await _blockEditLeaseService.GetCurrentAsync(
             blockId,
-            cancellationToken);
+            Context.ConnectionAborted);
 
         if (lease is null)
         {
