@@ -12,3 +12,4 @@ server/src/Pkm.Domain/obj
 server/src/Pkm.Infrastructure/bin
 server/src/Pkm.Infrastructure/obj
 server/src/Pkm.Infrastructure/Migrations
+server/.vs
