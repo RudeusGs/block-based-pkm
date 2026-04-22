@@ -30,3 +30,17 @@ server/server.Api/obj
 server/server.Api/appsettings.json
 server/server.Application/bin
 server/server.Application/obj
+server/src/.vs
+server/src/Pkm.Api/.vs
+server/src/Pkm.Api/bin
+server/src/Pkm.Api/obj/Release/net8.0
+server/src/Pkm.Api/obj
+server/src/Pkm.Api/appsettings.json
+server/src/Pkm.Api/appsettings.Development.json
+server/src/Pkm.Application/bin
+server/src/Pkm.Application/obj
+server/src/Pkm.Domain/bin
+server/src/Pkm.Domain/obj
+server/src/Pkm.Infrastructure/bin
+server/src/Pkm.Infrastructure/obj
+server/src/Pkm.Infrastructure/Migrations

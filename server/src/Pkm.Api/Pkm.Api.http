@@ -1,0 +1,30 @@
+@Pkm.Api_HostAddress = http://localhost:5029
+@userId = 00000000-0000-0000-0000-000000000000
+
+POST {{Pkm.Api_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "userName": "demo_user",
+  "email": "demo@example.com",
+  "fullName": "Demo User",
+  "avatarUrl": null,
+  "password": "StrongPass@123"
+}
+
+###
+
+POST {{Pkm.Api_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "userName": "demo_user",
+  "password": "StrongPass@123"
+}
+
+###
+
+GET {{Pkm.Api_HostAddress}}/api/auth/{{userId}}/roles
+Accept: application/json
+
+###

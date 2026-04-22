@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="Pkm.Api/Pkm.Api.csproj" />
+  <Project Path="Pkm.Application/Pkm.Application.csproj" Id="43dedae9-fe65-413c-84f0-4d73da067606" />
+  <Project Path="Pkm.Domain/Pkm.Domain.csproj" Id="0864f5fa-1151-4c4d-a045-0a29cda008b5" />
+  <Project Path="Pkm.Infrastructure/Pkm.Infrastructure.csproj" Id="f46499ce-d929-4a59-bda1-9c2a4dc6fe81" />
+</Solution>

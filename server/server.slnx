@@ -1,7 +1,0 @@
-<Solution>
-  <Project Path="server.Api/server.Api.csproj" />
-  <Project Path="server.Application/server.Application.csproj" />
-  <Project Path="server.Domain/server.Domain.csproj" Id="b63e2865-e60a-4315-b6d3-9d75496db62e" />
-  <Project Path="server.Infrastructure/server.Infrastructure.csproj" Id="4f834d8f-b02e-44dd-9449-9e3c3eef6637" />
-  <Project Path="service.Tests.Unit/service.Tests.Unit.csproj" Id="7d125e1b-25ae-4de3-985a-d94efd2852d3" />
-</Solution>

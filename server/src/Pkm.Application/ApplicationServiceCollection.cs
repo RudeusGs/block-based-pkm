@@ -1,0 +1,99 @@
+using Microsoft.Extensions.DependencyInjection;
+using Pkm.Application.Features.Authentication.Commands.Login;
+using Pkm.Application.Features.Authentication.Commands.Register;
+using Pkm.Application.Features.Authentication.Queries.GetUserRoles;
+using Pkm.Application.Features.Documents.Commands.AcquireBlockLease;
+using Pkm.Application.Features.Documents.Commands.CreateBlock;
+using Pkm.Application.Features.Documents.Commands.DeleteBlock;
+using Pkm.Application.Features.Documents.Commands.MoveBlock;
+using Pkm.Application.Features.Documents.Commands.ReleaseBlockLease;
+using Pkm.Application.Features.Documents.Commands.RenewBlockLease;
+using Pkm.Application.Features.Documents.Commands.UpdateBlock;
+using Pkm.Application.Features.Documents.Policies;
+using Pkm.Application.Features.Documents.Queries.GetBlock;
+using Pkm.Application.Features.Documents.Queries.GetBlockLease;
+using Pkm.Application.Features.Documents.Queries.GetPagePresence;
+using Pkm.Application.Features.Documents.Queries.ListPageBlocks;
+using Pkm.Application.Features.Documents.Services;
+using Pkm.Application.Features.Pages.Commands.CreatePage;
+using Pkm.Application.Features.Pages.Commands.DeletePage;
+using Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
+using Pkm.Application.Features.Pages.Policies;
+using Pkm.Application.Features.Pages.Queries.GetPage;
+using Pkm.Application.Features.Pages.Queries.ListSubPages;
+using Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
+using Pkm.Application.Features.Pages.Queries.SearchPages;
+using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
+using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
+using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
+using Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
+using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
+using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
+using Pkm.Application.Features.Workspaces.Policies;
+using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
+using Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
+using Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
+
+namespace Pkm.Application;
+
+public static class ApplicationServiceCollection
+{
+    public static IServiceCollection AddApplicationServices(this IServiceCollection services)
+    {
+        services.AddScoped<IWorkspaceAccessEvaluator, WorkspaceAccessEvaluator>();
+        services.AddScoped<IPageAccessEvaluator, PageAccessEvaluator>();
+        services.AddScoped<IDocumentAccessEvaluator, DocumentAccessEvaluator>();
+        services.AddScoped<ITaskAccessEvaluator, TaskAccessEvaluator>();
+
+        services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
+
+        services.AddScoped<LoginCommandValidator>();
+        services.AddScoped<RegisterCommandValidator>();
+        services.AddScoped<CreateWorkspaceCommandValidator>();
+        services.AddScoped<UpdateWorkspaceCommandValidator>();
+        services.AddScoped<AddWorkspaceMemberCommandValidator>();
+
+        services.AddScoped<LoginHandler>();
+        services.AddScoped<RegisterHandler>();
+        services.AddScoped<GetUserRolesHandler>();
+
+        services.AddScoped<CreateWorkspaceHandler>();
+        services.AddScoped<UpdateWorkspaceHandler>();
+        services.AddScoped<DeleteWorkspaceHandler>();
+        services.AddScoped<AddWorkspaceMemberHandler>();
+        services.AddScoped<ChangeWorkspaceMemberRoleHandler>();
+        services.AddScoped<RemoveWorkspaceMemberHandler>();
+
+        services.AddScoped<GetWorkspaceByIdHandler>();
+        services.AddScoped<ListMyWorkspacesHandler>();
+        services.AddScoped<ListWorkspaceMembersHandler>();
+
+        services.AddScoped<CreatePageHandler>();
+        services.AddScoped<UpdatePageMetadataHandler>();
+        services.AddScoped<DeletePageHandler>();
+
+        services.AddScoped<GetPageHandler>();
+        services.AddScoped<ListWorkspacePagesHandler>();
+        services.AddScoped<ListSubPagesHandler>();
+        services.AddScoped<SearchPagesHandler>();
+
+        services.AddScoped<GetBlockHandler>();
+        services.AddScoped<GetBlockLeaseHandler>();
+        services.AddScoped<GetPagePresenceHandler>();
+        services.AddScoped<ListPageBlocksHandler>();
+
+        services.AddScoped<CreateBlockHandler>();
+        services.AddScoped<UpdateBlockHandler>();
+        services.AddScoped<MoveBlockHandler>();
+        services.AddScoped<DeleteBlockHandler>();
+
+        services.AddScoped<AcquireBlockLeaseHandler>();
+        services.AddScoped<RenewBlockLeaseHandler>();
+        services.AddScoped<ReleaseBlockLeaseHandler>();
+
+        services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
+
+        return services;
+    }
+}
