@@ -135,9 +135,10 @@ public sealed class AddWorkspaceMemberHandler
             member.IsOwner(),
             member.CreatedDate,
             member.UpdatedDate);
+
         await _notificationService.NotifyAsync(
             request.UserId,
-            NotificationTemplates.WorkspaceRoleChanged(
+            NotificationTemplates.WorkspaceInvited(
                 currentUserId,
                 _currentUser.UserName ?? "Có người",
                 request.WorkspaceId,

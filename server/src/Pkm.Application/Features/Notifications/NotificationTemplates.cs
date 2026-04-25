@@ -199,4 +199,17 @@ public static class NotificationTemplates
             WorkspaceId: workspaceId,
             ReferenceId: commentId,
             ReferenceType: NotificationReferenceTypes.TaskComment);
+
+    public static NotificationDispatchRequest WorkspaceMemberRemoved(
+    Guid actorUserId,
+    string actorDisplayName,
+    Guid workspaceId)
+    => new(
+        Type: NotificationType.WorkspaceMemberRemoved,
+        Title: "Bạn đã bị xóa khỏi workspace",
+        Message: $"{actorDisplayName} đã xóa bạn khỏi workspace.",
+        ActorUserId: actorUserId,
+        WorkspaceId: workspaceId,
+        ReferenceId: workspaceId,
+        ReferenceType: NotificationReferenceTypes.Workspace);
 }

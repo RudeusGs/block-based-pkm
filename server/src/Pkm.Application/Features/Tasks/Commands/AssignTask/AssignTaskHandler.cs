@@ -7,6 +7,7 @@ using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.AssignTask;
 
@@ -56,6 +57,10 @@ public sealed class AssignTaskHandler
         if (!_currentUser.TryGetUserId(out var currentUserId))
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
 
+        if (request.AssigneeUserId == currentUserId)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.CannotAssignTaskToSelf);
+        }
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
             currentUserId,
@@ -92,8 +97,7 @@ public sealed class AssignTaskHandler
         task.RecordAssignmentChange(currentUserId, now);
         _workTaskRepository.Update(task);
 
-        _taskAssigneeRepository.Add(
-            Pkm.Domain.Tasks.TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
+        _taskAssigneeRepository.Add(TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Workspaces.Policies;
 
 namespace Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
@@ -16,7 +18,7 @@ public sealed class RemoveWorkspaceMemberHandler
     private readonly IClock _clock;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
-
+    private readonly INotificationService _notificationService;
     public RemoveWorkspaceMemberHandler(
         ICurrentUser currentUser,
         IWorkspaceMemberRepository workspaceMemberRepository,
@@ -24,7 +26,8 @@ public sealed class RemoveWorkspaceMemberHandler
         IUnitOfWork unitOfWork,
         IClock clock,
         IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IRedisKeyFactory redisKeyFactory,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -33,6 +36,7 @@ public sealed class RemoveWorkspaceMemberHandler
         _clock = clock;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> HandleAsync(
@@ -102,12 +106,20 @@ public sealed class RemoveWorkspaceMemberHandler
             WorkspaceCacheKeys.Access(_redisKeyFactory, request.WorkspaceId, request.UserId),
             cancellationToken);
 
+        await _notificationService.NotifyAsync(
+            request.UserId,
+            NotificationTemplates.WorkspaceMemberRemoved(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                request.WorkspaceId),
+            cancellationToken);
+
         var targetVersionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, request.UserId);
         await _redisCache.SetAsync(
             targetVersionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);
-
+        
         return Result.Success();
     }
 }

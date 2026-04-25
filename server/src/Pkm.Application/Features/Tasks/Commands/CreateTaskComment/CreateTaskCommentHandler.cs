@@ -97,15 +97,15 @@ public sealed class CreateTaskCommentHandler
                 TaskErrors.TaskNotFound);
         }
 
+        TaskComment? parentComment = null;
+
         if (request.ParentId.HasValue)
         {
-            var parentExists = await _taskCommentRepository.ExistsInTaskAsync(
+            parentComment = await _taskCommentRepository.GetByIdAsync(
                 request.ParentId.Value,
-                request.TaskId,
-                includeDeleted: false,
                 cancellationToken);
 
-            if (!parentExists)
+            if (parentComment is null || parentComment.TaskId != request.TaskId)
             {
                 return Result.Failure<TaskCommentDto>(
                     TaskCommentErrors.ParentCommentNotFound);
@@ -159,6 +159,7 @@ public sealed class CreateTaskCommentHandler
                 : taskDetail.Assignees
                     .Select(x => x.UserId)
                     .Append(taskDetail.CreatedById)
+                    .Concat(parentComment is null ? Array.Empty<Guid>() : new[] { parentComment.UserId })
                     .Distinct()
                     .ToArray();
 

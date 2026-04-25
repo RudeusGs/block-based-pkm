@@ -6,7 +6,8 @@ using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Workspaces;
-
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 namespace Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 
 public sealed class ChangeWorkspaceMemberRoleHandler
@@ -18,7 +19,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
     private readonly IClock _clock;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
-
+    private readonly INotificationService _notificationService;
     public ChangeWorkspaceMemberRoleHandler(
         ICurrentUser currentUser,
         IWorkspaceMemberRepository workspaceMemberRepository,
@@ -26,7 +27,8 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         IUnitOfWork unitOfWork,
         IClock clock,
         IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IRedisKeyFactory redisKeyFactory,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -35,6 +37,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         _clock = clock;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<WorkspaceMemberDto>> HandleAsync(
@@ -128,6 +131,15 @@ public sealed class ChangeWorkspaceMemberRoleHandler
             member.IsOwner(),
             member.CreatedDate,
             member.UpdatedDate);
+
+        await _notificationService.NotifyAsync(
+            request.UserId,
+            NotificationTemplates.WorkspaceRoleChanged(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                request.WorkspaceId,
+                request.Role),
+            cancellationToken);
 
         return Result.Success(dto);
     }
