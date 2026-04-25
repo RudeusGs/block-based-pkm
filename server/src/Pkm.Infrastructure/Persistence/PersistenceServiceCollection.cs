@@ -38,6 +38,7 @@ public static class PersistenceServiceCollection
         services.AddScoped<IBlockOperationRepository, BlockOperationRepository>();
         services.AddScoped<IWorkTaskRepository, WorkTaskRepository>();
         services.AddScoped<ITaskAssigneeRepository, TaskAssigneeRepository>();
+        services.AddScoped<ITaskCommentRepository, TaskCommentRepository>();
 
         return services;
     }

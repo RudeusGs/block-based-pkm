@@ -25,13 +25,18 @@ using Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
 using Pkm.Application.Features.Pages.Queries.SearchPages;
 using Pkm.Application.Features.Tasks.Commands.AssignTask;
 using Pkm.Application.Features.Tasks.Commands.ChangeWorkTaskStatus;
+using Pkm.Application.Features.Tasks.Commands.CreateTaskComment;
 using Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
+using Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
 using Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
+using Pkm.Application.Features.Tasks.Commands.RestoreTaskComment;
 using Pkm.Application.Features.Tasks.Commands.UnassignTask;
+using Pkm.Application.Features.Tasks.Commands.UpdateTaskComment;
 using Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Application.Features.Tasks.Queries.GetWorkTaskById;
 using Pkm.Application.Features.Tasks.Queries.ListPageTasks;
+using Pkm.Application.Features.Tasks.Queries.ListTaskComments;
 using Pkm.Application.Features.Tasks.Queries.ListWorkspaceTasks;
 using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
@@ -70,6 +75,12 @@ public static class ApplicationServiceCollection
         services.AddScoped<ChangeWorkTaskStatusCommandValidator>();
         services.AddScoped<ListPageTasksQueryValidator>();
         services.AddScoped<ListWorkspaceTasksQueryValidator>();
+
+        services.AddScoped<CreateTaskCommentCommandValidator>();
+        services.AddScoped<UpdateTaskCommentCommandValidator>();
+        services.AddScoped<DeleteTaskCommentCommandValidator>();
+        services.AddScoped<RestoreTaskCommentCommandValidator>();
+        services.AddScoped<ListTaskCommentsQueryValidator>();
 
         services.AddScoped<LoginHandler>();
         services.AddScoped<RegisterHandler>();
@@ -119,6 +130,12 @@ public static class ApplicationServiceCollection
         services.AddScoped<GetWorkTaskByIdHandler>();
         services.AddScoped<ListPageTasksHandler>();
         services.AddScoped<ListWorkspaceTasksHandler>();
+
+        services.AddScoped<ListTaskCommentsHandler>();
+        services.AddScoped<CreateTaskCommentHandler>();
+        services.AddScoped<UpdateTaskCommentHandler>();
+        services.AddScoped<DeleteTaskCommentHandler>();
+        services.AddScoped<RestoreTaskCommentHandler>();
 
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 
