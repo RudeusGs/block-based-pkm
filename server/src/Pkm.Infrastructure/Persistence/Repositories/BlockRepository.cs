@@ -102,6 +102,18 @@ internal sealed class BlockRepository : IBlockRepository
                  page.IsArchived))
             .FirstOrDefaultAsync(cancellationToken);
     }
-
+    public async Task<IReadOnlyList<Block>> ListSiblingsForUpdateAsync(
+        Guid pageId,
+        Guid? parentBlockId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dataContext.Blocks
+            .Where(x =>
+                x.PageId == pageId &&
+                x.ParentBlockId == parentBlockId &&
+                !x.IsDeleted)
+            .OrderBy(x => x.OrderKey)
+            .ToListAsync(cancellationToken);
+    }
     public void Add(Block block) => _dataContext.Blocks.Add(block);
 }

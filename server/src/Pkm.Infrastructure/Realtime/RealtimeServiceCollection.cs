@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pkm.Application.Abstractions.Realtime;
+using Pkm.Infrastructure.Cache;
 using Pkm.Infrastructure.Realtime.Locks;
 using Pkm.Infrastructure.Realtime.Presence;
 using Pkm.Infrastructure.Realtime.Publishers;
@@ -17,12 +18,39 @@ public static class RealtimeServiceCollection
         services.Configure<RealtimeOptions>(
             configuration.GetSection(RealtimeOptions.SectionName));
 
-        services.AddSignalR();
-        services.AddSingleton<InMemoryPagePresenceService>();
-        services.AddSingleton<InMemoryBlockEditLeaseService>();
+        var realtimeOptions = configuration
+            .GetSection(RealtimeOptions.SectionName)
+            .Get<RealtimeOptions>()
+            ?? new RealtimeOptions();
+
+        var redisOptions = configuration
+            .GetSection(RedisOptions.SectionName)
+            .Get<RedisOptions>()
+            ?? new RedisOptions();
 
         var hasRedisMultiplexer = services.Any(
             descriptor => descriptor.ServiceType == typeof(IConnectionMultiplexer));
+
+        var signalRBuilder = services.AddSignalR();
+
+        if (realtimeOptions.UseRedisBackplane &&
+            hasRedisMultiplexer &&
+            !string.IsNullOrWhiteSpace(redisOptions.Connection))
+        {
+            var channelPrefix = string.IsNullOrWhiteSpace(realtimeOptions.RedisBackplaneChannelPrefix)
+                ? $"{redisOptions.InstanceName}:signalr"
+                : realtimeOptions.RedisBackplaneChannelPrefix;
+
+            signalRBuilder.AddStackExchangeRedis(
+                redisOptions.Connection,
+                options =>
+                {
+                    options.Configuration.ChannelPrefix = RedisChannel.Literal(channelPrefix);
+                });
+        }
+
+        services.AddSingleton<InMemoryPagePresenceService>();
+        services.AddSingleton<InMemoryBlockEditLeaseService>();
 
         if (hasRedisMultiplexer)
         {
@@ -45,6 +73,7 @@ public static class RealtimeServiceCollection
         services.AddSingleton<ITaskRealtimePublisher, SignalRTaskRealtimePublisher>();
         services.AddSingleton<INotificationRealtimePublisher, SignalRNotificationRealtimePublisher>();
         services.AddSingleton<IRecommendationRealtimePublisher, SignalRRecommendationRealtimePublisher>();
+
         return services;
     }
 }

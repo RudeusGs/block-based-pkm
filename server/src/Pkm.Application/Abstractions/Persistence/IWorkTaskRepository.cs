@@ -56,6 +56,10 @@ public interface IWorkTaskRepository
         Guid? pageId,
         int take,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyDictionary<Guid, RecommendationCandidateReadModel>> ListRecommendationTaskDetailsByIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> taskIds,
+        CancellationToken cancellationToken = default);
     void Add(WorkTask task);
 
     void Update(WorkTask task);

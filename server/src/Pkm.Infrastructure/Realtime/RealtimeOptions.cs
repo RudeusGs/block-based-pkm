@@ -6,4 +6,7 @@ public sealed class RealtimeOptions
 
     public int PresenceTtlSeconds { get; init; } = 30;
     public int BlockLeaseTtlSeconds { get; init; } = 30;
+
+    public bool UseRedisBackplane { get; init; } = true;
+    public string RedisBackplaneChannelPrefix { get; init; } = "pkm:signalr";
 }

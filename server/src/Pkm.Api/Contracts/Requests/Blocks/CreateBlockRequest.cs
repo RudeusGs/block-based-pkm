@@ -1,6 +1,7 @@
 ﻿namespace Pkm.Api.Contracts.Requests.Blocks;
 
 public sealed record CreateBlockRequest(
+    long ExpectedRevision,
     string Type,
     string? TextContent,
     string? PropsJson,

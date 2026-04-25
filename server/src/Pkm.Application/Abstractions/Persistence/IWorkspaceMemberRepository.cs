@@ -27,6 +27,11 @@ public interface IWorkspaceMemberRepository
         Guid userId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlySet<Guid>> ListExistingUserIdsAsync(
+        Guid workspaceId,
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken = default);
+
     void Add(WorkspaceMember member);
     void Update(WorkspaceMember member);
 }

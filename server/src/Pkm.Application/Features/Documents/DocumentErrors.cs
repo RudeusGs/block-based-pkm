@@ -69,6 +69,11 @@ public static class DocumentErrors
         "Parent block không thuộc cùng page.",
         ResultStatus.Unprocessable);
 
+    public static readonly Error InvalidBlockPosition = new(
+        "Document.InvalidBlockPosition",
+        "Vị trí chèn block không hợp lệ. PreviousBlockId và NextBlockId phải thuộc cùng parent và liền kề nhau.",
+        ResultStatus.Unprocessable);
+
     public static readonly Error BlockCycleDetected = new(
         "Document.BlockCycleDetected",
         "Không thể move block vào chính nó hoặc descendant của nó.",

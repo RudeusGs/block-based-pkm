@@ -2,6 +2,7 @@
 
 public sealed record CreateBlockCommand(
     Guid PageId,
+    long ExpectedRevision,
     string Type,
     string? TextContent,
     string? PropsJson,

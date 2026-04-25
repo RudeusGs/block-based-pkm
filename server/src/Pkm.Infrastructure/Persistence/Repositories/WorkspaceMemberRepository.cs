@@ -72,6 +72,32 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
             .AnyAsync(x => x.WorkspaceId == workspaceId && x.UserId == userId, cancellationToken);
     }
 
+    public async Task<IReadOnlySet<Guid>> ListExistingUserIdsAsync(
+        Guid workspaceId,
+        IReadOnlyCollection<Guid> userIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (userIds.Count == 0)
+            return new HashSet<Guid>();
+
+        var normalizedUserIds = userIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        if (normalizedUserIds.Length == 0)
+            return new HashSet<Guid>();
+
+        var existingUserIds = await _dataContext.WorkspaceMembers
+            .AsNoTracking()
+            .Where(x =>
+                x.WorkspaceId == workspaceId &&
+                normalizedUserIds.Contains(x.UserId))
+            .Select(x => x.UserId)
+            .ToListAsync(cancellationToken);
+
+        return existingUserIds.ToHashSet();
+    }
     public void Add(WorkspaceMember member)
     {
         _dataContext.WorkspaceMembers.Add(member);

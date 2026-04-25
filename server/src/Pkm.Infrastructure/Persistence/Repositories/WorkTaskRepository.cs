@@ -352,4 +352,39 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
             .Take(take)
             .ToListAsync(cancellationToken);
     }
+    public async Task<IReadOnlyDictionary<Guid, RecommendationCandidateReadModel>> ListRecommendationTaskDetailsByIdsAsync(
+    Guid userId,
+    IReadOnlyCollection<Guid> taskIds,
+    CancellationToken cancellationToken = default)
+    {
+        if (taskIds.Count == 0)
+            return new Dictionary<Guid, RecommendationCandidateReadModel>();
+
+        var normalizedTaskIds = taskIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        if (normalizedTaskIds.Length == 0)
+            return new Dictionary<Guid, RecommendationCandidateReadModel>();
+
+        return await _context.WorkTasks
+            .AsNoTracking()
+            .Where(x => normalizedTaskIds.Contains(x.Id))
+            .Select(x => new RecommendationCandidateReadModel(
+                x.Id,
+                x.WorkspaceId,
+                x.PageId,
+                x.Title,
+                x.Description,
+                x.Status,
+                x.Priority,
+                x.DueDate,
+                x.CreatedById,
+                x.CreatedDate,
+                x.UpdatedDate,
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id && a.UserId == userId),
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id)))
+            .ToDictionaryAsync(x => x.TaskId, cancellationToken);
+    }
 }

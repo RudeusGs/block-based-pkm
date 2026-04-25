@@ -102,15 +102,14 @@ public sealed class CreateWorkTaskHandler
         {
             return Result.Failure<WorkTaskDto>(TaskErrors.CannotAssignTaskToSelf);
         }
-
-        foreach (var assigneeUserId in assigneeIds)
+        if (assigneeIds.Length > 0)
         {
-            var exists = await _workspaceMemberRepository.ExistsAsync(
+            var existingAssigneeIds = await _workspaceMemberRepository.ListExistingUserIdsAsync(
                 page.WorkspaceId,
-                assigneeUserId,
+                assigneeIds,
                 cancellationToken);
 
-            if (!exists)
+            if (existingAssigneeIds.Count != assigneeIds.Length)
             {
                 return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeNotInWorkspace);
             }

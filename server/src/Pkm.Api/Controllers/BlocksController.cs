@@ -190,6 +190,7 @@ public sealed class BlocksController : BaseController
     {
         var command = new CreateBlockCommand(
             pageId,
+            request.ExpectedRevision,
             request.Type,
             request.TextContent,
             request.PropsJson,

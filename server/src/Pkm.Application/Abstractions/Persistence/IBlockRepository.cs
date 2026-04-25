@@ -16,6 +16,11 @@ public interface IBlockRepository
         Guid pageId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Block>> ListSiblingsForUpdateAsync(
+        Guid pageId,
+        Guid? parentBlockId,
+        CancellationToken cancellationToken = default);
+        
     Task<bool> IsDescendantOrSelfAsync(
         Guid blockId,
         Guid candidateParentBlockId,

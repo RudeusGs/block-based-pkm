@@ -109,14 +109,15 @@ public sealed class ListTaskRecommendationsHandler
             request.Status,
             cancellationToken);
 
-        var candidateTasks = await _workTaskRepository.ListRecommendationCandidatesAsync(
-            currentUserId,
-            request.WorkspaceId ?? Guid.Empty,
-            pageId: null,
-            take: 500,
-            cancellationToken);
+        var taskIds = items
+            .Select(x => x.TaskId)
+            .Distinct()
+            .ToArray();
 
-        var taskMap = candidateTasks.ToDictionary(x => x.TaskId, x => x);
+        var taskMap = await _workTaskRepository.ListRecommendationTaskDetailsByIdsAsync(
+            currentUserId,
+            taskIds,
+            cancellationToken);
 
         var dto = new TaskRecommendationPagedResultDto(
             items.Select(x =>

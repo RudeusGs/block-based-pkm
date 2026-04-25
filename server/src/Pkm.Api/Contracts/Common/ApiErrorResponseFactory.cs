@@ -1,4 +1,5 @@
 ﻿using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using Pkm.Api.Contracts.Common;
 using Pkm.Application.Common.Results;
 using Pkm.Domain.Common;
@@ -32,6 +33,13 @@ public static class ApiErrorResponseFactory
                 "Dữ liệu đã thay đổi bởi một thao tác khác. Vui lòng tải lại và thử lại.",
                 Array.Empty<string>()),
 
+            DbUpdateException dbUpdateException when IsPostgresUniqueViolation(dbUpdateException) => new ErrorDescriptor(
+                StatusCodes.Status409Conflict,
+                "conflict",
+                "Persistence.UniqueConstraintViolation",
+                "Dữ liệu bị trùng hoặc đã thay đổi bởi một thao tác khác. Vui lòng tải lại và thử lại.",
+                Array.Empty<string>()),
+
             DomainException => new ErrorDescriptor(
                 StatusCodes.Status422UnprocessableEntity,
                 "domain_error",
@@ -63,6 +71,12 @@ public static class ApiErrorResponseFactory
             statusCode: descriptor.StatusCode,
             traceId: traceId);
     }
+
+    private static bool IsPostgresUniqueViolation(DbUpdateException exception)
+        => exception.InnerException is PostgresException
+        {
+            SqlState: PostgresErrorCodes.UniqueViolation
+        };
 
     private static ErrorDescriptor Resolve(ResultStatus status)
         => status switch
