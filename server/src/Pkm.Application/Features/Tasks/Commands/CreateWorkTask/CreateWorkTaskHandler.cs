@@ -4,6 +4,7 @@ using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Tasks.Models;
+using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
@@ -22,6 +23,7 @@ public sealed class CreateWorkTaskHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
+    private readonly CreateWorkTaskCommandValidator _validator;
 
     public CreateWorkTaskHandler(
         ICurrentUser currentUser,
@@ -32,7 +34,8 @@ public sealed class CreateWorkTaskHandler
         ITaskAssigneeRepository taskAssigneeRepository,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock)
+        IClock clock,
+        CreateWorkTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
@@ -43,32 +46,34 @@ public sealed class CreateWorkTaskHandler
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
         CreateWorkTaskCommand request,
         CancellationToken cancellationToken)
     {
-        var errors = new List<string>();
-
-        if (request.PageId == Guid.Empty)
-            errors.Add("PageId không hợp lệ.");
-
-        if (string.IsNullOrWhiteSpace(request.Title))
-            errors.Add("Tiêu đề task không được để trống.");
-
-        if (errors.Count > 0)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidCreateRequest(errors));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidCreateRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
+        }
 
         var page = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
         if (page is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageNotFound);
+        }
 
         if (page.IsArchived)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageArchived);
+        }
 
         var workspaceAccess = await _workspaceAccessEvaluator.EvaluateAsync(
             page.WorkspaceId,
@@ -76,15 +81,24 @@ public sealed class CreateWorkTaskHandler
             cancellationToken);
 
         if (!workspaceAccess.Exists)
+        {
             return Result.Failure<WorkTaskDto>(WorkspaceErrors.WorkspaceNotFound);
+        }
 
-        if (!workspaceAccess.CanCreateTasks)
-            return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
+        if (!TaskPermissionRules.CanManageTasks(workspaceAccess.Role))
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskManageForbidden);
+        }
 
         var assigneeIds = (request.AssigneeUserIds ?? Array.Empty<Guid>())
             .Where(x => x != Guid.Empty)
             .Distinct()
             .ToArray();
+
+        if (assigneeIds.Contains(currentUserId))
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.CannotAssignTaskToSelf);
+        }
 
         foreach (var assigneeUserId in assigneeIds)
         {
@@ -94,7 +108,9 @@ public sealed class CreateWorkTaskHandler
                 cancellationToken);
 
             if (!exists)
+            {
                 return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeNotInWorkspace);
+            }
         }
 
         try

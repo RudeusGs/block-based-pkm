@@ -194,11 +194,14 @@ public static class WorkspaceRoleCapabilityMatrix
                 CanCommentTask: true,
                 CanModerateComments: true),
 
+            // Members may read and comment, but they cannot manage, assign, delete,
+            // or complete arbitrary tasks. An assigned member can still change the
+            // status of their own assigned task in ChangeWorkTaskStatusHandler.
             WorkspaceRole.Member => new TaskCapabilitySet(
                 CanReadTask: true,
-                CanEditTask: true,
+                CanEditTask: false,
                 CanAssignTask: false,
-                CanCompleteTask: true,
+                CanCompleteTask: false,
                 CanCommentTask: true,
                 CanModerateComments: false),
 

@@ -15,6 +15,7 @@ public sealed class DeleteWorkTaskHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
+    private readonly DeleteWorkTaskCommandValidator _validator;
 
     public DeleteWorkTaskHandler(
         ICurrentUser currentUser,
@@ -22,7 +23,8 @@ public sealed class DeleteWorkTaskHandler
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock)
+        IClock clock,
+        DeleteWorkTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -30,17 +32,23 @@ public sealed class DeleteWorkTaskHandler
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
+        _validator = validator;
     }
 
     public async Task<Result> HandleAsync(
         DeleteWorkTaskCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.TaskId == Guid.Empty)
-            return Result.Failure(TaskErrors.InvalidTaskId(request.TaskId));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure(TaskErrors.InvalidDeleteRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure(TaskErrors.MissingUserContext);
+        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -48,14 +56,20 @@ public sealed class DeleteWorkTaskHandler
             cancellationToken);
 
         if (!access.Exists)
+        {
             return Result.Failure(TaskErrors.TaskNotFound);
+        }
 
-        if (!access.CanEditTask)
-            return Result.Failure(TaskErrors.TaskForbidden);
+        if (!TaskPermissionRules.CanManageTasks(access.Role))
+        {
+            return Result.Failure(TaskErrors.TaskManageForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
+        {
             return Result.Failure(TaskErrors.TaskNotFound);
+        }
 
         var now = _clock.UtcNow;
 

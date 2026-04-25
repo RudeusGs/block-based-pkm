@@ -19,6 +19,16 @@ public static class TaskErrors
         "Không có quyền thao tác task này.",
         ResultStatus.Forbidden);
 
+    public static readonly Error TaskManageForbidden = new(
+        "Task.ManageForbidden",
+        "Chỉ trưởng workspace hoặc manager mới có quyền tạo, cập nhật, xóa, phân công hoặc gỡ phân công task.",
+        ResultStatus.Forbidden);
+
+    public static readonly Error TaskStatusForbidden = new(
+        "Task.StatusForbidden",
+        "Chỉ trưởng workspace, manager hoặc người đang được giao task mới có quyền đổi trạng thái task.",
+        ResultStatus.Forbidden);
+
     public static readonly Error PageNotFound = new(
         "Task.PageNotFound",
         "Không tìm thấy page.",
@@ -47,6 +57,11 @@ public static class TaskErrors
     public static readonly Error AssigneeNotInWorkspace = new(
         "Task.AssigneeNotInWorkspace",
         "Người dùng không thuộc workspace của task.",
+        ResultStatus.Unprocessable);
+
+    public static readonly Error CannotAssignTaskToSelf = new(
+        "Task.CannotAssignTaskToSelf",
+        "Use case phân công task này chỉ dùng để giao task cho người khác, không dùng để tự giao cho chính mình.",
         ResultStatus.Unprocessable);
 
     public static readonly Error InvalidStatus = new(
@@ -99,6 +114,13 @@ public static class TaskErrors
         => new(
             "Task.InvalidUpdateRequest",
             "Dữ liệu cập nhật task không hợp lệ.",
+            ResultStatus.Validation,
+            details);
+
+    public static Error InvalidDeleteRequest(IReadOnlyList<string> details)
+        => new(
+            "Task.InvalidDeleteRequest",
+            "Dữ liệu xóa task không hợp lệ.",
             ResultStatus.Validation,
             details);
 

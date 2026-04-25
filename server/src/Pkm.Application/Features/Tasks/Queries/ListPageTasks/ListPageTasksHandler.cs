@@ -13,28 +13,36 @@ public sealed class ListPageTasksHandler
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IWorkTaskRepository _workTaskRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
+    private readonly ListPageTasksQueryValidator _validator;
 
     public ListPageTasksHandler(
         ICurrentUser currentUser,
         IPageAccessEvaluator pageAccessEvaluator,
         IWorkTaskRepository workTaskRepository,
-        ITaskAssigneeRepository taskAssigneeRepository)
+        ITaskAssigneeRepository taskAssigneeRepository,
+        ListPageTasksQueryValidator validator)
     {
         _currentUser = currentUser;
         _pageAccessEvaluator = pageAccessEvaluator;
         _workTaskRepository = workTaskRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskPagedResultDto>> HandleAsync(
         ListPageTasksQuery request,
         CancellationToken cancellationToken)
     {
-        if (request.PageId == Guid.Empty)
-            return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.InvalidPageId(request.PageId));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.InvalidListRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskPagedResultDto>(PageErrors.MissingUserContext);
+        }
 
         var pageAccess = await _pageAccessEvaluator.EvaluateAsync(
             request.PageId,
@@ -42,10 +50,17 @@ public sealed class ListPageTasksHandler
             cancellationToken);
 
         if (!pageAccess.Exists)
+        {
             return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.PageNotFound);
+        }
 
         if (!pageAccess.CanRead)
+        {
             return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.TaskForbidden);
+        }
+
+        var pageNumber = request.PageNumber;
+        var pageSize = request.PageSize;
 
         var filter = new WorkTaskListFilter(
             request.Keyword,
@@ -55,15 +70,12 @@ public sealed class ListPageTasksHandler
             request.DueFrom,
             request.DueTo,
             request.IncludeCompleted,
-            request.PageNumber,
-            request.PageSize);
-
-        var pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
-        var pageSize = filter.PageSize <= 0 ? 20 : Math.Min(filter.PageSize, 100);
+            pageNumber,
+            pageSize);
 
         var items = await _workTaskRepository.ListByPageAsync(
             request.PageId,
-            filter with { PageNumber = pageNumber, PageSize = pageSize },
+            filter,
             cancellationToken);
 
         var totalCount = await _workTaskRepository.CountByPageAsync(

@@ -13,28 +13,36 @@ public sealed class ListWorkspaceTasksHandler
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IWorkTaskRepository _workTaskRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
+    private readonly ListWorkspaceTasksQueryValidator _validator;
 
     public ListWorkspaceTasksHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IWorkTaskRepository workTaskRepository,
-        ITaskAssigneeRepository taskAssigneeRepository)
+        ITaskAssigneeRepository taskAssigneeRepository,
+        ListWorkspaceTasksQueryValidator validator)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _workTaskRepository = workTaskRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskPagedResultDto>> HandleAsync(
         ListWorkspaceTasksQuery request,
         CancellationToken cancellationToken)
     {
-        if (request.WorkspaceId == Guid.Empty)
-            return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.InvalidWorkspaceId(request.WorkspaceId));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.InvalidListRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskPagedResultDto>(TaskErrors.MissingUserContext);
+        }
 
         var access = await _workspaceAccessEvaluator.EvaluateAsync(
             request.WorkspaceId,
@@ -42,10 +50,17 @@ public sealed class ListWorkspaceTasksHandler
             cancellationToken);
 
         if (!access.Exists)
+        {
             return Result.Failure<WorkTaskPagedResultDto>(WorkspaceErrors.WorkspaceNotFound);
+        }
 
         if (!access.CanRead)
+        {
             return Result.Failure<WorkTaskPagedResultDto>(WorkspaceErrors.WorkspaceForbidden);
+        }
+
+        var pageNumber = request.PageNumber;
+        var pageSize = request.PageSize;
 
         var filter = new WorkTaskListFilter(
             request.Keyword,
@@ -55,15 +70,12 @@ public sealed class ListWorkspaceTasksHandler
             request.DueFrom,
             request.DueTo,
             request.IncludeCompleted,
-            request.PageNumber,
-            request.PageSize);
-
-        var pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
-        var pageSize = filter.PageSize <= 0 ? 20 : Math.Min(filter.PageSize, 100);
+            pageNumber,
+            pageSize);
 
         var items = await _workTaskRepository.ListByWorkspaceAsync(
             request.WorkspaceId,
-            filter with { PageNumber = pageNumber, PageSize = pageSize },
+            filter,
             cancellationToken);
 
         var totalCount = await _workTaskRepository.CountByWorkspaceAsync(

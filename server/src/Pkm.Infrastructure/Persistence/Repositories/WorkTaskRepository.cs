@@ -221,18 +221,11 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         if (raw is null)
             return null;
 
-        var role = raw.Role;
-
-        if (raw.CreatedById == userId && role is null)
-        {
-            role = WorkspaceRole.Owner;
-        }
-
         return new TaskAccessReadModel(
             raw.Id,
             raw.WorkspaceId,
             raw.CreatedById,
-            role,
+            raw.Role,
             raw.Status);
     }
 

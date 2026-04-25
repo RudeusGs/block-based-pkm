@@ -20,17 +20,7 @@ public sealed class TaskAccessEvaluator : ITaskAccessEvaluator
     {
         if (taskId == Guid.Empty || userId == Guid.Empty)
         {
-            return new TaskAccessResult(
-                Exists: false,
-                TaskId: Guid.Empty,
-                WorkspaceId: Guid.Empty,
-                Role: null,
-                CanReadTask: false,
-                CanEditTask: false,
-                CanAssignTask: false,
-                CanCompleteTask: false,
-                CanCommentTask: false,
-                CanModerateComments: false);
+            return Denied();
         }
 
         var access = await _workTaskRepository.GetAccessContextAsync(
@@ -40,27 +30,20 @@ public sealed class TaskAccessEvaluator : ITaskAccessEvaluator
 
         if (access is null)
         {
-            return new TaskAccessResult(
-                Exists: false,
-                TaskId: Guid.Empty,
-                WorkspaceId: Guid.Empty,
-                Role: null,
-                CanReadTask: false,
-                CanEditTask: false,
-                CanAssignTask: false,
-                CanCompleteTask: false,
-                CanCommentTask: false,
-                CanModerateComments: false);
+            return Denied();
         }
 
-        var isOwner = access.CreatedById == userId || access.Role == WorkspaceRole.Owner;
-        var capabilities = WorkspaceRoleCapabilityMatrix.ForTask(isOwner, access.Role);
+        // Task permission must come from workspace role, not from task creator ownership.
+        // A normal member who created a task is still not allowed to assign/delete/manage tasks
+        // unless they are promoted to workspace Owner or Manager.
+        var isWorkspaceOwner = access.Role == WorkspaceRole.Owner;
+        var capabilities = WorkspaceRoleCapabilityMatrix.ForTask(isWorkspaceOwner, access.Role);
 
         return new TaskAccessResult(
             Exists: true,
             TaskId: access.TaskId,
             WorkspaceId: access.WorkspaceId,
-            Role: isOwner ? WorkspaceRole.Owner : access.Role,
+            Role: access.Role,
             CanReadTask: capabilities.CanReadTask,
             CanEditTask: capabilities.CanEditTask,
             CanAssignTask: capabilities.CanAssignTask,
@@ -68,4 +51,17 @@ public sealed class TaskAccessEvaluator : ITaskAccessEvaluator
             CanCommentTask: capabilities.CanCommentTask,
             CanModerateComments: capabilities.CanModerateComments);
     }
+
+    private static TaskAccessResult Denied()
+        => new(
+            Exists: false,
+            TaskId: Guid.Empty,
+            WorkspaceId: Guid.Empty,
+            Role: null,
+            CanReadTask: false,
+            CanEditTask: false,
+            CanAssignTask: false,
+            CanCompleteTask: false,
+            CanCommentTask: false,
+            CanModerateComments: false);
 }

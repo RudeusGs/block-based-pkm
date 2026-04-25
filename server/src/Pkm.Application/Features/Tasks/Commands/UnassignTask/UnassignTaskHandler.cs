@@ -17,6 +17,7 @@ public sealed class UnassignTaskHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
+    private readonly UnassignTaskCommandValidator _validator;
 
     public UnassignTaskHandler(
         ICurrentUser currentUser,
@@ -25,7 +26,8 @@ public sealed class UnassignTaskHandler
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock)
+        IClock clock,
+        UnassignTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -34,20 +36,23 @@ public sealed class UnassignTaskHandler
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
         UnassignTaskCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.TaskId == Guid.Empty)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidTaskId(request.TaskId));
-
-        if (request.AssigneeUserId == Guid.Empty)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidAssigneeUserId(request.AssigneeUserId));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidAssignRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
+        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -55,14 +60,20 @@ public sealed class UnassignTaskHandler
             cancellationToken);
 
         if (!access.Exists)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
-        if (!access.CanAssignTask)
-            return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
+        if (!TaskPermissionRules.CanAssignTasks(access.Role))
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskManageForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
         var assignee = await _taskAssigneeRepository.GetByTaskAndUserAsync(
             request.TaskId,
@@ -70,7 +81,9 @@ public sealed class UnassignTaskHandler
             cancellationToken);
 
         if (assignee is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeNotFound);
+        }
 
         var now = _clock.UtcNow;
 
@@ -92,7 +105,11 @@ public sealed class UnassignTaskHandler
                 TaskId: task.Id,
                 ActorId: currentUserId,
                 OccurredAtUtc: now,
-                Payload: dto),
+                Payload: new
+                {
+                    task = dto,
+                    assigneeUserId = request.AssigneeUserId
+                }),
             cancellationToken);
 
         return Result.Success(dto);

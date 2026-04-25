@@ -13,36 +13,47 @@ public sealed class ChangeWorkTaskStatusHandler
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly ITaskAssigneeRepository _taskAssigneeRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
+    private readonly ChangeWorkTaskStatusCommandValidator _validator;
 
     public ChangeWorkTaskStatusHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
+        ITaskAssigneeRepository taskAssigneeRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock)
+        IClock clock,
+        ChangeWorkTaskStatusCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
+        _taskAssigneeRepository = taskAssigneeRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
         ChangeWorkTaskStatusCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.TaskId == Guid.Empty)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidTaskId(request.TaskId));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidStatusChangeRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
+        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -50,18 +61,31 @@ public sealed class ChangeWorkTaskStatusHandler
             cancellationToken);
 
         if (!access.Exists)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
-        var needsCompleteCapability = request.Status == StatusWorkTask.Done;
-        if (needsCompleteCapability && !access.CanCompleteTask)
+        if (!access.CanReadTask)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
+        }
 
-        if (!needsCompleteCapability && !access.CanEditTask)
-            return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
+        var canManageTask = TaskPermissionRules.CanManageTasks(access.Role);
+        var isAssignee = await _taskAssigneeRepository.ExistsAsync(
+            request.TaskId,
+            currentUserId,
+            cancellationToken);
+
+        if (!canManageTask && !isAssignee)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskStatusForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
         var now = _clock.UtcNow;
 
@@ -81,7 +105,11 @@ public sealed class ChangeWorkTaskStatusHandler
                 TaskId: task.Id,
                 ActorId: currentUserId,
                 OccurredAtUtc: now,
-                Payload: dto),
+                Payload: new
+                {
+                    task = dto,
+                    status = request.Status.ToString()
+                }),
             cancellationToken);
 
         return Result.Success(dto);

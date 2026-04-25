@@ -62,6 +62,14 @@ public static class ApplicationServiceCollection
         services.AddScoped<CreateWorkspaceCommandValidator>();
         services.AddScoped<UpdateWorkspaceCommandValidator>();
         services.AddScoped<AddWorkspaceMemberCommandValidator>();
+        services.AddScoped<CreateWorkTaskCommandValidator>();
+        services.AddScoped<UpdateWorkTaskCommandValidator>();
+        services.AddScoped<AssignTaskCommandValidator>();
+        services.AddScoped<UnassignTaskCommandValidator>();
+        services.AddScoped<DeleteWorkTaskCommandValidator>();
+        services.AddScoped<ChangeWorkTaskStatusCommandValidator>();
+        services.AddScoped<ListPageTasksQueryValidator>();
+        services.AddScoped<ListWorkspaceTasksQueryValidator>();
 
         services.AddScoped<LoginHandler>();
         services.AddScoped<RegisterHandler>();

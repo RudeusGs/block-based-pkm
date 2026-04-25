@@ -5,6 +5,7 @@ using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.AssignTask;
 
@@ -18,6 +19,7 @@ public sealed class AssignTaskHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
+    private readonly AssignTaskCommandValidator _validator;
 
     public AssignTaskHandler(
         ICurrentUser currentUser,
@@ -27,7 +29,8 @@ public sealed class AssignTaskHandler
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock)
+        IClock clock,
+        AssignTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -37,20 +40,28 @@ public sealed class AssignTaskHandler
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
         AssignTaskCommand request,
         CancellationToken cancellationToken)
     {
-        if (request.TaskId == Guid.Empty)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidTaskId(request.TaskId));
-
-        if (request.AssigneeUserId == Guid.Empty)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidAssigneeUserId(request.AssigneeUserId));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidAssignRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
+        }
+
+        if (request.AssigneeUserId == currentUserId)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.CannotAssignTaskToSelf);
+        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -58,14 +69,20 @@ public sealed class AssignTaskHandler
             cancellationToken);
 
         if (!access.Exists)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
-        if (!access.CanAssignTask)
-            return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
+        if (!TaskPermissionRules.CanAssignTasks(access.Role))
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskManageForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
         var existsInWorkspace = await _workspaceMemberRepository.ExistsAsync(
             task.WorkspaceId,
@@ -73,7 +90,9 @@ public sealed class AssignTaskHandler
             cancellationToken);
 
         if (!existsInWorkspace)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeNotInWorkspace);
+        }
 
         var alreadyAssigned = await _taskAssigneeRepository.ExistsAsync(
             task.Id,
@@ -81,7 +100,9 @@ public sealed class AssignTaskHandler
             cancellationToken);
 
         if (alreadyAssigned)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeAlreadyExists);
+        }
 
         var now = _clock.UtcNow;
 
@@ -89,7 +110,7 @@ public sealed class AssignTaskHandler
         _workTaskRepository.Update(task);
 
         _taskAssigneeRepository.Add(
-            Pkm.Domain.Tasks.TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
+            TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -104,7 +125,11 @@ public sealed class AssignTaskHandler
                 TaskId: task.Id,
                 ActorId: currentUserId,
                 OccurredAtUtc: now,
-                Payload: dto),
+                Payload: new
+                {
+                    task = dto,
+                    assigneeUserId = request.AssigneeUserId
+                }),
             cancellationToken);
 
         return Result.Success(dto);

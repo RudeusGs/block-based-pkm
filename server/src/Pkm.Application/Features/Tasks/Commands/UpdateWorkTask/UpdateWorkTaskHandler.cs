@@ -18,6 +18,7 @@ public sealed class UpdateWorkTaskHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
+    private readonly UpdateWorkTaskCommandValidator _validator;
 
     public UpdateWorkTaskHandler(
         ICurrentUser currentUser,
@@ -26,7 +27,8 @@ public sealed class UpdateWorkTaskHandler
         IPageRepository pageRepository,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock)
+        IClock clock,
+        UpdateWorkTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -35,28 +37,23 @@ public sealed class UpdateWorkTaskHandler
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
+        _validator = validator;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
         UpdateWorkTaskCommand request,
         CancellationToken cancellationToken)
     {
-        var errors = new List<string>();
-
-        if (request.TaskId == Guid.Empty)
-            errors.Add("TaskId không hợp lệ.");
-
-        if (request.PageId == Guid.Empty)
-            errors.Add("PageId không hợp lệ.");
-
-        if (string.IsNullOrWhiteSpace(request.Title))
-            errors.Add("Tiêu đề task không được để trống.");
-
-        if (errors.Count > 0)
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidUpdateRequest(errors));
+        var validationErrors = _validator.Validate(request);
+        if (validationErrors.Count > 0)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidUpdateRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
+        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -64,24 +61,36 @@ public sealed class UpdateWorkTaskHandler
             cancellationToken);
 
         if (!access.Exists)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
-        if (!access.CanEditTask)
-            return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
+        if (!TaskPermissionRules.CanManageTasks(access.Role))
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskManageForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
+        }
 
         var page = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
         if (page is null)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageNotFound);
+        }
 
         if (page.IsArchived)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageArchived);
+        }
 
         if (page.WorkspaceId != task.WorkspaceId)
+        {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageDifferentWorkspace);
+        }
 
         try
         {
