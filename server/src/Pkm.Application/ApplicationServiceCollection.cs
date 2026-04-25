@@ -55,6 +55,14 @@ using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsUnread;
 using Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
 using Pkm.Application.Features.Notifications.Queries.ListNotifications;
 using Pkm.Application.Features.Notifications.Services;
+using Pkm.Application.Features.Recommendations.Commands.AcceptTaskRecommendation;
+using Pkm.Application.Features.Recommendations.Commands.CompleteTaskRecommendation;
+using Pkm.Application.Features.Recommendations.Commands.GenerateTaskRecommendations;
+using Pkm.Application.Features.Recommendations.Commands.RejectTaskRecommendation;
+using Pkm.Application.Features.Recommendations.Commands.UpdateUserTaskPreference;
+using Pkm.Application.Features.Recommendations.Queries.GetUserTaskPreference;
+using Pkm.Application.Features.Recommendations.Queries.ListTaskRecommendations;
+using Pkm.Application.Features.Recommendations.Services;
 namespace Pkm.Application;
 
 public static class ApplicationServiceCollection
@@ -66,6 +74,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<IDocumentAccessEvaluator, DocumentAccessEvaluator>();
         services.AddScoped<ITaskAccessEvaluator, TaskAccessEvaluator>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
 
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
 
@@ -89,6 +98,10 @@ public static class ApplicationServiceCollection
         services.AddScoped<DeleteTaskCommentCommandValidator>();
         services.AddScoped<RestoreTaskCommentCommandValidator>();
         services.AddScoped<ListTaskCommentsQueryValidator>();
+
+        services.AddScoped<GenerateTaskRecommendationsCommandValidator>();
+        services.AddScoped<ListTaskRecommendationsQueryValidator>();
+        services.AddScoped<UpdateUserTaskPreferenceCommandValidator>();
 
         services.AddScoped<LoginHandler>();
         services.AddScoped<RegisterHandler>();
@@ -151,7 +164,15 @@ public static class ApplicationServiceCollection
         services.AddScoped<MarkNotificationAsUnreadHandler>();
         services.AddScoped<MarkAllNotificationsAsReadHandler>();
         services.AddScoped<DeleteNotificationHandler>();
-       
+
+        services.AddScoped<GenerateTaskRecommendationsHandler>();
+        services.AddScoped<ListTaskRecommendationsHandler>();
+        services.AddScoped<AcceptTaskRecommendationHandler>();
+        services.AddScoped<RejectTaskRecommendationHandler>();
+        services.AddScoped<CompleteTaskRecommendationHandler>();
+        services.AddScoped<GetUserTaskPreferenceHandler>();
+        services.AddScoped<UpdateUserTaskPreferenceHandler>();
+
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 
         return services;

@@ -93,7 +93,7 @@ public sealed class CompleteTaskRecommendationHandler
             recommendation.MarkCompleted(now);
             _recommendationRepository.Update(recommendation);
 
-            task.MarkDone(currentUserId, now);
+            task.Complete(currentUserId, now);
             _workTaskRepository.Update(task);
 
             var history = new UserTaskHistory(
