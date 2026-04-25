@@ -40,6 +40,10 @@ public static class PersistenceServiceCollection
         services.AddScoped<ITaskAssigneeRepository, TaskAssigneeRepository>();
         services.AddScoped<ITaskCommentRepository, TaskCommentRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<ITaskRecommendationRepository, TaskRecommendationRepository>();
+        services.AddScoped<IUserTaskPreferenceRepository, UserTaskPreferenceRepository>();
+        services.AddScoped<IUserTaskHistoryRepository, UserTaskHistoryRepository>();
+        
         return services;
     }
 }

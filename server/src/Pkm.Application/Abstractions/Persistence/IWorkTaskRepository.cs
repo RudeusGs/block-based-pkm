@@ -1,6 +1,6 @@
 ﻿using Pkm.Application.Features.Tasks.Models;
 using Pkm.Domain.Tasks;
-
+using Pkm.Application.Features.Recommendations.Models;
 namespace Pkm.Application.Abstractions.Persistence;
 
 public interface IWorkTaskRepository
@@ -45,7 +45,17 @@ public interface IWorkTaskRepository
         Guid taskId,
         Guid userId,
         CancellationToken cancellationToken = default);
+    Task<bool> HasActiveAssignedTaskAsync(
+        Guid userId,
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<RecommendationCandidateReadModel>> ListRecommendationCandidatesAsync(
+        Guid userId,
+        Guid workspaceId,
+        Guid? pageId,
+        int take,
+        CancellationToken cancellationToken = default);
     void Add(WorkTask task);
 
     void Update(WorkTask task);

@@ -3,7 +3,7 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Domain.Tasks;
 using Pkm.Domain.Workspaces;
-
+using Pkm.Application.Features.Recommendations.Models;
 namespace Pkm.Infrastructure.Persistence.Repositories;
 
 internal sealed class WorkTaskRepository : IWorkTaskRepository
@@ -289,5 +289,67 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         }
 
         return query;
+    }
+
+    public Task<bool> HasActiveAssignedTaskAsync(
+    Guid userId,
+    Guid workspaceId,
+    CancellationToken cancellationToken = default)
+    {
+        return _context.WorkTasks
+            .AsNoTracking()
+            .Where(x =>
+                x.WorkspaceId == workspaceId &&
+                x.Status != StatusWorkTask.Done)
+            .AnyAsync(
+                x => _context.TaskAssignees.Any(a =>
+                    a.TaskId == x.Id &&
+                    a.UserId == userId),
+                cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RecommendationCandidateReadModel>> ListRecommendationCandidatesAsync(
+        Guid userId,
+        Guid workspaceId,
+        Guid? pageId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        take = take <= 0 ? 100 : Math.Min(take, 500);
+
+        var query = _context.WorkTasks
+            .AsNoTracking()
+            .Where(x => x.Status != StatusWorkTask.Done);
+
+        if (workspaceId != Guid.Empty)
+        {
+            query = query.Where(x => x.WorkspaceId == workspaceId);
+        }
+
+        if (pageId.HasValue && pageId.Value != Guid.Empty)
+        {
+            query = query.Where(x => x.PageId == pageId.Value);
+        }
+
+        return await query
+            .Select(x => new RecommendationCandidateReadModel(
+                x.Id,
+                x.WorkspaceId,
+                x.PageId,
+                x.Title,
+                x.Description,
+                x.Status,
+                x.Priority,
+                x.DueDate,
+                x.CreatedById,
+                x.CreatedDate,
+                x.UpdatedDate,
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id && a.UserId == userId),
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id)))
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate ?? DateTimeOffset.MaxValue)
+            .ThenByDescending(x => x.CreatedDate)
+            .Take(take)
+            .ToListAsync(cancellationToken);
     }
 }
