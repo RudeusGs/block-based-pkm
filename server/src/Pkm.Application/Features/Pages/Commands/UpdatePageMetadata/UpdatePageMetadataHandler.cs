@@ -2,6 +2,8 @@
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Domain.Common;
@@ -15,19 +17,21 @@ public sealed class UpdatePageMetadataHandler
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-
+    private readonly INotificationService _notificationService;
     public UpdatePageMetadataHandler(
         ICurrentUser currentUser,
         IPageRepository pageRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IUnitOfWork unitOfWork,
-        IClock clock)
+        IClock clock,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<PageDto>> HandleAsync(
@@ -63,7 +67,16 @@ public sealed class UpdatePageMetadataHandler
             page.UpdateAppearance(request.Icon, request.CoverImage, currentUserId, now);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+            await _notificationService.NotifyWorkspaceAsync(
+                page.WorkspaceId,
+                NotificationTemplates.PageUpdated(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    page.WorkspaceId,
+                    page.Id,
+                    page.Title),
+                excludeUserIds: new[] { currentUserId },
+                cancellationToken);
             return Result.Success(page.ToDto());
         }
         catch (DomainException ex)

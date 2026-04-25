@@ -6,7 +6,8 @@ using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Workspaces;
-
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 namespace Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 
 public sealed class AddWorkspaceMemberHandler
@@ -20,7 +21,7 @@ public sealed class AddWorkspaceMemberHandler
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly AddWorkspaceMemberCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
     public AddWorkspaceMemberHandler(
         ICurrentUser currentUser,
         IUserRepository userRepository,
@@ -30,7 +31,8 @@ public sealed class AddWorkspaceMemberHandler
         IClock clock,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        AddWorkspaceMemberCommandValidator validator)
+        AddWorkspaceMemberCommandValidator validator,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
@@ -41,6 +43,7 @@ public sealed class AddWorkspaceMemberHandler
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _validator = validator;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<WorkspaceMemberDto>> HandleAsync(
@@ -132,6 +135,14 @@ public sealed class AddWorkspaceMemberHandler
             member.IsOwner(),
             member.CreatedDate,
             member.UpdatedDate);
+        await _notificationService.NotifyAsync(
+            request.UserId,
+            NotificationTemplates.WorkspaceRoleChanged(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                request.WorkspaceId,
+                request.Role),
+            cancellationToken);
 
         return Result.Success(dto);
     }

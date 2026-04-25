@@ -4,6 +4,8 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Domain.Common;
@@ -19,6 +21,7 @@ public sealed class CreateTaskCommentHandler
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
+    private readonly INotificationService _notificationService;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
@@ -31,6 +34,7 @@ public sealed class CreateTaskCommentHandler
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
+        INotificationService notificationService,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         IClock clock,
@@ -42,6 +46,7 @@ public sealed class CreateTaskCommentHandler
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
+        _notificationService = notificationService;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
@@ -54,10 +59,16 @@ public sealed class CreateTaskCommentHandler
     {
         var validationErrors = _validator.Validate(request);
         if (validationErrors.Count > 0)
-            return Result.Failure<TaskCommentDto>(TaskCommentErrors.InvalidCreateRequest(validationErrors));
+        {
+            return Result.Failure<TaskCommentDto>(
+                TaskCommentErrors.InvalidCreateRequest(validationErrors));
+        }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
-            return Result.Failure<TaskCommentDto>(TaskErrors.MissingUserContext);
+        {
+            return Result.Failure<TaskCommentDto>(
+                TaskErrors.MissingUserContext);
+        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -65,17 +76,26 @@ public sealed class CreateTaskCommentHandler
             cancellationToken);
 
         if (!access.Exists)
-            return Result.Failure<TaskCommentDto>(TaskErrors.TaskNotFound);
+        {
+            return Result.Failure<TaskCommentDto>(
+                TaskErrors.TaskNotFound);
+        }
 
         if (!access.CanCommentTask)
-            return Result.Failure<TaskCommentDto>(TaskCommentErrors.CommentCreateForbidden);
+        {
+            return Result.Failure<TaskCommentDto>(
+                TaskCommentErrors.CommentCreateForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdAsync(
             request.TaskId,
             cancellationToken);
 
         if (task is null)
-            return Result.Failure<TaskCommentDto>(TaskErrors.TaskNotFound);
+        {
+            return Result.Failure<TaskCommentDto>(
+                TaskErrors.TaskNotFound);
+        }
 
         if (request.ParentId.HasValue)
         {
@@ -86,7 +106,10 @@ public sealed class CreateTaskCommentHandler
                 cancellationToken);
 
             if (!parentExists)
-                return Result.Failure<TaskCommentDto>(TaskCommentErrors.ParentCommentNotFound);
+            {
+                return Result.Failure<TaskCommentDto>(
+                    TaskCommentErrors.ParentCommentNotFound);
+            }
         }
 
         try
@@ -127,6 +150,31 @@ public sealed class CreateTaskCommentHandler
                     }),
                 cancellationToken);
 
+            var taskDetail = await _workTaskRepository.GetDetailAsync(
+                task.Id,
+                cancellationToken);
+
+            var recipients = taskDetail is null
+                ? new[] { task.CreatedById }
+                : taskDetail.Assignees
+                    .Select(x => x.UserId)
+                    .Append(taskDetail.CreatedById)
+                    .Distinct()
+                    .ToArray();
+
+            await _notificationService.NotifyManyAsync(
+                recipients,
+                NotificationTemplates.TaskCommentCreated(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    task.WorkspaceId,
+                    task.Id,
+                    comment.Id,
+                    task.Title,
+                    request.ParentId.HasValue),
+                excludeUserIds: new[] { currentUserId },
+                cancellationToken);
+
             return Result.Success(dto);
         }
         catch (DomainException ex)
@@ -140,7 +188,9 @@ public sealed class CreateTaskCommentHandler
         Guid taskId,
         CancellationToken cancellationToken)
     {
-        var versionKey = TaskCommentCacheKeys.ListVersion(_redisKeyFactory, taskId);
+        var versionKey = TaskCommentCacheKeys.ListVersion(
+            _redisKeyFactory,
+            taskId);
 
         await _redisCache.SetAsync(
             versionKey,

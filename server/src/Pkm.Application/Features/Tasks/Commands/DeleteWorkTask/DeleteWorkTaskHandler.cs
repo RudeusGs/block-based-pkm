@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Policies;
 
 namespace Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
@@ -16,7 +18,8 @@ public sealed class DeleteWorkTaskHandler
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly DeleteWorkTaskCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
+    
     public DeleteWorkTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -24,7 +27,8 @@ public sealed class DeleteWorkTaskHandler
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        DeleteWorkTaskCommandValidator validator)
+        DeleteWorkTaskCommandValidator validator,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -33,6 +37,7 @@ public sealed class DeleteWorkTaskHandler
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
+        _notificationService = notificationService;
     }
 
     public async Task<Result> HandleAsync(
@@ -72,6 +77,13 @@ public sealed class DeleteWorkTaskHandler
         }
 
         var now = _clock.UtcNow;
+        var detailBeforeDelete = await _workTaskRepository.GetDetailAsync(
+            task.Id,
+            cancellationToken);
+
+        var assigneeIds = detailBeforeDelete?.Assignees
+            .Select(x => x.UserId)
+            .ToArray() ?? Array.Empty<Guid>();
 
         task.Delete(currentUserId, now);
         _workTaskRepository.Update(task);
@@ -91,7 +103,16 @@ public sealed class DeleteWorkTaskHandler
                     taskId = task.Id
                 }),
             cancellationToken);
-
+        await _notificationService.NotifyManyAsync(
+            assigneeIds,
+            NotificationTemplates.TaskDeleted(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                task.WorkspaceId,
+                task.Id,
+                task.Title),
+            excludeUserIds: new[] { currentUserId },
+            cancellationToken);
         return Result.Success();
     }
 }

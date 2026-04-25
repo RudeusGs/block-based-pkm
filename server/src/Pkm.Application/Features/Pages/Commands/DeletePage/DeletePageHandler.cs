@@ -2,6 +2,8 @@
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Policies;
 
 namespace Pkm.Application.Features.Pages.Commands.DeletePage;
@@ -13,18 +15,20 @@ public sealed class DeletePageHandler
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-
+    private readonly INotificationService _notificationService;
     public DeletePageHandler(
         ICurrentUser currentUser,
         IPageRepository pageRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IUnitOfWork unitOfWork,
-        IClock clock)
+        IClock clock,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
         _unitOfWork = unitOfWork;
+        _notificationService = notificationService;
         _clock = clock;
     }
 
@@ -55,7 +59,16 @@ public sealed class DeletePageHandler
 
         page.SoftDelete(_clock.UtcNow);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+        await _notificationService.NotifyWorkspaceAsync(
+            page.WorkspaceId,
+            NotificationTemplates.PageDeleted(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                page.WorkspaceId,
+                page.Id,
+                page.Title),
+            excludeUserIds: new[] { currentUserId },
+            cancellationToken);
         return Result.Success();
     }
 }

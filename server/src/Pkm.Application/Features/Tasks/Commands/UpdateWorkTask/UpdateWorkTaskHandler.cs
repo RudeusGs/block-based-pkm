@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Domain.Common;
@@ -19,7 +21,7 @@ public sealed class UpdateWorkTaskHandler
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly UpdateWorkTaskCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
     public UpdateWorkTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -28,12 +30,14 @@ public sealed class UpdateWorkTaskHandler
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        UpdateWorkTaskCommandValidator validator)
+        UpdateWorkTaskCommandValidator validator,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _pageRepository = pageRepository;
+        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
@@ -130,6 +134,18 @@ public sealed class UpdateWorkTaskHandler
                     Payload: dto),
                 cancellationToken);
 
+            var assigneeIds = dto.Assignees.Select(x => x.UserId).ToArray();
+
+            await _notificationService.NotifyManyAsync(
+                assigneeIds,
+                NotificationTemplates.TaskUpdated(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    task.WorkspaceId,
+                    task.Id,
+                    task.Title),
+                excludeUserIds: new[] { currentUserId },
+                cancellationToken);
             return Result.Success(dto);
         }
         catch (DomainException ex)

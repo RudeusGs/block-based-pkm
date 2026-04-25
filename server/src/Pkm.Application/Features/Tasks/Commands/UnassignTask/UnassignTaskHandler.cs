@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 
@@ -18,7 +20,7 @@ public sealed class UnassignTaskHandler
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly UnassignTaskCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
     public UnassignTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -27,7 +29,8 @@ public sealed class UnassignTaskHandler
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        UnassignTaskCommandValidator validator)
+        UnassignTaskCommandValidator validator,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -37,6 +40,7 @@ public sealed class UnassignTaskHandler
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -111,7 +115,15 @@ public sealed class UnassignTaskHandler
                     assigneeUserId = request.AssigneeUserId
                 }),
             cancellationToken);
-
+        await _notificationService.NotifyAsync(
+            request.AssigneeUserId,
+            NotificationTemplates.TaskUnassigned(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                task.WorkspaceId,
+                task.Id,
+                task.Title),
+            cancellationToken);
         return Result.Success(dto);
     }
 }

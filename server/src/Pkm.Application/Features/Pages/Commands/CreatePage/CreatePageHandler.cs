@@ -8,7 +8,8 @@ using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
 using Pkm.Domain.Pages;
-
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 namespace Pkm.Application.Features.Pages.Commands.CreatePage;
 
 public sealed class CreatePageHandler
@@ -19,14 +20,15 @@ public sealed class CreatePageHandler
     private readonly IPageRepository _pageRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-
+    private readonly INotificationService _notificationService;
     public CreatePageHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IPageAccessEvaluator pageAccessEvaluator,
         IPageRepository pageRepository,
         IUnitOfWork unitOfWork,
-        IClock clock)
+        IClock clock,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -34,6 +36,7 @@ public sealed class CreatePageHandler
         _pageRepository = pageRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<PageDto>> HandleAsync(
@@ -99,7 +102,16 @@ public sealed class CreatePageHandler
 
             _pageRepository.Add(page);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-
+            await _notificationService.NotifyWorkspaceAsync(
+                page.WorkspaceId,
+                NotificationTemplates.PageCreated(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    page.WorkspaceId,
+                    page.Id,
+                    page.Title),
+                excludeUserIds: new[] { currentUserId },
+                cancellationToken);
             return Result.Success(page.ToDto());
         }
         catch (DomainException ex)

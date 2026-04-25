@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Domain.Tasks;
@@ -19,7 +21,7 @@ public sealed class ChangeWorkTaskStatusHandler
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly ChangeWorkTaskStatusCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
     public ChangeWorkTaskStatusHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -28,12 +30,14 @@ public sealed class ChangeWorkTaskStatusHandler
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        ChangeWorkTaskStatusCommandValidator validator)
+        ChangeWorkTaskStatusCommandValidator validator,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
+        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
@@ -110,6 +114,20 @@ public sealed class ChangeWorkTaskStatusHandler
                     task = dto,
                     status = request.Status.ToString()
                 }),
+            cancellationToken);
+
+        var assigneeIds = dto.Assignees.Select(x => x.UserId).ToArray();
+
+        await _notificationService.NotifyManyAsync(
+            assigneeIds,
+            NotificationTemplates.TaskStatusChanged(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                task.WorkspaceId,
+                task.Id,
+                task.Title,
+                request.Status),
+            excludeUserIds: new[] { currentUserId },
             cancellationToken);
 
         return Result.Success(dto);

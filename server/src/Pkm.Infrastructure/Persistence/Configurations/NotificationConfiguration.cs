@@ -33,6 +33,13 @@ internal sealed class NotificationConfiguration : IEntityTypeConfiguration<Notif
             .IsDescending(false, false, true)
             .HasFilter("\"IsDeleted\" = false");
 
+        builder.HasIndex(x => new { x.UserId, x.WorkspaceId, x.IsRead, x.CreatedDate })
+            .IsDescending(false, false, false, true)
+            .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasIndex(x => new { x.ReferenceType, x.ReferenceId })
+            .HasFilter("\"IsDeleted\" = false");
+
         builder.HasOne<Workspace>()
             .WithMany()
             .HasForeignKey(x => x.WorkspaceId)

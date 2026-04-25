@@ -48,7 +48,13 @@ using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
 using Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
 using Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
-
+using Pkm.Application.Features.Notifications.Commands.DeleteNotification;
+using Pkm.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
+using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsRead;
+using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsUnread;
+using Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
+using Pkm.Application.Features.Notifications.Queries.ListNotifications;
+using Pkm.Application.Features.Notifications.Services;
 namespace Pkm.Application;
 
 public static class ApplicationServiceCollection
@@ -59,6 +65,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<IPageAccessEvaluator, PageAccessEvaluator>();
         services.AddScoped<IDocumentAccessEvaluator, DocumentAccessEvaluator>();
         services.AddScoped<ITaskAccessEvaluator, TaskAccessEvaluator>();
+        services.AddScoped<INotificationService, NotificationService>();
 
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
 
@@ -75,6 +82,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<ChangeWorkTaskStatusCommandValidator>();
         services.AddScoped<ListPageTasksQueryValidator>();
         services.AddScoped<ListWorkspaceTasksQueryValidator>();
+        services.AddScoped<ListNotificationsQueryValidator>();
 
         services.AddScoped<CreateTaskCommentCommandValidator>();
         services.AddScoped<UpdateTaskCommentCommandValidator>();
@@ -137,6 +145,13 @@ public static class ApplicationServiceCollection
         services.AddScoped<DeleteTaskCommentHandler>();
         services.AddScoped<RestoreTaskCommentHandler>();
 
+        services.AddScoped<ListNotificationsHandler>();
+        services.AddScoped<GetUnreadNotificationCountHandler>();
+        services.AddScoped<MarkNotificationAsReadHandler>();
+        services.AddScoped<MarkNotificationAsUnreadHandler>();
+        services.AddScoped<MarkAllNotificationsAsReadHandler>();
+        services.AddScoped<DeleteNotificationHandler>();
+       
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 
         return services;

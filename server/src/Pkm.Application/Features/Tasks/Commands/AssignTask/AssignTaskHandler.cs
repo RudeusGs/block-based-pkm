@@ -3,9 +3,10 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
-using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.AssignTask;
 
@@ -19,8 +20,7 @@ public sealed class AssignTaskHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
-    private readonly AssignTaskCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
     public AssignTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -29,8 +29,8 @@ public sealed class AssignTaskHandler
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock,
-        AssignTaskCommandValidator validator)
+        IClock clock, 
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -40,28 +40,21 @@ public sealed class AssignTaskHandler
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
-        _validator = validator;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
         AssignTaskCommand request,
         CancellationToken cancellationToken)
     {
-        var validationErrors = _validator.Validate(request);
-        if (validationErrors.Count > 0)
-        {
-            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidAssignRequest(validationErrors));
-        }
+        if (request.TaskId == Guid.Empty)
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidTaskId(request.TaskId));
+
+        if (request.AssigneeUserId == Guid.Empty)
+            return Result.Failure<WorkTaskDto>(TaskErrors.InvalidAssigneeUserId(request.AssigneeUserId));
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
-        {
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
-        }
-
-        if (request.AssigneeUserId == currentUserId)
-        {
-            return Result.Failure<WorkTaskDto>(TaskErrors.CannotAssignTaskToSelf);
-        }
 
         var access = await _taskAccessEvaluator.EvaluateAsync(
             request.TaskId,
@@ -69,20 +62,14 @@ public sealed class AssignTaskHandler
             cancellationToken);
 
         if (!access.Exists)
-        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
-        }
 
-        if (!TaskPermissionRules.CanAssignTasks(access.Role))
-        {
-            return Result.Failure<WorkTaskDto>(TaskErrors.TaskManageForbidden);
-        }
+        if (!access.CanAssignTask)
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
-        {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
-        }
 
         var existsInWorkspace = await _workspaceMemberRepository.ExistsAsync(
             task.WorkspaceId,
@@ -90,9 +77,7 @@ public sealed class AssignTaskHandler
             cancellationToken);
 
         if (!existsInWorkspace)
-        {
             return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeNotInWorkspace);
-        }
 
         var alreadyAssigned = await _taskAssigneeRepository.ExistsAsync(
             task.Id,
@@ -100,9 +85,7 @@ public sealed class AssignTaskHandler
             cancellationToken);
 
         if (alreadyAssigned)
-        {
             return Result.Failure<WorkTaskDto>(TaskErrors.AssigneeAlreadyExists);
-        }
 
         var now = _clock.UtcNow;
 
@@ -110,7 +93,7 @@ public sealed class AssignTaskHandler
         _workTaskRepository.Update(task);
 
         _taskAssigneeRepository.Add(
-            TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
+            Pkm.Domain.Tasks.TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -125,13 +108,18 @@ public sealed class AssignTaskHandler
                 TaskId: task.Id,
                 ActorId: currentUserId,
                 OccurredAtUtc: now,
-                Payload: new
-                {
-                    task = dto,
-                    assigneeUserId = request.AssigneeUserId
-                }),
+                Payload: dto),
             cancellationToken);
 
+        await _notificationService.NotifyAsync(
+            request.AssigneeUserId,
+            NotificationTemplates.TaskAssigned(
+                currentUserId,
+                _currentUser.UserName ?? "Có người",
+                task.WorkspaceId,
+                task.Id,
+                task.Title),
+            cancellationToken);
         return Result.Success(dto);
     }
 }

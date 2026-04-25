@@ -1,0 +1,3 @@
+﻿namespace Pkm.Application.Features.Notifications.Commands.MarkNotificationAsUnread;
+
+public sealed record MarkNotificationAsUnreadCommand(Guid NotificationId);

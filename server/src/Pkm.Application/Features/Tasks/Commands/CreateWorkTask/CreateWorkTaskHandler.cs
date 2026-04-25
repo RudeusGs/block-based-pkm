@@ -9,7 +9,8 @@ using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
 using Pkm.Domain.Tasks;
-
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 namespace Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
 
 public sealed class CreateWorkTaskHandler
@@ -24,7 +25,7 @@ public sealed class CreateWorkTaskHandler
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly CreateWorkTaskCommandValidator _validator;
-
+    private readonly INotificationService _notificationService;
     public CreateWorkTaskHandler(
         ICurrentUser currentUser,
         IPageRepository pageRepository,
@@ -35,7 +36,8 @@ public sealed class CreateWorkTaskHandler
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        CreateWorkTaskCommandValidator validator)
+        CreateWorkTaskCommandValidator validator,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
@@ -47,6 +49,7 @@ public sealed class CreateWorkTaskHandler
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -153,7 +156,27 @@ public sealed class CreateWorkTaskHandler
                     OccurredAtUtc: now,
                     Payload: dto),
                 cancellationToken);
+            await _notificationService.NotifyWorkspaceAsync(
+                page.WorkspaceId,
+                NotificationTemplates.TaskCreated(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    page.WorkspaceId,
+                    task.Id,
+                    task.Title),
+                excludeUserIds: new[] { currentUserId }.Concat(assigneeIds),
+                cancellationToken);
 
+            await _notificationService.NotifyManyAsync(
+                assigneeIds,
+                NotificationTemplates.TaskAssigned(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    task.WorkspaceId,
+                    task.Id,
+                    task.Title),
+                excludeUserIds: new[] { currentUserId },
+                cancellationToken);
             return Result.Success(dto);
         }
         catch (DomainException ex)
