@@ -1,6 +1,5 @@
 <template>
   <div class="task-list-wrap">
-    <!-- Thêm sự kiện @click vào từng hàng -->
     <div 
       class="task-row border-top-custom" 
       v-for="task in tasks" 
@@ -8,10 +7,10 @@
       @click="handleRowClick(task)"
     >
       <div class="task-row-inner">
-        
-        <!-- Cột trái: Tên task và mô tả -->
+        <!-- Cột trái -->
         <div class="task-row-left">
-          <div class="status-dot" :class="statusClass(task.status)"></div>
+          <!-- SỬ DỤNG HÀM TỪ UTILS -->
+          <div class="status-dot" :class="getStatusClass(task.status)"></div>
 
           <div class="flex-grow-1 min-w-0">
             <h4 class="task-title mb-1">{{ task.title }}</h4>
@@ -21,7 +20,8 @@
 
         <!-- Cột phải: Giao diện Desktop -->
         <div class="task-row-right d-none d-lg-flex">
-          <span class="priority-badge" :class="priorityClass(task.priority)">
+          <!-- SỬ DỤNG HÀM TỪ UTILS -->
+          <span class="priority-badge" :class="getPriorityClass(task.priority)">
             {{ getShortPriority(task.priority) }}
           </span>
 
@@ -30,17 +30,10 @@
           </span>
 
           <div class="d-flex align-items-center gap-2">
-            <!-- Xử lý lỗi avatar null -->
-            <img 
-              v-if="task.assigneeAvatar" 
-              :src="task.assigneeAvatar" 
-              :alt="task.assigneeName" 
-              class="assignee-avatar" 
-            />
+            <img v-if="task.assigneeAvatar" :src="task.assigneeAvatar" :alt="task.assigneeName" class="assignee-avatar" />
             <div v-else class="assignee-avatar bg-secondary d-flex align-items-center justify-content-center text-white" style="font-size: 10px; font-weight: bold;">
               {{ task.assigneeName ? task.assigneeName.charAt(0).toUpperCase() : '?' }}
             </div>
-            
             <span class="meta-text">{{ task.assigneeName || 'Unassigned' }}</span>
           </div>
 
@@ -51,7 +44,8 @@
       <!-- Cột dưới: Giao diện Mobile -->
       <div class="task-row-mobile d-lg-none mt-2">
         <div class="d-flex flex-wrap gap-2 align-items-center">
-          <span class="priority-badge" :class="priorityClass(task.priority)">
+           <!-- SỬ DỤNG HÀM TỪ UTILS -->
+          <span class="priority-badge" :class="getPriorityClass(task.priority)">
             {{ getShortPriority(task.priority) }}
           </span>
           <span class="status-badge cursor-pointer hover-scale" @click.stop="toggleStatus(task)">
@@ -61,12 +55,14 @@
           <span class="meta-text">{{ task.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date' }}</span>
         </div>
       </div>
-      
     </div>
   </div>
 </template>
 
 <script setup>
+// IMPORT CÁC HÀM DÙNG CHUNG TỪ UTILS
+import { getPriorityClass, getShortPriority, getStatusClass, getStatusLabel } from '@/utils/task.utils'
+
 const props = defineProps({
   tasks: {
     type: Array,
@@ -75,9 +71,11 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['task-click', 'update-status'])
+
 function handleRowClick(task) {
   emit('task-click', task)
 }
+
 function toggleStatus(task) {
   let nextStatus = task.status + 1
   if (nextStatus > 3) {
@@ -85,34 +83,10 @@ function toggleStatus(task) {
   }
   emit('update-status', task.id, nextStatus)
 }
-function getShortPriority(priorityCode) {
-  if (priorityCode === 3) return 'High'
-  if (priorityCode === 2) return 'Med'
-  return 'Low'
-}
-
-function priorityClass(priorityCode) {
-  if (priorityCode === 3) return 'high'
-  if (priorityCode === 2) return 'medium'
-  return 'low'
-}
-
-function getStatusLabel(statusCode) {
-  if (statusCode === 1) return 'To Do'
-  if (statusCode === 2) return 'Doing'
-  if (statusCode === 3) return 'Done'
-  return 'Unknown'
-}
-
-function statusClass(statusCode) {
-  if (statusCode === 1) return 'todo'
-  if (statusCode === 2) return 'doing'
-  if (statusCode === 3) return 'done'
-  return 'unknown'
-}
 </script>
 
 <style scoped>
+/* Giữ nguyên phần CSS của bạn */
 .cursor-pointer { cursor: pointer; }
 .hover-scale { display: inline-block; transition: transform 0.15s ease, background-color 0.15s ease; }
 .hover-scale:hover { transform: scale(1.05); background-color: #2a2b2b; }

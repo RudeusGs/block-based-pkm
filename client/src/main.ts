@@ -6,6 +6,7 @@ import 'bootstrap'
 import App from './App.vue'
 import router from './router'
 import api from './api/base.api'
+import '@/assets/css/global.css'
 const app = createApp(App)
 
 app.use(createPinia())

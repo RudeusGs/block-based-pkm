@@ -1,0 +1,52 @@
+/* src/assets/css/views/AppLayout.css */
+
+.bg-surface-lowest { background-color: #000000; }
+.bg-surface-container { background-color: #121212; border: 1px solid rgba(255,255,255,0.05); }
+.text-on-surface { color: #f3f4f6; }
+.text-on-surface-dim { color: #d1d5db; }
+.text-on-surface-variant { color: #9ca3af; }
+.text-primary-custom { color: #818cf8; }
+.bg-primary-soft { background-color: rgba(129, 140, 248, 0.1); }
+.border-outline-variant { border-color: rgba(255, 255, 255, 0.1) !important; }
+.border-outline-variant-soft { border-color: rgba(255, 255, 255, 0.08) !important; }
+.bg-dark-container { background-color: #1f2937; }
+
+.app-wrapper { min-height: 100vh; font-family: 'Inter', sans-serif; letter-spacing: -0.01em; }
+.content-container { max-width: 860px; }
+.top-nav { background-color: rgba(0, 0, 0, 0.7); backdrop-filter: blur(24px); height: 56px; }
+
+.btn-share { background-color: rgba(255,255,255,0.05); color: #e5e7eb; border: 1px solid rgba(255,255,255,0.08); transition: 0.2s ease; }
+.btn-share:hover { background-color: rgba(255,255,255,0.1); color: #fff; }
+.btn-icon-ghost { color: #9ca3af; padding: 6px; border: none; background: transparent; transition: 0.2s; border-radius: 8px;}
+.btn-icon-ghost:hover { background-color: rgba(255,255,255,0.08); color: #fff; }
+
+/* FIX BANNER Ở ĐÂY: Khóa cứng chiều cao */
+.hero-banner { 
+  height: 160px; /* Ép chiều cao nhỏ lại */
+  max-height: 25vh; 
+  border: 1px solid rgba(255,255,255,0.05); 
+}
+.banner-overlay { background: linear-gradient(to top, #000000, transparent); }
+.emoji-box { width: 54px; height: 54px; margin-top: -30px; position: relative; z-index: 2; background: #1a1a1a;}
+.empty-icon-wrap { width: 80px; height: 80px; }
+
+.btn-primary-solid { background: #fff; color: #000; border: none; transition: 0.2s; }
+.btn-primary-solid:hover { background: #e5e7eb; transform: translateY(-1px); }
+
+.fab-btn { width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1, #4338ca); color: #fff; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 50; box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4); }
+.fab-btn:hover { transform: scale(1.08) translateY(-4px); box-shadow: 0 15px 30px -5px rgba(99, 102, 241, 0.6); }
+
+.hover-white:hover { color: #fff; }
+.tracking-tighter { letter-spacing: -0.04em; }
+.tracking-widest { letter-spacing: 0.08em; }
+.fs-7 { font-size: 14px; }
+.fs-11 { font-size: 11px; }
+.fw-extrabold { font-weight: 800; }
+.dot-separator { width: 4px; height: 4px; border-radius: 50%; background-color: #4b5563; }
+
+.bg-active { background-color: rgba(255,255,255,0.15) !important; color: #fff !important; }
+.transition-300 { transition: padding-right 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+
+@media (min-width: 1200px) {
+  .shifted-left { padding-right: 340px !important; }
+}

@@ -96,6 +96,7 @@
 
 <script setup>
 import { computed } from 'vue'
+import { getPriorityLabel, getStatusLabel } from '@/utils/task.utils'
 
 const props = defineProps({
   task: {
@@ -106,31 +107,15 @@ const props = defineProps({
 
 defineEmits(['close'])
 
-// Các hàm map ID thành Chữ cho dễ đọc
-function getPriorityLabel(priorityCode) {
-  if (priorityCode === 3) return 'High'
-  if (priorityCode === 2) return 'Medium'
-  if (priorityCode === 1) return 'Low'
-  return priorityCode || 'Medium'
-}
-
-function getStatusLabel(statusCode) {
-  if (statusCode === 1) return 'To Do'
-  if (statusCode === 2) return 'Doing'
-  if (statusCode === 3) return 'Done'
-  return statusCode || 'To Do'
-}
-
-// Xử lý lại object Task trước khi hiển thị
 const normalizedTask = computed(() => {
   const t = props.task || {}
   return {
     pageTitle: t.pageTitle || 'Workspace Task',
     title: t.title || 'Untitled Task',
     description: t.description || '',
-    priority: getPriorityLabel(t.priority), // Áp dụng hàm map
-    status: getStatusLabel(t.status),       // Áp dụng hàm map
-    dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '', // Format lại ngày tháng
+    priority: getPriorityLabel(t.priority), 
+    status: getStatusLabel(t.status),       
+    dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : '', 
     assignee: {
       name: t?.assignee?.name || t.assigneeName || 'Unknown',
       avatar: t?.assignee?.avatar || t.assigneeAvatar || ''

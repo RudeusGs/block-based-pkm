@@ -210,6 +210,4 @@ onBeforeUnmount(() => {
 })
 </script>
 
-<style scoped>
-@import '../css/CreateWorkspaceModal.css';
-</style>
+<style scoped src="@/assets/css/components/CreateWorkspaceModal.css"></style>

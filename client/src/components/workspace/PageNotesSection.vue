@@ -335,7 +335,9 @@ onBeforeUnmount(async () => {
   width: 28px;
   height: 28px;
   border-radius: 9px;
-  color: #8f8e8d;
+  color: #8f8e8d !important;
+  background-color: transparent !important;
+  border: none !important;
   opacity: 0.78;
   transition:
     background 0.18s ease,
@@ -345,14 +347,15 @@ onBeforeUnmount(async () => {
 
 :deep(.ce-toolbar__plus:hover),
 :deep(.ce-toolbar__settings-btn:hover) {
-  background: rgba(255, 255, 255, 0.065);
-  color: #f3f1f1;
+  background-color: rgba(255, 255, 255, 0.065) !important;
+  color: #f3f1f1 !important;
   opacity: 1;
 }
 
 :deep(.ce-toolbar__plus svg),
 :deep(.ce-toolbar__settings-btn svg) {
   transform: scale(0.92);
+  fill: currentColor;
 }
 
 :deep(.ce-toolbar__plus) {

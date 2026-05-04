@@ -42,7 +42,7 @@
             A precision-engineered productivity environment designed for high-performance teams. Replace disconnected tools with a single, elegant source of truth.
           </p>
           <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-            <button class="btn btn-primary-solid px-5 py-3 rounded-3 fw-bold">Get Started for free</button>
+            <button class="btn btn-primary-solid px-5 py-3 rounded-3 fw-bold" >Get Started for free</button>
             <button class="btn btn-ghost px-5 py-3 rounded-3 fw-semibold">Try Demo</button>
           </div>
         </div>

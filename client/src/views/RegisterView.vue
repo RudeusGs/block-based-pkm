@@ -223,48 +223,9 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
-import { useRouter } from 'vue-router';
-// Import API
-import { AuthenticateAPI } from '@/api/authenticate.api';
-
-const router = useRouter();
-
-const form = reactive({
-  fullName: '',
-  userName: '',
-  email: '',
-  password: ''
-});
-
-const showPassword = ref(false);
-const isSubmitting = ref(false);
-const errorMessage = ref('');
-
-const handleRegister = async () => {
-  try {
-    isSubmitting.value = true;
-    errorMessage.value = '';
-
-    // Gọi trực tiếp API đăng ký
-    const response: any = await AuthenticateAPI.register(form);
-
-    // Kiểm tra kết quả trả về từ Backend (dựa theo ApiResult.cs của bạn)
-    if (response.isSuccess) {
-      // Đăng ký thành công, tự động chuyển về trang Đăng nhập
-      router.push('/login');
-    } else {
-      errorMessage.value = response.message || 'Registration failed.';
-    }
-  } catch (error: any) {
-    console.error('Registration Error:', error);
-    errorMessage.value = error?.message || 'Registration failed. Please try again.';
-  } finally {
-    isSubmitting.value = false;
-  }
-};
+import { useRegister } from '@/composables/useRegister';
+import '@/assets/css/auth.css';
+import '@/assets/css/views/RegisterView.css';
+const { form, showPassword, isSubmitting, errorMessage, handleRegister } = useRegister();
 </script>
 
-<style scoped>
-@import './css/RegisterView.css';
-</style>

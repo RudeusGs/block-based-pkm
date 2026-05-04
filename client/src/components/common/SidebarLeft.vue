@@ -109,6 +109,7 @@ import { storeToRefs } from 'pinia';
 import { useWorkspaceStore } from '@/stores/workspace.store';
 import { useAuthStore } from '@/stores/auth.store';
 
+
 // Định nghĩa emit để AppLayout bắt được sự kiện mở Modal
 defineEmits(['open-create-workspace']);
 
@@ -135,4 +136,4 @@ const handleLogout = () => {
 };
 </script>
 
-<style scoped src="./css/SidebarLeft.css"></style>
+<style scoped src="@/assets/css/components/SidebarLeft.css"></style>
