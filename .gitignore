@@ -25,3 +25,9 @@ server/server.Service/obj
 server/service.Tests.Unit/bin
 server/service.Tests.Unit/obj
 server/server/appsettings.json
+client/package-lock.json
+client/package-lock.json
+client/package.json
+client/package-lock.json
+client/package.json
+client/package-lock.json
