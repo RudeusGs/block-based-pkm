@@ -213,14 +213,27 @@ onBeforeUnmount(async () => {
   box-shadow: 0 0 0 6px rgba(173, 198, 255, 0.06);
 }
 
-/* Khung ngoài chỉ còn là vùng layout, không còn cảm giác focus */
 .editorjs-frame {
   border-radius: 20px;
-  padding: 10px 8px 14px 18px;
+  padding: 10px 8px 14px 60px !important; 
   background: transparent;
   border: none;
   box-shadow: none;
-  transition: none;
+}
+
+:deep(.ce-block__content),
+:deep(.ce-toolbar__content) {
+  max-width: 100% !important;
+  margin-left: 0 !important;
+}
+
+:deep(.ce-toolbar__plus) {
+  left: -45px !important;
+}
+
+:deep(.ce-toolbar__settings-btn) {
+  left: -20px !important; 
+  right: auto !important;
 }
 
 .editorjs-host {

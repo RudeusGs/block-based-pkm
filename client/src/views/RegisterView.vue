@@ -131,7 +131,7 @@
 
             <footer class="register-meta mt-4">
               <div class="d-flex flex-wrap align-items-center gap-3">
-                <span>© 2026 Block Paged</span>
+                <span>© 2024 Block Paged</span>
                 <span class="meta-dot"></span>
                 <a href="#">Privacy</a>
                 <a href="#">Terms</a>
@@ -225,6 +225,7 @@
 <script setup lang="ts">
 import { reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
+// Import API
 import { AuthenticateAPI } from '@/api/authenticate.api';
 
 const router = useRouter();
@@ -245,16 +246,19 @@ const handleRegister = async () => {
     isSubmitting.value = true;
     errorMessage.value = '';
 
+    // Gọi trực tiếp API đăng ký
     const response: any = await AuthenticateAPI.register(form);
-    
+
+    // Kiểm tra kết quả trả về từ Backend (dựa theo ApiResult.cs của bạn)
     if (response.isSuccess) {
+      // Đăng ký thành công, tự động chuyển về trang Đăng nhập
       router.push('/login');
     } else {
-      errorMessage.value = response.message || 'Đăng ký thất bại.';
+      errorMessage.value = response.message || 'Registration failed.';
     }
   } catch (error: any) {
-    console.error('Register Error:', error);
-    errorMessage.value = error?.message || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.';
+    console.error('Registration Error:', error);
+    errorMessage.value = error?.message || 'Registration failed. Please try again.';
   } finally {
     isSubmitting.value = false;
   }
@@ -262,5 +266,5 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
-
+@import './css/RegisterView.css';
 </style>

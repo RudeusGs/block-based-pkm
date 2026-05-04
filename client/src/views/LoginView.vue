@@ -32,7 +32,7 @@
               <label for="userName" class="form-label-custom">User Name</label>
               <div class="input-group-custom">
                 <span class="material-symbols-outlined icon">person</span>
-                <input v-model="form.userName" type="text" id="userName" class="form-control-custom" placeholder="Your user name" required />
+                <input v-model="form.userName" type="text" id="userName" class="form-control-custom" placeholder="Tên đăng nhập của bạn" required />
               </div>
             </div>
 
@@ -43,12 +43,12 @@
               </div>
               <div class="input-group-custom">
                 <span class="material-symbols-outlined icon">lock</span>
-                <input 
+                 <input 
                   v-model="form.password" 
                   :type="showPassword ? 'text' : 'password'" 
                   id="password" class="form-control-custom" placeholder="••••••••" required 
                 />
-                <button type="button" class="btn-toggle-pass" @click="showPassword = !showPassword">
+                <button type="button" class="btn-toggle-pass" @click="togglePassword">
                   <span class="material-symbols-outlined">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
                 </button>
               </div>
@@ -58,6 +58,12 @@
               <span v-if="!isSubmitting">Sign In</span>
               <span v-else class="spinner-border spinner-border-sm"></span>
             </button>
+
+            <!-- Hiển thị thông báo lỗi nếu đăng nhập thất bại -->
+            <div v-if="errorMessage" class="error-alert d-flex align-items-center gap-2 mb-4">
+              <span class="material-symbols-outlined" style="font-size:18px">error</span>
+              <span>{{ errorMessage }}</span>
+            </div>
           </form>
 
           <div class="divider mb-4"><span>Or</span></div>
@@ -80,7 +86,7 @@
         
         <div class="card-footer border-0 bg-light-soft py-3 text-center">
           <p class="mb-0 small text-muted">
-            New here? <router-link to="/register" class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1">Create account</router-link>
+            New here? <a href="/register" class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1">Create account</a>
           </p>
         </div>
       </div>
@@ -89,16 +95,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
-const showPassword = ref(false);
-const isSubmitting = ref(false);
-const form = reactive({ userName: '', password: '' });
+import { useLogin } from './composables/useLogin';
 
-const handleLogin = async () => {
-  isSubmitting.value = true;
-  await new Promise(resolve => setTimeout(resolve, 1000));
-  isSubmitting.value = false;
-};
+const { form, showPassword, isSubmitting, errorMessage, handleLogin, togglePassword } = useLogin();
 </script>
 
 <style scoped>

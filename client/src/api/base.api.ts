@@ -2,7 +2,6 @@ import axios, { type AxiosInstance, type AxiosResponse, type InternalAxiosReques
 import Cookies from 'js-cookie'
 
 const apiClient: AxiosInstance = axios.create({
-  // Đã sửa lại cổng thành 7135 và route thành api/
   baseURL: 'https://localhost:7135/api/', 
   timeout: 15000,
   headers: {
