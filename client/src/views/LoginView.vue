@@ -29,10 +29,10 @@
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <label for="email" class="form-label-custom">Email</label>
+              <label for="userName" class="form-label-custom">User Name</label>
               <div class="input-group-custom">
-                <span class="material-symbols-outlined icon">mail</span>
-                <input v-model="form.email" type="text" id="email" class="form-control-custom" placeholder="name@company.com" required />
+                <span class="material-symbols-outlined icon">person</span>
+                <input v-model="form.userName" type="text" id="userName" class="form-control-custom" placeholder="Your user name" required />
               </div>
             </div>
 
@@ -80,7 +80,7 @@
         
         <div class="card-footer border-0 bg-light-soft py-3 text-center">
           <p class="mb-0 small text-muted">
-            New here? <a href="#" class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1">Create account</a>
+            New here? <router-link to="/register" class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1">Create account</router-link>
           </p>
         </div>
       </div>
@@ -92,7 +92,7 @@
 import { ref, reactive } from 'vue';
 const showPassword = ref(false);
 const isSubmitting = ref(false);
-const form = reactive({ email: '', password: '' });
+const form = reactive({ userName: '', password: '' });
 
 const handleLogin = async () => {
   isSubmitting.value = true;
