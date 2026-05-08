@@ -12,7 +12,6 @@
     </div>
 
     <main class="login-container w-100 z-1 px-3">
-      
       <div class="text-center mb-4 animate-fade-down">
         <div class="brand-logo mx-auto mb-3 d-flex align-items-center justify-content-center">
           <span class="material-symbols-outlined fs-2">architecture</span>
@@ -29,67 +28,119 @@
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <label for="email" class="form-label-custom">User Name</label>
+              <label for="userName" class="form-label-custom">User Name</label>
+
               <div class="input-group-custom">
                 <span class="material-symbols-outlined icon">person</span>
-                <input v-model="form.userName" type="text" id="email" class="form-control-custom" placeholder="Your user name" required />
+
+                <input
+                  v-model.trim="form.userName"
+                  type="text"
+                  id="userName"
+                  class="form-control-custom"
+                  placeholder="Your user name"
+                  autocomplete="username"
+                  :disabled="isSubmitting"
+                  required
+                />
               </div>
             </div>
 
             <div class="mb-3">
               <div class="d-flex justify-content-between">
                 <label for="password" class="form-label-custom">Password</label>
-                <a href="#" class="text-link small">Forgot?</a>
+
+                <router-link to="/forgot-password" class="text-link small">
+                  Forgot?
+                </router-link>
               </div>
+
               <div class="input-group-custom">
                 <span class="material-symbols-outlined icon">lock</span>
-                <input 
-                  v-model="form.password" 
-                  :type="showPassword ? 'text' : 'password'" 
-                  id="password" class="form-control-custom" placeholder="••••••••" required 
+
+                <input
+                  v-model="form.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  id="password"
+                  class="form-control-custom"
+                  placeholder="••••••••"
+                  autocomplete="current-password"
+                  :disabled="isSubmitting"
+                  required
                 />
-                <button type="button" class="btn-toggle-pass" @click="togglePassword">
-                  <span class="material-symbols-outlined">{{ showPassword ? 'visibility_off' : 'visibility' }}</span>
+
+                <button
+                  type="button"
+                  class="btn-toggle-pass"
+                  @click="togglePassword"
+                  :disabled="isSubmitting"
+                  aria-label="Toggle password visibility"
+                >
+                  <span class="material-symbols-outlined">
+                    {{ showPassword ? 'visibility_off' : 'visibility' }}
+                  </span>
                 </button>
               </div>
             </div>
+
             <button
               type="submit"
               class="btn btn-black w-100 py-3 fw-bold rounded-3 mb-4"
-              :disabled="isSubmitting"
+              :disabled="isSubmitting || !canSubmit"
             >
               <span v-if="!isSubmitting">Sign In</span>
-              <span v-else class="spinner-border spinner-border-sm"></span>
-            </button>
 
-            <!-- Error message -->
-            <div v-if="errorMessage" class="error-alert d-flex align-items-center gap-2 mb-2">
-              <span class="material-symbols-outlined" style="font-size:18px">error</span>
-              <span>{{ errorMessage }}</span>
-            </div>
+              <span
+                v-else
+                class="spinner-border spinner-border-sm"
+                role="status"
+                aria-hidden="true"
+              ></span>
+            </button>
           </form>
 
-          <div class="divider mb-4"><span>Or</span></div>
+          <div class="divider mb-4">
+            <span>Or</span>
+          </div>
 
           <div class="row g-2">
             <div class="col-6">
-              <button class="btn btn-outline-custom w-100 d-flex align-items-center justify-content-center gap-2 py-2">
-                <img src="https://www.google.com/favicon.ico" width="14" height="14" />
+              <button
+                type="button"
+                class="btn btn-outline-custom w-100 d-flex align-items-center justify-content-center gap-2 py-2"
+              >
+                <img
+                  src="https://www.google.com/favicon.ico"
+                  width="14"
+                  height="14"
+                  alt="Google"
+                />
                 <span class="fw-semibold small">Google</span>
               </button>
             </div>
+
             <div class="col-6">
-              <button class="btn btn-outline-custom w-100 d-flex align-items-center justify-content-center gap-2 py-2">
+              <button
+                type="button"
+                class="btn btn-outline-custom w-100 d-flex align-items-center justify-content-center gap-2 py-2"
+              >
                 <span class="material-symbols-outlined fs-5">terminal</span>
                 <span class="fw-semibold small">GitHub</span>
               </button>
             </div>
           </div>
         </div>
-        
+
         <div class="card-footer border-0 bg-light-soft py-3 text-center">
           <p class="mb-0 small text-muted">
-            New here? <a href="/register" class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1">Create account</a>
+            New here?
+
+            <router-link
+              to="/register"
+              class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1"
+            >
+              Create account
+            </router-link>
           </p>
         </div>
       </div>
@@ -98,9 +149,16 @@
 </template>
 
 <script setup lang="ts">
-import { useLogin } from './composables/useLogin';
+import { useLogin } from './composables/useLogin'
 
-const { form, showPassword, isSubmitting, errorMessage, handleLogin, togglePassword } = useLogin();
+const {
+  form,
+  showPassword,
+  isSubmitting,
+  canSubmit,
+  handleLogin,
+  togglePassword,
+} = useLogin()
 </script>
 
 <style scoped>

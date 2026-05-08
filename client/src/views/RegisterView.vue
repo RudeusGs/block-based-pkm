@@ -30,62 +30,93 @@
               <div class="register-card">
                 <form @submit.prevent="handleRegister" class="row g-3">
                   <div class="col-12">
-                    <label class="form-label-custom">Full Name</label>
+                    <label for="fullName" class="form-label-custom">
+                      Full Name
+                    </label>
+
                     <div class="input-shell">
                       <span class="material-symbols-outlined input-icon">badge</span>
+
                       <input
-                        v-model="form.fullName"
+                        v-model.trim="form.fullName"
                         type="text"
+                        id="fullName"
                         class="form-control form-control-custom"
                         placeholder="Jan van Eyck"
+                        autocomplete="name"
+                        :disabled="isSubmitting"
                         required
                       />
                     </div>
                   </div>
 
                   <div class="col-12">
-                    <label class="form-label-custom">Username</label>
+                    <label for="userName" class="form-label-custom">
+                      Username
+                    </label>
+
                     <div class="input-shell">
                       <span class="material-symbols-outlined input-icon">person</span>
+
                       <input
-                        v-model="form.userName"
+                        v-model.trim="form.userName"
                         type="text"
+                        id="userName"
                         class="form-control form-control-custom"
                         placeholder="jan_eyck"
+                        autocomplete="username"
+                        :disabled="isSubmitting"
                         required
                       />
                     </div>
                   </div>
 
                   <div class="col-12">
-                    <label class="form-label-custom">Email</label>
+                    <label for="email" class="form-label-custom">
+                      Email
+                    </label>
+
                     <div class="input-shell">
                       <span class="material-symbols-outlined input-icon">mail</span>
+
                       <input
-                        v-model="form.email"
+                        v-model.trim="form.email"
                         type="email"
+                        id="email"
                         class="form-control form-control-custom"
                         placeholder="jan@atheneum.io"
+                        autocomplete="email"
+                        :disabled="isSubmitting"
                         required
                       />
                     </div>
                   </div>
 
                   <div class="col-12">
-                    <label class="form-label-custom">Password</label>
+                    <label for="password" class="form-label-custom">
+                      Password
+                    </label>
+
                     <div class="input-shell">
                       <span class="material-symbols-outlined input-icon">lock</span>
+
                       <input
                         v-model="form.password"
                         :type="showPassword ? 'text' : 'password'"
+                        id="password"
                         class="form-control form-control-custom password-input"
                         placeholder="••••••••"
+                        autocomplete="new-password"
+                        :disabled="isSubmitting"
                         required
                       />
+
                       <button
                         type="button"
                         class="password-toggle"
-                        @click="showPassword = !showPassword"
+                        @click="togglePassword"
+                        :disabled="isSubmitting"
+                        aria-label="Toggle password visibility"
                       >
                         <span class="material-symbols-outlined">
                           {{ showPassword ? 'visibility_off' : 'visibility' }}
@@ -98,29 +129,26 @@
                     <button
                       type="submit"
                       class="btn btn-register w-100"
-                      :disabled="isSubmitting"
+                      :disabled="isSubmitting || !canSubmit"
                     >
                       <span v-if="!isSubmitting">Create Account</span>
-                      <span
-                        v-else
-                        class="spinner-border spinner-border-sm"
-                        role="status"
-                        aria-hidden="true"
-                      ></span>
-                    </button>
-                  </div>
 
-                  <div v-if="errorMessage" class="col-12">
-                    <div class="error-alert d-flex align-items-center gap-2">
-                      <span class="material-symbols-outlined error-icon">error</span>
-                      <span>{{ errorMessage }}</span>
-                    </div>
+                      <span v-else class="d-inline-flex align-items-center gap-2">
+                        <span
+                          class="spinner-border spinner-border-sm"
+                          role="status"
+                          aria-hidden="true"
+                        ></span>
+                        Creating account...
+                      </span>
+                    </button>
                   </div>
                 </form>
 
                 <div class="register-footer text-center">
                   <p class="mb-0">
                     Already have an account?
+
                     <router-link to="/login" class="signin-link ms-1">
                       Sign in
                     </router-link>
@@ -168,6 +196,7 @@
                   <div class="col-6">
                     <div class="media-card media-image"></div>
                   </div>
+
                   <div class="col-6">
                     <div class="media-card media-note">
                       <div class="mini-line short"></div>
@@ -223,34 +252,16 @@
 </template>
 
 <script setup lang="ts">
-import { reactive, ref } from 'vue';
+import { useRegister } from './composables/useRegister'
 
-const form = reactive({
-  fullName: '',
-  userName: '',
-  email: '',
-  password: ''
-});
-
-const showPassword = ref(false);
-const isSubmitting = ref(false);
-const errorMessage = ref('');
-
-const handleRegister = async () => {
-  try {
-    isSubmitting.value = true;
-    errorMessage.value = '';
-
-    console.log('Register Data:', { ...form });
-
-    setTimeout(() => {
-      isSubmitting.value = false;
-    }, 1500);
-  } catch (error) {
-    errorMessage.value = 'Registration failed. Please try again.';
-    isSubmitting.value = false;
-  }
-};
+const {
+  form,
+  showPassword,
+  isSubmitting,
+  canSubmit,
+  handleRegister,
+  togglePassword,
+} = useRegister()
 </script>
 
 <style scoped>

@@ -78,7 +78,7 @@ var app = builder.Build();
 app.UseExceptionMapping();
 
 // Swagger UI:
-// - Chỉ bật ở môi trường Development theo logic trong extension
+// - Chỉ bật ở môi trường Development
 app.UseCustomSwaggerUI();
 
 // HTTPS redirection:
