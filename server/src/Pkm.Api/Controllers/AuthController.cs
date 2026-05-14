@@ -1,11 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.RateLimiting;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Auth;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Auth;
-using Pkm.Api.Extensions;
 using Pkm.Application.Abstractions.Authentication;
 using Pkm.Application.Features.Authentication.Commands.Login;
 using Pkm.Application.Features.Authentication.Commands.Logout;
