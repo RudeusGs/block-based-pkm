@@ -9,6 +9,11 @@ public static class AuthenticationErrors
         "Thông tin đăng nhập không hợp lệ.",
         ResultStatus.Unauthorized);
 
+    public static readonly Error InvalidRefreshToken = new(
+        "Auth.InvalidRefreshToken",
+        "Refresh token không hợp lệ hoặc đã hết hạn.",
+        ResultStatus.Unauthorized);
+
     public static readonly Error MissingUserContext = new(
         "Auth.MissingUserContext",
         "Không xác định được người dùng hiện tại.",
@@ -39,6 +44,11 @@ public static class AuthenticationErrors
         "Không tìm thấy người dùng.",
         ResultStatus.NotFound);
 
+    public static readonly Error UserInactive = new(
+        "Auth.UserInactive",
+        "Tài khoản đã bị khóa hoặc vô hiệu hóa.",
+        ResultStatus.Forbidden);
+
     public static Error InvalidLoginRequest(IReadOnlyList<string> details)
         => new(
             "Auth.InvalidLoginRequest",
@@ -50,6 +60,20 @@ public static class AuthenticationErrors
         => new(
             "Auth.InvalidRegisterRequest",
             "Dữ liệu đăng ký không hợp lệ.",
+            ResultStatus.Validation,
+            details);
+
+    public static Error InvalidRefreshRequest(IReadOnlyList<string> details)
+        => new(
+            "Auth.InvalidRefreshRequest",
+            "Dữ liệu refresh token không hợp lệ.",
+            ResultStatus.Validation,
+            details);
+
+    public static Error InvalidLogoutRequest(IReadOnlyList<string> details)
+        => new(
+            "Auth.InvalidLogoutRequest",
+            "Dữ liệu logout không hợp lệ.",
             ResultStatus.Validation,
             details);
 }

@@ -62,6 +62,12 @@ using Pkm.Application.Features.Recommendations.Commands.RejectTaskRecommendation
 using Pkm.Application.Features.Recommendations.Commands.UpdateUserTaskPreference;
 using Pkm.Application.Features.Recommendations.Queries.GetUserTaskPreference;
 using Pkm.Application.Features.Recommendations.Queries.ListTaskRecommendations;
+using Pkm.Application.Features.Account.Commands.ChangeMyPassword;
+using Pkm.Application.Features.Account.Commands.UpdateMyProfile;
+using Pkm.Application.Features.Account.Queries.GetMyProfile;
+using Pkm.Application.Features.Authentication.Commands.Logout;
+using Pkm.Application.Features.Authentication.Commands.LogoutAll;
+using Pkm.Application.Features.Authentication.Commands.RefreshToken;
 using Pkm.Application.Features.Recommendations.Services;
 namespace Pkm.Application;
 
@@ -102,6 +108,11 @@ public static class ApplicationServiceCollection
         services.AddScoped<GenerateTaskRecommendationsCommandValidator>();
         services.AddScoped<ListTaskRecommendationsQueryValidator>();
         services.AddScoped<UpdateUserTaskPreferenceCommandValidator>();
+
+        services.AddScoped<RefreshTokenCommandValidator>();
+        services.AddScoped<LogoutCommandValidator>();
+        services.AddScoped<UpdateMyProfileCommandValidator>();
+        services.AddScoped<ChangeMyPasswordCommandValidator>();
 
         services.AddScoped<LoginHandler>();
         services.AddScoped<RegisterHandler>();
@@ -172,6 +183,14 @@ public static class ApplicationServiceCollection
         services.AddScoped<CompleteTaskRecommendationHandler>();
         services.AddScoped<GetUserTaskPreferenceHandler>();
         services.AddScoped<UpdateUserTaskPreferenceHandler>();
+
+        services.AddScoped<RefreshTokenHandler>();
+        services.AddScoped<LogoutHandler>();
+        services.AddScoped<LogoutAllHandler>();
+
+        services.AddScoped<GetMyProfileHandler>();
+        services.AddScoped<UpdateMyProfileHandler>();
+        services.AddScoped<ChangeMyPasswordHandler>();
 
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 

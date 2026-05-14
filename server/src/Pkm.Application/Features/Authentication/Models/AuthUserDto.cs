@@ -7,4 +7,6 @@ public sealed record AuthUserDto(
     string FullName,
     string? AvatarUrl,
     string Status,
-    bool IsAuthenticated);
+    bool IsAuthenticated,
+    DateTimeOffset CreatedDate,
+    DateTimeOffset? UpdatedDate);

@@ -19,7 +19,15 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(User.MaxNameLength);
 
+        builder.Property(x => x.NormalizedUserName)
+            .IsRequired()
+            .HasMaxLength(User.MaxNameLength);
+
         builder.Property(x => x.Email)
+            .IsRequired()
+            .HasMaxLength(User.MaxEmailLength);
+
+        builder.Property(x => x.NormalizedEmail)
             .IsRequired()
             .HasMaxLength(User.MaxEmailLength);
 
@@ -32,16 +40,20 @@ internal sealed class UserConfiguration : IEntityTypeConfiguration<User>
 
         builder.Property(x => x.Status)
             .IsRequired()
-            .HasMaxLength(User.MaxStatusLength);
+            .HasConversion<string>()
+            .HasMaxLength(50);
 
         builder.Property(x => x.PasswordHash)
             .IsRequired();
 
-        builder.HasIndex(x => x.UserName)
+        builder.Property(x => x.IsAuthenticated)
+            .IsRequired();
+
+        builder.HasIndex(x => x.NormalizedUserName)
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
 
-        builder.HasIndex(x => x.Email)
+        builder.HasIndex(x => x.NormalizedEmail)
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");
     }

@@ -58,8 +58,7 @@ builder.Services.AddApplicationServices();
 
 // CORS:
 // - Cho phép frontend gọi API theo danh sách origins trong config
-builder.Services.AddCustomCors(builder.Configuration);
-
+builder.Services.AddCustomCors(builder.Configuration, builder.Environment);
 // Swagger/OpenAPI:
 // - Sinh tài liệu API và UI cho môi trường dev
 builder.Services.AddCustomSwagger();

@@ -33,21 +33,34 @@ public sealed class RegisterHandler
         _validator = validator;
     }
 
-    public async Task<Result<AuthUserDto>> HandleAsync(RegisterCommand request, CancellationToken cancellationToken)
+    public async Task<Result<AuthUserDto>> HandleAsync(
+        RegisterCommand request,
+        CancellationToken cancellationToken)
     {
         var validationErrors = _validator.Validate(request);
         if (validationErrors.Count > 0)
         {
-            return Result.Failure<AuthUserDto>(AuthenticationErrors.InvalidRegisterRequest(validationErrors));
+            return Result.Failure<AuthUserDto>(
+                AuthenticationErrors.InvalidRegisterRequest(validationErrors));
         }
 
         try
         {
-            if (!await _userRepository.IsUserNameUniqueAsync(request.UserName, cancellationToken))
-                return Result.Failure<AuthUserDto>(AuthenticationErrors.DuplicateUserName);
+            if (!await _userRepository.IsUserNameUniqueAsync(
+                    request.UserName,
+                    cancellationToken))
+            {
+                return Result.Failure<AuthUserDto>(
+                    AuthenticationErrors.DuplicateUserName);
+            }
 
-            if (!await _userRepository.IsEmailUniqueAsync(request.Email, cancellationToken))
-                return Result.Failure<AuthUserDto>(AuthenticationErrors.DuplicateEmail);
+            if (!await _userRepository.IsEmailUniqueAsync(
+                    request.Email,
+                    cancellationToken))
+            {
+                return Result.Failure<AuthUserDto>(
+                    AuthenticationErrors.DuplicateEmail);
+            }
 
             var user = User.Create(
                 Guid.NewGuid(),
@@ -61,18 +74,13 @@ public sealed class RegisterHandler
 
             _userRepository.Add(user);
 
-            await _userRoleService.AssignDefaultRoleAsync(user.Id, cancellationToken);
+            await _userRoleService.AssignDefaultRoleAsync(
+                user.Id,
+                cancellationToken);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            return Result.Success(new AuthUserDto(
-                user.Id,
-                user.UserName,
-                user.Email,
-                user.FullName,
-                user.AvatarUrl,
-                user.Status,
-                user.IsAuthenticated));
+            return Result.Success(user.ToAuthUserDto(isAuthenticated: false));
         }
         catch (DomainException ex)
         {

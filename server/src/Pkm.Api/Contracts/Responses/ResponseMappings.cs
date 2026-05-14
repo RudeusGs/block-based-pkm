@@ -21,13 +21,17 @@ public static class ResponseMappings
             dto.FullName,
             dto.AvatarUrl,
             dto.Status,
-            dto.IsAuthenticated);
+            dto.IsAuthenticated,
+            dto.CreatedDate,
+            dto.UpdatedDate);
 
     public static AuthTokenResponse ToResponse(this AppAuth.AuthTokenDto dto)
         => new(
             dto.AccessToken,
+            dto.RefreshToken,
             dto.TokenType,
             dto.ExpiresIn,
+            dto.RefreshTokenExpiresAtUtc,
             dto.User.ToResponse());
 
     public static BlockResponse ToResponse(this AppDocuments.BlockDto dto)

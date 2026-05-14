@@ -6,9 +6,9 @@ public sealed class LoginCommandValidator
     {
         var errors = new List<string>();
 
-        if (string.IsNullOrWhiteSpace(command.UserName))
+        if (string.IsNullOrWhiteSpace(command.LoginIdentifier))
         {
-            errors.Add("Tên đăng nhập không được để trống.");
+            errors.Add("Tên đăng nhập hoặc email không được để trống.");
         }
 
         if (string.IsNullOrWhiteSpace(command.Password))
