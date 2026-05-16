@@ -1,5 +1,6 @@
 import axios, {
   type AxiosInstance,
+  type AxiosRequestConfig,
   type AxiosResponse,
 } from 'axios'
 import Cookies from 'js-cookie'
@@ -54,25 +55,55 @@ apiClient.interceptors.response.use(
 )
 
 const api = {
-  get: <T = any>(url: string, params?: any): Promise<T> => {
-    return apiClient.get(url, { params }) as Promise<T>
+  get: <T = any>(
+    url: string,
+    params?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
+    return apiClient.get(url, { ...config, params }) as Promise<T>
   },
 
-  post: <T = any>(url: string, body?: any): Promise<T> => {
-    return apiClient.post(url, body) as Promise<T>
+  post: <T = any>(
+    url: string,
+    body?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
+    return apiClient.post(url, body, config) as Promise<T>
   },
 
-  put: <T = any>(url: string, body?: any): Promise<T> => {
-    return apiClient.put(url, body) as Promise<T>
+  put: <T = any>(
+    url: string,
+    body?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
+    return apiClient.put(url, body, config) as Promise<T>
   },
 
-  delete: <T = any>(url: string): Promise<T> => {
-    return apiClient.delete(url) as Promise<T>
+  patch: <T = any>(
+    url: string,
+    body?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
+    return apiClient.patch(url, body, config) as Promise<T>
   },
 
-  postForm: <T = any>(url: string, formData: FormData): Promise<T> => {
+  delete: <T = any>(
+    url: string,
+    params?: any,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
+    return apiClient.delete(url, { ...config, params }) as Promise<T>
+  },
+
+  postForm: <T = any>(
+    url: string,
+    formData: FormData,
+    config?: AxiosRequestConfig
+  ): Promise<T> => {
     return apiClient.post(url, formData, {
+      ...config,
       headers: {
+        ...config?.headers,
         'Content-Type': 'multipart/form-data',
       },
     }) as Promise<T>
