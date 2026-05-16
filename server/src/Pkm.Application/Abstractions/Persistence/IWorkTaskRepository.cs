@@ -60,6 +60,17 @@ public interface IWorkTaskRepository
         Guid userId,
         IReadOnlyCollection<Guid> taskIds,
         CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<WorkTaskListItemReadModel>> ListAssignedToUserAsync(
+    Guid userId,
+    Guid? workspaceId,
+    WorkTaskListFilter filter,
+    CancellationToken cancellationToken = default);
+
+    Task<int> CountAssignedToUserAsync(
+        Guid userId,
+        Guid? workspaceId,
+        WorkTaskListFilter filter,
+        CancellationToken cancellationToken = default);
     void Add(WorkTask task);
 
     void Update(WorkTask task);
