@@ -37,7 +37,7 @@ export const pageController = {
   listByWorkspace(workspaceId: Guid, params?: ListWorkspacePagesParams) {
     return api.get<ApiResult<PagePagedResultResponse>>(
       `workspaces/${workspaceId}/pages`,
-      { params }
+      params
     )
   },
 
@@ -48,7 +48,7 @@ export const pageController = {
   search(workspaceId: Guid, params: SearchPagesParams) {
     return api.get<ApiResult<PagePagedResultResponse>>(
       `workspaces/${workspaceId}/pages:search`,
-      { params }
+      params
     )
   },
 }

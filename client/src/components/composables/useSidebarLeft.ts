@@ -10,92 +10,8 @@ import type { Guid } from '@/api/models/common.model'
 import type { PageResponse } from '@/api/models/page.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
 
-export interface PageTreeItem extends PageResponse {
-  children: PageTreeItem[]
-}
-
-interface SidebarWorkspaceLike {
-  id: Guid
-  name: string
-}
-
-function sortPagesByDate(pages: PageTreeItem[]) {
-  return [...pages].sort((a, b) => {
-    return new Date(a.createdDate).getTime() - new Date(b.createdDate).getTime()
-  })
-}
-
-function sortTree(nodes: PageTreeItem[]): PageTreeItem[] {
-  return sortPagesByDate(nodes).map((node) => ({
-    ...node,
-    children: sortTree(node.children),
-  }))
-}
-
-function buildPageTree(pages: PageResponse[]): PageTreeItem[] {
-  const map = new Map<Guid, PageTreeItem>()
-  const roots: PageTreeItem[] = []
-
-  pages.forEach((page) => {
-    map.set(page.id, {
-      ...page,
-      children: [],
-    })
-  })
-
-  map.forEach((page) => {
-    if (page.parentPageId && map.has(page.parentPageId)) {
-      map.get(page.parentPageId)?.children.push(page)
-      return
-    }
-
-    roots.push(page)
-  })
-
-  return sortTree(roots)
-}
-
-function createPageTreeNode(page: PageResponse): PageTreeItem {
-  return {
-    ...page,
-    children: [],
-  }
-}
-
-function insertPageIntoTree(
-  tree: PageTreeItem[],
-  page: PageResponse
-): PageTreeItem[] {
-  const node = createPageTreeNode(page)
-
-  if (!page.parentPageId) {
-    return [node, ...tree]
-  }
-
-  let inserted = false
-
-  function insert(nodes: PageTreeItem[]): PageTreeItem[] {
-    return nodes.map((item) => {
-      if (item.id === page.parentPageId) {
-        inserted = true
-
-        return {
-          ...item,
-          children: [node, ...item.children],
-        }
-      }
-
-      return {
-        ...item,
-        children: insert(item.children),
-      }
-    })
-  }
-
-  const nextTree = insert(tree)
-
-  return inserted ? nextTree : [node, ...tree]
-}
+import type { PageTreeItem, SidebarWorkspaceLike } from '../types/sidebar.types'
+import { buildPageTree, insertPageIntoTree } from '../utils/page-tree.util'
 
 export function useSidebarLeft() {
   const isCollapsed = ref(false)
@@ -112,6 +28,7 @@ export function useSidebarLeft() {
   const createPageParentPageId = ref<Guid | null>(null)
 
   const openedWorkspaceIds = ref<Set<Guid>>(new Set())
+  const openedPageIds = ref<Set<Guid>>(new Set())
   const loadingPageWorkspaceIds = ref<Set<Guid>>(new Set())
 
   const pageTreesByWorkspaceId = ref<Record<Guid, PageTreeItem[]>>({})
@@ -232,6 +149,30 @@ export function useSidebarLeft() {
     void fetchWorkspacePages(workspace.id)
   }
 
+  function isPageBranchOpen(pageId: Guid) {
+    return openedPageIds.value.has(pageId)
+  }
+
+  function openPageBranch(pageId: Guid) {
+    const next = new Set(openedPageIds.value)
+    next.add(pageId)
+    openedPageIds.value = next
+  }
+
+  function closePageBranch(pageId: Guid) {
+    const next = new Set(openedPageIds.value)
+    next.delete(pageId)
+    openedPageIds.value = next
+  }
+
+  function togglePageBranch(pageId: Guid) {
+    if (isPageBranchOpen(pageId)) {
+      closePageBranch(pageId)
+      return
+    }
+    openPageBranch(pageId)
+  }
+
   function isLoadingPages(workspaceId: Guid) {
     return loadingPageWorkspaceIds.value.has(workspaceId)
   }
@@ -318,6 +259,10 @@ export function useSidebarLeft() {
     selectedPageId.value = page.id
     openWorkspaceBranch(page.workspaceId)
 
+    if (page.parentPageId) {
+      openPageBranch(page.parentPageId)
+    }
+
     const currentTree = pageTreesByWorkspaceId.value[page.workspaceId] || []
 
     pageTreesByWorkspaceId.value = {
@@ -365,6 +310,11 @@ export function useSidebarLeft() {
     openCreatePageModal,
     toggleWorkspaceBranch,
     isWorkspaceBranchOpen,
+    openedPageIds,
+    isPageBranchOpen,
+    openPageBranch,
+    closePageBranch,
+    togglePageBranch,
     isLoadingPages,
     getWorkspacePages,
     getPageListError,

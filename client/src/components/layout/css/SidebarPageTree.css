@@ -1,74 +1,164 @@
 .sidebar-page-tree {
   list-style: none;
   padding: 0;
-  margin: 2px 0 4px;
+  margin: 0;
+  min-width: 0;
+  overflow: hidden; /* Prevent horizontal scroll */
 }
 
 .sidebar-page-node {
-  margin: 1px 0;
+  position: relative;
+  min-width: 0;
 }
 
-.sidebar-page-node .sidebar-page-tree {
-  margin-left: 14px;
-  padding-left: 10px;
-  border-left: 1px solid rgba(255, 255, 255, 0.07);
+/* Optional nested guide line. We rely on the parent padding and 
+   a pseudo-element for a subtle visual line, keeping width compact. */
+.sidebar-page-children {
+  position: relative;
+}
+
+.sidebar-page-children::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(var(--tree-depth-padding, 0px) + 8px);
+  width: 1px;
+  background-color: rgba(255, 255, 255, 0.05);
+  pointer-events: none;
 }
 
 .sidebar-page-row {
-  min-height: 28px;
   display: flex;
   align-items: center;
-  gap: 4px;
-  border-radius: 8px;
-  padding-right: 4px;
-  transition: background 0.16s ease;
+  padding: 4px 8px;
+  margin-bottom: 2px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  color: var(--bs-body-color, #e0e0e0);
+  min-width: 0; /* Important to allow children to shrink */
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .sidebar-page-row:hover {
-  background: rgba(255, 255, 255, 0.045);
-}
-
-.sidebar-page-row:hover .sidebar-page-add {
-  opacity: 1;
+  background-color: rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-page-row-active {
-  background: rgba(173, 198, 255, 0.09);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-weight: 500;
 }
 
-.sidebar-page-link {
-  min-width: 0;
-  flex: 1;
-  border: 0;
-  padding: 4px 4px;
-  background: transparent;
-  color: #b9b7b5;
-  display: inline-flex;
+.sidebar-page-arrow,
+.sidebar-page-arrow-spacer {
+  display: flex;
   align-items: center;
-  gap: 7px;
-  text-align: left;
-  font-size: 12px;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  margin-right: 2px;
 }
 
-.sidebar-page-link:hover {
-  color: #f4f2f1;
+.sidebar-page-arrow {
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.sidebar-page-arrow:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.sidebar-page-arrow .material-symbols-outlined {
+  font-size: 18px;
+  transition: transform 0.15s ease;
+}
+
+.sidebar-page-arrow-open .material-symbols-outlined {
+  transform: rotate(90deg);
+}
+
+.sidebar-page-main {
+  display: flex;
+  align-items: center;
+  flex-grow: 1;
+  min-width: 0; /* for text truncation */
+  gap: 6px;
 }
 
 .sidebar-page-icon {
-  width: 18px;
-  min-width: 18px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  font-size: 14px;
 }
 
 .sidebar-page-title {
+  flex-grow: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  user-select: none;
   min-width: 0;
-  flex: 1;
 }
 
-.sidebar-page-add {
+.sidebar-page-plus-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  border: none;
+  background: transparent;
+  color: inherit;
   opacity: 0;
-  transition: opacity 0.16s ease, background 0.16s ease;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.sidebar-page-plus-button .material-symbols-outlined {
+  font-size: 16px;
+}
+
+/* Show plus button on row hover or if row is active */
+.sidebar-page-row:hover .sidebar-page-plus-button,
+.sidebar-page-row-active .sidebar-page-plus-button {
+  opacity: 0.6;
+}
+
+.sidebar-page-plus-button:hover {
+  opacity: 1 !important;
+  background-color: rgba(138, 115, 255, 0.2);
+  color: #a084ff;
+}
+
+.sidebar-page-plus-button:focus-visible {
+  opacity: 1;
+  outline: 2px solid #a084ff;
+  outline-offset: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-page-row,
+  .sidebar-page-plus-button,
+  .sidebar-page-arrow,
+  .sidebar-page-arrow .material-symbols-outlined {
+    transition: none;
+  }
 }

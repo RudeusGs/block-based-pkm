@@ -217,8 +217,10 @@
                         v-else
                         :pages="getWorkspacePages(ws.id)"
                         :selected-page-id="selectedPageId"
+                        :opened-page-ids="openedPageIds"
                         @select-page="selectPage"
                         @create-child="handleCreateChildPage(ws, $event)"
+                        @toggle-page="togglePageBranch($event.id)"
                       />
                     </div>
                   </Transition>
@@ -321,7 +323,7 @@ import CreateWorkspaceModal from '@/components/workspace/CreateWorkspaceModal.vu
 import CreatePageModal from '@/components/page/CreatePageModal.vue'
 import SidebarPageTree from '@/components/layout/SidebarPageTree.vue'
 import { useSidebarLeft } from './composables/useSidebarLeft'
-import type { PageTreeItem } from './composables/useSidebarLeft'
+import type { PageTreeItem } from '@/components/types/sidebar.types'
 import type { WorkspaceSidebarItem } from '@/modules/workspaces/composables/useMyWorkspaces'
 
 const {
@@ -353,6 +355,8 @@ const {
   openCreatePageModal,
   toggleWorkspaceBranch,
   isWorkspaceBranchOpen,
+  openedPageIds,
+  togglePageBranch,
   isLoadingPages,
   getWorkspacePages,
   getPageListError,
