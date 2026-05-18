@@ -8,57 +8,81 @@
       <div
         class="sidebar-page-row"
         :class="{ 'sidebar-page-row-active': page.id === selectedPageId }"
+        :style="{ paddingLeft: `calc(4px + ${Math.min(depth, maxVisualDepth)} * 12px)` }"
+        @click.stop="emit('selectPage', page)"
       >
         <button
+          v-if="page.children.length > 0"
           type="button"
-          class="sidebar-page-link"
-          @click.stop="$emit('selectPage', page)"
+          class="sidebar-page-arrow"
+          :class="{ 'sidebar-page-arrow-open': openedPageIds.has(page.id) }"
+          @click.stop="emit('togglePage', page)"
         >
+          <span class="material-symbols-outlined">arrow_right</span>
+        </button>
+        <div v-else class="sidebar-page-arrow-spacer"></div>
+
+        <div class="sidebar-page-main">
           <span class="sidebar-page-icon">
             {{ page.icon || '📄' }}
           </span>
 
-          <span class="sidebar-page-title text-truncate">
+          <span class="sidebar-page-title">
             {{ page.title }}
           </span>
-        </button>
+        </div>
 
         <button
           type="button"
-          class="btn-add-child sidebar-page-add"
+          class="sidebar-page-plus-button"
           title="Tạo subpage"
-          @click.stop="$emit('createChild', page)"
+          @click.stop="emit('createChild', page)"
         >
           <span class="material-symbols-outlined">add</span>
         </button>
       </div>
 
       <SidebarPageTree
-        v-if="page.children.length"
+        v-if="page.children.length > 0 && openedPageIds.has(page.id)"
+        class="sidebar-page-children"
         :pages="page.children"
         :selected-page-id="selectedPageId"
-        @select-page="$emit('selectPage', $event)"
-        @create-child="$emit('createChild', $event)"
+        :opened-page-ids="openedPageIds"
+        :depth="depth + 1"
+        :max-visual-depth="maxVisualDepth"
+        @select-page="emit('selectPage', $event)"
+        @create-child="emit('createChild', $event)"
+        @toggle-page="emit('togglePage', $event)"
       />
     </li>
   </ul>
 </template>
 
 <script setup lang="ts">
-import type { PageTreeItem } from '@/components/composables/useSidebarLeft'
+import type { PageTreeItem } from '@/components/types/sidebar.types'
 
 defineOptions({
   name: 'SidebarPageTree',
 })
 
-defineProps<{
-  pages: PageTreeItem[]
-  selectedPageId: string | null
-}>()
+withDefaults(
+  defineProps<{
+    pages: PageTreeItem[]
+    selectedPageId: string | null
+    openedPageIds: Set<string>
+    depth?: number
+    maxVisualDepth?: number
+  }>(),
+  {
+    depth: 0,
+    maxVisualDepth: 4,
+  }
+)
 
-defineEmits<{
+const emit = defineEmits<{
   selectPage: [page: PageTreeItem]
   createChild: [page: PageTreeItem]
+  togglePage: [page: PageTreeItem]
 }>()
 </script>
 
