@@ -14,13 +14,18 @@
         >
           <span class="material-symbols-outlined fill-1">grid_view</span>
         </div>
-        <div v-if="!isCollapsed" class="d-flex flex-column overflow-hidden ms-3 fade-in">
+
+        <div
+          v-if="!isCollapsed"
+          class="d-flex flex-column overflow-hidden ms-3 fade-in"
+        >
           <span class="fs-6 fw-bold text-light text-nowrap">Block-based</span>
           <span
             class="text-uppercase text-on-surface-variant tracking-widest"
             style="font-size: 10px"
-            >Pro Workspace</span
           >
+            Pro Workspace
+          </span>
         </div>
       </div>
 
@@ -28,7 +33,7 @@
         v-if="!isCollapsed"
         type="button"
         class="btn-text-toggle fade-in flex-shrink-0"
-        @click.stop="isCollapsed = true"
+        @click.stop="collapseSidebar"
       >
         &lt;&lt;
       </button>
@@ -39,9 +44,10 @@
         class="search-wrapper d-flex align-items-center rounded-4 border border-outline-variant transition-200"
         :class="isCollapsed ? 'justify-content-center py-2' : 'px-3 py-2 gap-2'"
       >
-        <span class="material-symbols-outlined text-on-surface-variant fs-6 flex-shrink-0"
-          >search</span
-        >
+        <span class="material-symbols-outlined text-on-surface-variant fs-6 flex-shrink-0">
+          search
+        </span>
+
         <input
           v-if="!isCollapsed"
           type="text"
@@ -64,22 +70,26 @@
               :class="isCollapsed ? 'justify-content-center p-0' : 'gap-2 py-2 ps-3'"
               @click.stop="toggleWorkspaces"
             >
-              <span class="material-symbols-outlined flex-shrink-0 text-white folder-icon"
-                >workspaces</span
-              >
+              <span class="material-symbols-outlined flex-shrink-0 text-white folder-icon">
+                workspaces
+              </span>
 
               <span
                 v-if="!isCollapsed"
                 class="fade-in text-start flex-grow-1 ms-1 fw-medium text-white"
-                >Workspaces</span
               >
+                Workspaces
+              </span>
+
               <span
                 v-if="!isCollapsed"
                 class="material-symbols-outlined fs-7 transition-200 me-2 text-on-surface-variant"
                 :class="{ 'rotate-minus-90': !isWorkspacesOpen }"
-                >expand_more</span
               >
+                expand_more
+              </span>
             </button>
+
             <button
               v-if="!isCollapsed"
               type="button"
@@ -102,8 +112,15 @@
               >
                 Đang tải…
               </div>
-              <div v-else-if="workspaceListError" class="workspace-list-error py-2 ps-2">
-                <div class="fs-7 text-danger mb-2">{{ workspaceListError }}</div>
+
+              <div
+                v-else-if="workspaceListError"
+                class="workspace-list-error py-2 ps-2"
+              >
+                <div class="fs-7 text-danger mb-2">
+                  {{ workspaceListError }}
+                </div>
+
                 <button
                   type="button"
                   class="btn btn-sm btn-outline-light py-0 px-2 fs-7"
@@ -112,27 +129,99 @@
                   Thử lại
                 </button>
               </div>
+
               <div
                 v-else-if="!hasWorkspaces"
                 class="workspace-list-hint py-2 ps-2 fs-7 text-on-surface-variant"
               >
                 Chưa có workspace. Nhấn <span class="text-white">+</span> để tạo mới.
               </div>
+
               <template v-else>
                 <div
                   v-for="ws in workspaces"
                   :key="ws.id"
-                  class="d-flex align-items-center pe-2 group-item"
+                  class="workspace-tree-node"
                 >
-                  <button
-                    type="button"
-                    class="project-child-link border-0 d-flex align-items-center py-1 px-0 bg-transparent fs-7 flex-grow-1 text-start w-100"
-                    :class="{ 'workspace-row-active': ws.id === selectedWorkspaceId }"
-                    @click.stop="selectWorkspace(ws.id)"
-                  >
-                    <span class="tree-dot me-2 flex-shrink-0"></span>
-                    <span class="flex-grow-1 text-truncate">{{ ws.name }}</span>
-                  </button>
+                  <div class="d-flex align-items-center pe-2 group-item">
+                    <button
+                      type="button"
+                      class="workspace-branch-toggle"
+                      @click.stop="toggleWorkspaceBranch(ws)"
+                    >
+                      <span
+                        class="material-symbols-outlined"
+                        :class="{ 'rotate-90': isWorkspaceBranchOpen(ws.id) }"
+                      >
+                        chevron_right
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="project-child-link border-0 d-flex align-items-center py-1 px-0 bg-transparent fs-7 flex-grow-1 text-start w-100"
+                      :class="{ 'workspace-row-active': ws.id === selectedWorkspaceId }"
+                      @click.stop="toggleWorkspaceBranch(ws)"
+                    >
+                      <span class="tree-dot me-2 flex-shrink-0"></span>
+                      <span class="flex-grow-1 text-truncate">{{ ws.name }}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      class="btn-add-child"
+                      title="Tạo page"
+                      @click.stop="openCreatePageModal(ws)"
+                    >
+                      <span class="material-symbols-outlined">add</span>
+                    </button>
+                  </div>
+
+                  <Transition name="expand">
+                    <div
+                      v-show="isWorkspaceBranchOpen(ws.id)"
+                      class="workspace-pages-branch ms-3 ps-2 border-start"
+                    >
+                      <div
+                        v-if="isLoadingPages(ws.id)"
+                        class="workspace-list-hint py-1 ps-2 fs-7 text-on-surface-variant"
+                      >
+                        Đang tải page…
+                      </div>
+
+                      <div
+                        v-else-if="getPageListError(ws.id)"
+                        class="workspace-list-error py-1 ps-2"
+                      >
+                        <div class="fs-7 text-danger mb-1">
+                          {{ getPageListError(ws.id) }}
+                        </div>
+
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-light py-0 px-2 fs-7"
+                          @click.stop="retryLoadPages(ws.id)"
+                        >
+                          Tải lại page
+                        </button>
+                      </div>
+
+                      <div
+                        v-else-if="!getWorkspacePages(ws.id).length"
+                        class="workspace-list-hint py-1 ps-2 fs-7 text-on-surface-variant"
+                      >
+                        Chưa có page.
+                      </div>
+
+                      <SidebarPageTree
+                        v-else
+                        :pages="getWorkspacePages(ws.id)"
+                        :selected-page-id="selectedPageId"
+                        @select-page="selectPage"
+                        @create-child="handleCreateChildPage(ws, $event)"
+                      />
+                    </div>
+                  </Transition>
                 </div>
               </template>
             </div>
@@ -148,12 +237,16 @@
             class="border-0 d-flex align-items-center bg-transparent text-inherit w-100"
             :class="isCollapsed ? 'justify-content-center p-0' : 'gap-2 py-2 ps-3'"
           >
-            <span class="material-symbols-outlined flex-shrink-0 text-white folder-icon"
-              >task_alt</span
+            <span class="material-symbols-outlined flex-shrink-0 text-white folder-icon">
+              task_alt
+            </span>
+
+            <span
+              v-if="!isCollapsed"
+              class="fade-in text-start flex-grow-1 ms-1 fw-medium text-white"
             >
-            <span v-if="!isCollapsed" class="fade-in text-start flex-grow-1 ms-1 fw-medium text-white"
-              >My Tasks</span
-            >
+              My Tasks
+            </span>
           </button>
         </div>
       </div>
@@ -163,12 +256,40 @@
       <div class="d-flex flex-column gap-1">
         <a
           href="#"
-          class="nav-link-custom d-flex align-items-center rounded-3"
-          :class="isCollapsed ? 'justify-content-center py-2' : 'gap-3 py-2 ps-3'"
+          class="nav-link-custom sidebar-profile-link d-flex align-items-center rounded-3"
+          :class="isCollapsed ? 'justify-content-center py-2' : 'gap-3 py-2 ps-3 pe-2'"
+          title="Profile"
         >
-          <span class="material-symbols-outlined flex-shrink-0">account_circle</span>
-          <span v-if="!isCollapsed" class="fade-in">Profile</span>
+          <span class="sidebar-profile-avatar flex-shrink-0">
+            <img
+              v-if="profileAvatarUrl"
+              :src="profileAvatarUrl"
+              :alt="profileDisplayName"
+              class="sidebar-profile-avatar-img"
+            />
+
+            <span
+              v-else
+              class="sidebar-profile-avatar-fallback"
+            >
+              {{ profileInitial }}
+            </span>
+          </span>
+
+          <span
+            v-if="!isCollapsed"
+            class="sidebar-profile-meta fade-in min-w-0"
+          >
+            <span class="sidebar-profile-name text-truncate">
+              {{ isLoadingProfile ? 'Đang tải...' : profileDisplayName }}
+            </span>
+
+            <span class="sidebar-profile-subtitle text-truncate">
+              {{ profileSubtitle }}
+            </span>
+          </span>
         </a>
+
         <a
           href="#"
           class="nav-link-custom d-flex align-items-center rounded-3"
@@ -184,89 +305,70 @@
       v-model="isCreateWorkspaceModalOpen"
       @created="handleWorkspaceCreated"
     />
+
+    <CreatePageModal
+      v-model="isCreatePageModalOpen"
+      :workspace-id="createPageWorkspaceId"
+      :workspace-name="createPageWorkspaceName"
+      :parent-page-id="createPageParentPageId"
+      @created="handlePageCreated"
+    />
   </aside>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
 import CreateWorkspaceModal from '@/components/workspace/CreateWorkspaceModal.vue'
-import { useMyWorkspaces } from '@/modules/workspaces/composables/useMyWorkspaces'
-import type { WorkspaceResponse } from '@/api/models/workspace.model'
-
-const isCollapsed = ref(false)
-const isWorkspacesOpen = ref(true)
-const isCreateWorkspaceModalOpen = ref(false)
-const selectedWorkspaceId = ref<string | null>(null)
+import CreatePageModal from '@/components/page/CreatePageModal.vue'
+import SidebarPageTree from '@/components/layout/SidebarPageTree.vue'
+import { useSidebarLeft } from './composables/useSidebarLeft'
+import type { PageTreeItem } from './composables/useSidebarLeft'
+import type { WorkspaceSidebarItem } from '@/modules/workspaces/composables/useMyWorkspaces'
 
 const {
+  isCollapsed,
+  isWorkspacesOpen,
+  isCreateWorkspaceModalOpen,
+  isCreatePageModalOpen,
+  selectedWorkspaceId,
+  selectedPageId,
+  createPageWorkspaceId,
+  createPageWorkspaceName,
+  createPageParentPageId,
+
   workspaces,
   hasWorkspaces,
   isLoadingWorkspaces,
   workspaceListError,
-  fetchMyWorkspaces,
-  prependWorkspace,
-  clearWorkspaceListError,
-} = useMyWorkspaces()
 
-watch(
-  workspaces,
-  (list) => {
-    if (!list.length) {
-      selectedWorkspaceId.value = null
-      return
-    }
-    const current = selectedWorkspaceId.value
-    const first = list[0]
-    if (first && (!current || !list.some((w) => w.id === current))) {
-      selectedWorkspaceId.value = first.id
-    }
-  },
-  { immediate: true }
-)
+  profileDisplayName,
+  profileSubtitle,
+  profileAvatarUrl,
+  profileInitial,
+  isLoadingProfile,
 
-function expandSidebar() {
-  if (isCollapsed.value) {
-    isCollapsed.value = false
-  }
+  expandSidebar,
+  collapseSidebar,
+  toggleWorkspaces,
+  openCreateWorkspaceModal,
+  openCreatePageModal,
+  toggleWorkspaceBranch,
+  isWorkspaceBranchOpen,
+  isLoadingPages,
+  getWorkspacePages,
+  getPageListError,
+  retryLoadPages,
+  selectPage,
+  handleWorkspaceCreated,
+  handlePageCreated,
+  retryLoadWorkspaces,
+} = useSidebarLeft()
+
+function handleCreateChildPage(
+  workspace: WorkspaceSidebarItem,
+  page: PageTreeItem
+) {
+  openCreatePageModal(workspace, page.id)
 }
-
-function toggleWorkspaces() {
-  if (isCollapsed.value) {
-    isCollapsed.value = false
-    isWorkspacesOpen.value = true
-    return
-  }
-
-  isWorkspacesOpen.value = !isWorkspacesOpen.value
-}
-
-function openCreateWorkspaceModal() {
-  if (isCollapsed.value) {
-    isCollapsed.value = false
-  }
-
-  isWorkspacesOpen.value = true
-  isCreateWorkspaceModalOpen.value = true
-}
-
-function selectWorkspace(id: string) {
-  selectedWorkspaceId.value = id
-}
-
-function handleWorkspaceCreated(workspace: WorkspaceResponse) {
-  prependWorkspace(workspace)
-  isWorkspacesOpen.value = true
-  selectedWorkspaceId.value = workspace.id
-}
-
-function retryLoadWorkspaces() {
-  clearWorkspaceListError()
-  void fetchMyWorkspaces()
-}
-
-onMounted(() => {
-  void fetchMyWorkspaces()
-})
 </script>
 
 <style scoped src="./css/SidebarLeft.css"></style>
