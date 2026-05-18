@@ -5,7 +5,7 @@
       <div class="container-xl px-4">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#">
           <span class="material-symbols-outlined text-primary-accent">architecture</span>
-          Block Paged
+          Block-based
         </a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
           <span class="material-symbols-outlined text-muted">menu</span>
