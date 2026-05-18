@@ -149,7 +149,7 @@
 </template>
 
 <script setup lang="ts">
-import { useLogin } from './composables/useLogin'
+import { useLogin } from '@/modules/auth/composables/useLogin'
 
 const {
   form,

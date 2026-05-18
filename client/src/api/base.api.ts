@@ -6,7 +6,8 @@ import axios, {
 import Cookies from 'js-cookie'
 
 const apiClient: AxiosInstance = axios.create({
-  baseURL: 'https://localhost:7286/api/v1/',
+  baseURL:
+    import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:7286/api/v1/',
   timeout: 15000,
   headers: {
     'Content-Type': 'application/json',

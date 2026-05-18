@@ -74,6 +74,16 @@
   color: #bdc2ff;
 }
 
+.workspace-list-hint {
+  line-height: 1.45;
+}
+
+.workspace-row-active {
+  color: #e8e7ff !important;
+  background-color: rgba(189, 194, 255, 0.08);
+  border-radius: 6px;
+}
+
 .project-child-link { 
   color: #acabaa !important; 
   text-decoration: none; 

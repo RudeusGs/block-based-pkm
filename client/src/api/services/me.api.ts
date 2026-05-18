@@ -29,10 +29,14 @@ export const meController = {
   },
 
   listMyWorkspaces(params?: ListMyWorkspacesParams) {
-    return api.get<ApiResult<MyWorkspacesResponse>>('me/workspaces', params)
+    return api.get<ApiResult<MyWorkspacesResponse>>('me/workspaces', {
+      params,
+    })
   },
 
   listMyAssignedTasks(params?: ListMyAssignedTasksParams) {
-    return api.get<ApiResult<WorkTaskPagedResultResponse>>('me/tasks', params)
+    return api.get<ApiResult<WorkTaskPagedResultResponse>>('me/tasks', {
+      params,
+    })
   },
 }

@@ -12,12 +12,17 @@
             <span>New workspace</span>
           </div>
 
-          <button class="ghost-icon-btn" type="button" @click="closeModal">
+          <button
+            class="ghost-icon-btn"
+            type="button"
+            :disabled="isCreatingWorkspace"
+            @click="closeModal"
+          >
             <i class="bi bi-x-lg"></i>
           </button>
         </div>
 
-        <form @submit.prevent="handleSubmit" class="workspace-modal-body">
+        <form class="workspace-modal-body" @submit.prevent="handleSubmit">
           <div class="hero-row d-flex align-items-start gap-3">
             <button class="workspace-icon-btn" type="button">
               <i class="bi bi-grid-1x2-fill"></i>
@@ -31,13 +36,18 @@
                 class="workspace-title-input"
                 placeholder="Untitled workspace"
                 maxlength="50"
+                :disabled="isCreatingWorkspace"
               />
 
               <div class="title-meta d-flex align-items-center justify-content-between mt-2">
                 <span class="inline-hint" :class="{ danger: nameError }">
                   {{ nameError || 'Tên workspace sẽ hiển thị ở sidebar và danh sách workspace.' }}
                 </span>
-                <span class="char-counter" :class="{ danger: form.name.length >= 50 }">
+
+                <span
+                  class="char-counter"
+                  :class="{ danger: form.name.length >= 50 }"
+                >
                   {{ form.name.length }}/50
                 </span>
               </div>
@@ -58,13 +68,21 @@
                   rows="6"
                   maxlength="500"
                   placeholder="Write a short description about this workspace..."
-                ></textarea>
+                  :disabled="isCreatingWorkspace"
+                />
 
                 <div class="title-meta d-flex align-items-center justify-content-between mt-2">
-                  <span class="inline-hint" :class="{ danger: descriptionError }">
+                  <span
+                    class="inline-hint"
+                    :class="{ danger: descriptionError }"
+                  >
                     {{ descriptionError || 'Mô tả giúp team hiểu workspace này dùng để làm gì.' }}
                   </span>
-                  <span class="char-counter" :class="{ danger: form.description.length >= 500 }">
+
+                  <span
+                    class="char-counter"
+                    :class="{ danger: form.description.length >= 500 }"
+                  >
                     {{ form.description.length }}/500
                   </span>
                 </div>
@@ -84,6 +102,7 @@
                 <div class="preview-title text-truncate">
                   {{ previewName }}
                 </div>
+
                 <div class="preview-description text-truncate">
                   {{ previewDescription }}
                 </div>
@@ -91,20 +110,34 @@
             </div>
           </div>
 
+          <div v-if="createWorkspaceError" class="workspace-api-error mt-4">
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>{{ createWorkspaceError }}</span>
+          </div>
+
           <div class="workspace-modal-footer d-flex align-items-center justify-content-between mt-4">
             <div class="keyboard-hint">
-              <span>Enter to create</span>
+              <span>Ctrl + Enter to create</span>
               <span class="dot-separator"></span>
               <span>Esc to close</span>
             </div>
 
             <div class="d-flex align-items-center gap-2">
-              <button class="btn btn-ghost-action" type="button" @click="closeModal">
+              <button
+                class="btn btn-ghost-action"
+                type="button"
+                :disabled="isCreatingWorkspace"
+                @click="closeModal"
+              >
                 Cancel
               </button>
 
-              <button class="btn btn-create-workspace" type="submit" :disabled="!isFormValid">
-                Create workspace
+              <button
+                class="btn btn-create-workspace"
+                type="submit"
+                :disabled="!isFormValid || isCreatingWorkspace"
+              >
+                {{ isCreatingWorkspace ? 'Creating...' : 'Create workspace' }}
               </button>
             </div>
           </div>
@@ -114,59 +147,98 @@
   </Teleport>
 </template>
 
-<script setup>
-import { computed, nextTick, onMounted, onBeforeUnmount, ref, watch } from 'vue'
+<script setup lang="ts">
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue'
+import { useCreateWorkspace } from '@/modules/workspaces/composables/useCreateWorkspace'
+import type { WorkspaceResponse } from '@/api/models/workspace.model'
 
-const props = defineProps({
-  modelValue: {
-    type: Boolean,
-    default: false
-  }
+interface CreateWorkspaceForm {
+  name: string
+  description: string
+}
+
+const props = defineProps<{
+  modelValue: boolean
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  created: [workspace: WorkspaceResponse]
+}>()
+
+const {
+  isCreatingWorkspace,
+  createWorkspaceError,
+  createWorkspace,
+  clearCreateWorkspaceError,
+} = useCreateWorkspace()
+
+const nameInputRef = ref<HTMLInputElement | null>(null)
+
+const form = reactive<CreateWorkspaceForm>({
+  name: '',
+  description: '',
 })
 
-const emit = defineEmits(['update:modelValue', 'submit'])
+const nameError = computed(() => {
+  const value = form.name.trim()
 
-const nameInputRef = ref(null)
+  if (!value) return 'Tên Workspace không được để trống.'
+  if (value.length > 50) return 'Tên Workspace không được quá 50 ký tự.'
 
-const form = ref({
-  name: '',
-  description: ''
+  return ''
+})
+
+const descriptionError = computed(() => {
+  const value = form.description.trim()
+
+  if (value.length > 500) {
+    return 'Description không được quá 500 ký tự.'
+  }
+
+  return ''
+})
+
+const isFormValid = computed(() => {
+  return !nameError.value && !descriptionError.value
+})
+
+const previewName = computed(() => {
+  return form.name.trim() || 'Untitled workspace'
+})
+
+const previewDescription = computed(() => {
+  return form.description.trim() || 'No description'
 })
 
 watch(
   () => props.modelValue,
   async (isOpen) => {
-    if (isOpen) {
-      await nextTick()
-      nameInputRef.value?.focus()
-    }
+    if (!isOpen) return
+
+    clearCreateWorkspaceError()
+
+    await nextTick()
+    nameInputRef.value?.focus()
   }
 )
 
-const nameError = computed(() => {
-  const value = form.value.name.trim()
-
-  if (!value) return 'Tên Workspace không được để trống.'
-  if (value.length > 50) return 'Tên Workspace không được quá 50 ký tự.'
-  return ''
-})
-
-const descriptionError = computed(() => {
-  const value = form.value.description.trim()
-
-  if (value.length > 500) return 'Description không được quá 500 ký tự.'
-  return ''
-})
-
-const isFormValid = computed(() => !nameError.value && !descriptionError.value)
-
-const previewName = computed(() => form.value.name.trim() || 'Untitled workspace')
-
-const previewDescription = computed(() => {
-  return form.value.description.trim() || 'No description'
-})
+function resetForm() {
+  form.name = ''
+  form.description = ''
+}
 
 function closeModal() {
+  if (isCreatingWorkspace.value) return
+
   emit('update:modelValue', false)
 }
 
@@ -174,30 +246,31 @@ function handleOverlayClick() {
   closeModal()
 }
 
-function resetForm() {
-  form.value = {
-    name: '',
-    description: ''
-  }
-}
+async function handleSubmit() {
+  if (!isFormValid.value || isCreatingWorkspace.value) return
 
-function handleSubmit() {
-  if (!isFormValid.value) return
-
-  emit('submit', {
-    name: form.value.name.trim(),
-    description: form.value.description.trim() || null
+  const workspace = await createWorkspace({
+    name: form.name.trim(),
+    description: form.description.trim() || null,
   })
 
+  if (!workspace) return
+
+  emit('created', workspace)
   resetForm()
-  closeModal()
+  emit('update:modelValue', false)
 }
 
-function handleKeydown(event) {
+function handleKeydown(event: KeyboardEvent) {
   if (!props.modelValue) return
 
   if (event.key === 'Escape') {
     closeModal()
+    return
+  }
+
+  if (event.key === 'Enter' && event.ctrlKey) {
+    void handleSubmit()
   }
 }
 

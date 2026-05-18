@@ -1,19 +1,12 @@
 import { computed, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import Cookies from 'js-cookie'
-import { AuthenticateAPI } from '@/api/authenticate.api'
+import { authController } from '@/api'
 import { useToast } from '@/components/composables/useToast'
-
-type LoginApiResponse = {
-  token?: string
-  accessToken?: string
-  refreshToken?: string
-  data?: {
-    token?: string
-    accessToken?: string
-    refreshToken?: string
-  }
-}
+import {
+  getApiErrorMessage,
+  getApiResultErrorMessage,
+} from '@/api/utils/api-error.util'
+import { saveAuthToken } from '@/modules/auth/utils/auth-token.util'
 
 export function useLogin() {
   const router = useRouter()
@@ -31,15 +24,6 @@ export function useLogin() {
     return form.userName.trim().length > 0 && form.password.length > 0
   })
 
-  const getAccessToken = (response: LoginApiResponse): string | undefined => {
-    return (
-      response?.token ||
-      response?.accessToken ||
-      response?.data?.token ||
-      response?.data?.accessToken
-    )
-  }
-
   const handleLogin = async () => {
     if (isSubmitting.value || !canSubmit.value) return
 
@@ -47,41 +31,34 @@ export function useLogin() {
     errorMessage.value = ''
 
     try {
-      const response = await AuthenticateAPI.login({
+      const response = await authController.login({
         userName: form.userName.trim(),
         password: form.password,
-      }) as LoginApiResponse
-
-      const token = getAccessToken(response)
-
-      if (!token) {
-        throw new Error('Login succeeded but no token was returned.')
-      }
-
-      Cookies.set('token', token, {
-        expires: 7,
-        path: '/',
-        sameSite: 'Lax',
-        secure: window.location.protocol === 'https:',
       })
 
-      toast.success('Signed in successfully', 'Welcome back.')
+      const token = response.data?.accessToken
 
+      if (!response.isSuccess || !token) {
+        errorMessage.value = getApiResultErrorMessage(
+          response,
+          'Đăng nhập thất bại. Vui lòng thử lại.'
+        )
+        toast.error('Login failed', errorMessage.value)
+        return
+      }
+
+      saveAuthToken(token)
+
+      toast.success('Signed in successfully', 'Welcome back.')
       await router.replace('/app')
-    } catch (error: any) {
+    } catch (error) {
       console.error('Login failed:', error)
 
-      errorMessage.value =
-        error?.message ||
-        error?.data?.message ||
-        error?.data?.title ||
+      errorMessage.value = getApiErrorMessage(
+        error,
         'Đăng nhập thất bại. Vui lòng thử lại.'
-      toast.error('Login failed',
-        error?.message ||
-          error?.data?.message ||
-          error?.data?.title ||
-          'Đăng nhập thất bại. Vui lòng thử lại.'
       )
+      toast.error('Login failed', errorMessage.value)
     } finally {
       isSubmitting.value = false
     }
@@ -90,7 +67,7 @@ export function useLogin() {
   const togglePassword = () => {
     showPassword.value = !showPassword.value
   }
-  
+
   return {
     form,
     showPassword,
