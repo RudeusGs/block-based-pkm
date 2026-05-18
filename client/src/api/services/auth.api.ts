@@ -1,6 +1,6 @@
 // src/api/controllers/auth.controller.ts
 
-import api from '../base.api.ts'
+import api from '../base.api'
 import type { ApiResult } from '../models/common.model'
 import type {
   AuthTokenResponse,

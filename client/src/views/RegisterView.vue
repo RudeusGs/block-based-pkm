@@ -252,7 +252,7 @@
 </template>
 
 <script setup lang="ts">
-import { useRegister } from './composables/useRegister'
+import { useRegister } from '@/modules/auth/composables/useRegister'
 
 const {
   form,

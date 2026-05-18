@@ -40,6 +40,16 @@ public static class ApiErrorResponseFactory
                 "Dữ liệu bị trùng hoặc đã thay đổi bởi một thao tác khác. Vui lòng tải lại và thử lại.",
                 Array.Empty<string>()),
 
+            DbUpdateException dbUpdateException when dbUpdateException.InnerException is PostgresException pg
+                => MapPostgresException(pg),
+
+            DbUpdateException dbUpdateException when dbUpdateException.InnerException is NpgsqlException npg
+                => MapNpgsqlException(npg),
+
+            PostgresException pgEx => MapPostgresException(pgEx),
+
+            NpgsqlException npgEx => MapNpgsqlException(npgEx),
+
             DomainException => new ErrorDescriptor(
                 StatusCodes.Status422UnprocessableEntity,
                 "domain_error",
@@ -77,6 +87,54 @@ public static class ApiErrorResponseFactory
         {
             SqlState: PostgresErrorCodes.UniqueViolation
         };
+
+    private static ErrorDescriptor MapPostgresException(PostgresException pg)
+        => pg.SqlState switch
+        {
+            PostgresErrorCodes.InvalidPassword
+                or "28P01" => new ErrorDescriptor(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "service_unavailable",
+                    "Persistence.DatabaseAuthFailed",
+                    "PostgreSQL từ chối đăng nhập (sai mật khẩu hoặc tên người dùng). Kiểm tra ConnectionStrings trong appsettings hoặc biến môi trường.",
+                    Array.Empty<string>()),
+
+            PostgresErrorCodes.InvalidCatalogName
+                or "3D000" => new ErrorDescriptor(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "service_unavailable",
+                    "Persistence.DatabaseNotFound",
+                    "Database trong chuỗi kết nối không tồn tại trên máy chủ PostgreSQL. Tạo database hoặc sửa tên trong ConnectionStrings.",
+                    Array.Empty<string>()),
+
+            PostgresErrorCodes.UndefinedTable
+                or "42P01" => new ErrorDescriptor(
+                    StatusCodes.Status503ServiceUnavailable,
+                    "service_unavailable",
+                    "Persistence.SchemaMissing",
+                    "Schema database chưa khớp (thiếu bảng). Chạy migration: dotnet ef database update.",
+                    Array.Empty<string>()),
+
+            _ => new ErrorDescriptor(
+                StatusCodes.Status503ServiceUnavailable,
+                "service_unavailable",
+                "Persistence.PostgresError",
+                "Lỗi PostgreSQL khi thao tác dữ liệu. Kiểm tra log server và trạng thái database.",
+                Array.Empty<string>())
+        };
+
+    private static ErrorDescriptor MapNpgsqlException(NpgsqlException npg)
+    {
+        if (npg.InnerException is PostgresException pg)
+            return MapPostgresException(pg);
+
+        return new ErrorDescriptor(
+            StatusCodes.Status503ServiceUnavailable,
+            "service_unavailable",
+            "Persistence.DatabaseUnavailable",
+            "Không kết nối được tới PostgreSQL (máy chủ không chạy, sai cổng/host, hoặc firewall). Kiểm tra dịch vụ Postgres và ConnectionStrings.",
+            Array.Empty<string>());
+    }
 
     private static ErrorDescriptor Resolve(ResultStatus status)
         => status switch

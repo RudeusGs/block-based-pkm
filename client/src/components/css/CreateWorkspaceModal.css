@@ -9,6 +9,25 @@
   justify-content: center;
   padding: 48px 20px 20px;
 }
+.workspace-api-error {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  color: #fecaca;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.workspace-title-input:disabled,
+.workspace-description-input:disabled,
+.ghost-icon-btn:disabled,
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
 
 .workspace-modal-shell {
   width: 100%;

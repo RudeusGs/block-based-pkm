@@ -1,4 +1,4 @@
-import type { DateTimeString, Guid, PagingParams } from './common.model'
+import type { DateTimeString, Guid } from './common.model'
 
 export type WorkspaceRoleRequest = 'owner' | 'manager' | 'member' | 'viewer'
 
@@ -60,5 +60,3 @@ export interface AddWorkspaceMemberRequest {
 export interface ChangeWorkspaceMemberRoleRequest {
   role: WorkspaceRoleRequest
 }
-
-export interface ListMyWorkspacesParams extends PagingParams {}
