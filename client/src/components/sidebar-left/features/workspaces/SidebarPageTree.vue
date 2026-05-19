@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import type { PageTreeItem } from '@/components/types/sidebar.types'
+import type { PageTreeItem } from '@/components/sidebar-left/types/sidebar.types'
 
 defineOptions({
   name: 'SidebarPageTree',
