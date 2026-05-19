@@ -9,9 +9,12 @@
       >
         <span class="lunar-account-avatar">
           <img
-            v-if="avatarUrl"
-            :src="avatarUrl"
+            v-if="canShowAvatar"
+            :key="avatarSrc"
+            :src="avatarSrc"
             :alt="displayName"
+            referrerpolicy="no-referrer"
+            @error="avatarLoadFailed = true"
           />
 
           <span v-else>
@@ -48,9 +51,12 @@
           <div class="lunar-account-menu-head">
             <span class="lunar-account-menu-avatar">
               <img
-                v-if="avatarUrl"
-                :src="avatarUrl"
+                v-if="canShowAvatar"
+                :key="avatarSrc"
+                :src="avatarSrc"
                 :alt="displayName"
+                referrerpolicy="no-referrer"
+                @error="avatarLoadFailed = true"
               />
 
               <span v-else>
@@ -106,9 +112,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 
-defineProps<{
+const props = defineProps<{
   displayName: string
   subtitle: string
   avatarUrl: string | null
@@ -125,6 +131,22 @@ const emit = defineEmits<{
 }>()
 
 const isMenuOpen = ref(false)
+const avatarLoadFailed = ref(false)
+
+const avatarSrc = computed(() => {
+  return props.avatarUrl?.trim() || undefined
+})
+
+const canShowAvatar = computed(() => {
+  return Boolean(avatarSrc.value) && !avatarLoadFailed.value
+})
+
+watch(
+  () => props.avatarUrl,
+  () => {
+    avatarLoadFailed.value = false
+  }
+)
 
 function closeMenu() {
   isMenuOpen.value = false
