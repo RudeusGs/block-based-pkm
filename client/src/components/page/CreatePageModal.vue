@@ -1,34 +1,48 @@
 <template>
   <Teleport to="body">
-    <div
-      v-if="modelValue"
-      class="page-modal-overlay"
-      @click="handleOverlayClick"
-    >
-      <div class="page-modal-shell" @click.stop>
-        <div class="page-modal-topbar">
-          <div class="page-modal-crumb">
-            <i class="bi bi-file-earmark-text"></i>
-            <span>Create / Page</span>
-          </div>
+    <Transition name="page-drawer-scrim">
+      <div
+        v-if="modelValue"
+        class="page-drawer-scrim"
+        @click="handleOverlayClick"
+      ></div>
+    </Transition>
 
-          <button
-            class="page-modal-close"
-            type="button"
-            :disabled="isCreatingPage"
-            @click="closeModal"
-          >
-            <i class="bi bi-x-lg"></i>
-          </button>
-        </div>
-
-        <form class="page-modal-body" @submit.prevent="handleSubmit">
-          <div class="page-modal-hero">
-            <div class="page-icon-tile">
-              <span>{{ previewIcon }}</span>
+    <Transition name="page-drawer-slide">
+      <aside
+        v-if="modelValue"
+        class="page-drawer-panel"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Create page"
+        @click.stop
+      >
+        <div class="page-drawer-shell">
+          <div class="page-drawer-topbar">
+            <div class="page-drawer-crumb">
+              <i class="bi bi-file-earmark-text"></i>
+              <span>Page</span>
+              <i class="bi bi-chevron-right page-crumb-separator"></i>
+              <span>New</span>
             </div>
 
-            <div class="page-hero-content">
+            <button
+              class="page-drawer-close"
+              type="button"
+              title="Close"
+              :disabled="isCreatingPage"
+              @click="closeModal"
+            >
+              <i class="bi bi-x-lg"></i>
+            </button>
+          </div>
+
+          <form class="page-drawer-body" @submit.prevent="handleSubmit">
+            <section class="page-drawer-head">
+              <button class="page-icon-tile" type="button">
+                <span>{{ previewIcon }}</span>
+              </button>
+
               <p class="page-eyebrow">
                 New page in
                 <span>{{ workspaceName || 'Workspace' }}</span>
@@ -53,87 +67,93 @@
                   {{ form.title.length }}/80
                 </span>
               </div>
-            </div>
-          </div>
+            </section>
 
-          <div class="page-modal-grid">
-            <div class="page-property-card">
-              <label class="page-property-label">
-                <i class="bi bi-stars"></i>
-                Icon
-              </label>
+            <section class="page-properties">
+              <div class="page-property-row">
+                <label class="page-property-label">
+                  <i class="bi bi-stars"></i>
+                  <span>Icon</span>
+                </label>
 
-              <input
-                v-model="form.icon"
-                class="page-property-input"
-                type="text"
-                maxlength="8"
-                placeholder="VD: 📄, 🚀, 🧠"
-                :disabled="isCreatingPage"
-              />
+                <div class="page-property-value">
+                  <input
+                    v-model="form.icon"
+                    class="page-property-input"
+                    type="text"
+                    maxlength="8"
+                    placeholder="VD: 📄, 🚀, 🧠"
+                    :disabled="isCreatingPage"
+                  />
 
-              <p class="page-property-help">
-                Để trống sẽ dùng icon mặc định.
-              </p>
-            </div>
-
-            <div class="page-property-card">
-              <label class="page-property-label">
-                <i class="bi bi-image"></i>
-                Cover image
-              </label>
-
-              <input
-                v-model="form.coverImage"
-                class="page-property-input"
-                type="text"
-                placeholder="https://..."
-                :disabled="isCreatingPage"
-              />
-
-              <p class="page-property-help">
-                Optional. Có thể thêm cover URL sau.
-              </p>
-            </div>
-          </div>
-
-          <div class="page-preview-section">
-            <div class="page-preview-label">Sidebar preview</div>
-
-            <div class="page-preview-card">
-              <div class="page-preview-icon">
-                {{ previewIcon }}
-              </div>
-
-              <div class="page-preview-content">
-                <div class="page-preview-title">
-                  {{ previewTitle }}
-                </div>
-
-                <div class="page-preview-subtitle">
-                  Inside {{ workspaceName || 'selected workspace' }}
+                  <p class="page-property-help">
+                    Để trống sẽ dùng icon mặc định.
+                  </p>
                 </div>
               </div>
 
-              <div class="page-preview-badge">
-                Page
+              <div class="page-property-row">
+                <label class="page-property-label">
+                  <i class="bi bi-image"></i>
+                  <span>Cover image</span>
+                </label>
+
+                <div class="page-property-value">
+                  <input
+                    v-model="form.coverImage"
+                    class="page-property-input"
+                    type="text"
+                    placeholder="https://..."
+                    :disabled="isCreatingPage"
+                  />
+
+                  <p class="page-property-help">
+                    Optional. Có thể thêm cover URL sau.
+                  </p>
+                </div>
               </div>
+            </section>
+
+            <section class="page-preview-section">
+              <div class="page-preview-label">
+                Sidebar preview
+              </div>
+
+              <div class="page-preview-card">
+                <div class="page-preview-icon">
+                  {{ previewIcon }}
+                </div>
+
+                <div class="page-preview-content">
+                  <div class="page-preview-title">
+                    {{ previewTitle }}
+                  </div>
+
+                  <div class="page-preview-subtitle">
+                    Inside {{ workspaceName || 'selected workspace' }}
+                  </div>
+                </div>
+
+                <div class="page-preview-badge">
+                  Page
+                </div>
+              </div>
+            </section>
+
+            <div v-if="createPageError" class="page-drawer-error">
+              <i class="bi bi-exclamation-triangle"></i>
+              <span>{{ createPageError }}</span>
             </div>
-          </div>
+          </form>
 
-          <div v-if="createPageError" class="page-modal-error">
-            <i class="bi bi-exclamation-triangle"></i>
-            <span>{{ createPageError }}</span>
-          </div>
-
-          <div class="page-modal-footer">
+          <footer class="page-drawer-footer">
             <div class="page-keyboard-hint">
               <span>Ctrl + Enter to create</span>
               <span class="page-dot"></span>
               <span>Esc to close</span>
             </div>
 
-            <div class="page-modal-actions">
+            <div class="page-drawer-actions">
               <button
                 class="page-btn page-btn-ghost"
                 type="button"
@@ -145,17 +165,18 @@
 
               <button
                 class="page-btn page-btn-primary"
-                type="submit"
+                type="button"
                 :disabled="!isFormValid || isCreatingPage || !workspaceId"
+                @click="handleSubmit"
               >
                 <span v-if="isCreatingPage" class="page-btn-spinner"></span>
                 <span>{{ isCreatingPage ? 'Creating...' : 'Create page' }}</span>
               </button>
             </div>
-          </div>
-        </form>
-      </div>
-    </div>
+          </footer>
+        </div>
+      </aside>
+    </Transition>
   </Teleport>
 </template>
 
@@ -230,6 +251,8 @@ const previewIcon = computed(() => {
 watch(
   () => props.modelValue,
   async (isOpen) => {
+    document.body.classList.toggle('page-drawer-lock-scroll', isOpen)
+
     if (!isOpen) return
 
     clearCreatePageError()
@@ -263,7 +286,7 @@ async function handleSubmit() {
     parentPageId: props.parentPageId ?? null,
     icon: form.icon.trim() || null,
     coverImage: form.coverImage.trim() || null,
-})
+  })
 
   if (!page) return
 
@@ -291,6 +314,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener('keydown', handleKeydown)
+  document.body.classList.remove('page-drawer-lock-scroll')
 })
 </script>
 

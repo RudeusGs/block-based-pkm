@@ -1,6 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
 using Pkm.Application.Abstractions.Caching;
-using StackExchange.Redis;
 
 namespace Pkm.Infrastructure.Cache;
 
@@ -26,9 +25,17 @@ internal sealed class FallbackRedisCache : IRedisCache
         {
             return await _primary.GetAsync<T>(key, cancellationToken);
         }
-        catch (Exception ex) when (IsRedisFailure(ex))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Redis unavailable during GET for key {CacheKey}. Falling back to in-memory cache.", key);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Cache GET failed for key {CacheKey}. Falling back to in-memory cache.",
+                key);
+
             return await _fallback.GetAsync<T>(key, cancellationToken);
         }
     }
@@ -45,9 +52,17 @@ internal sealed class FallbackRedisCache : IRedisCache
             await _fallback.SetAsync(key, value, ttl, cancellationToken);
             return result;
         }
-        catch (Exception ex) when (IsRedisFailure(ex))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Redis unavailable during SET for key {CacheKey}. Falling back to in-memory cache.", key);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Cache SET failed for key {CacheKey}. Falling back to in-memory cache.",
+                key);
+
             return await _fallback.SetAsync(key, value, ttl, cancellationToken);
         }
     }
@@ -60,9 +75,17 @@ internal sealed class FallbackRedisCache : IRedisCache
             await _fallback.RemoveAsync(key, cancellationToken);
             return result;
         }
-        catch (Exception ex) when (IsRedisFailure(ex))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Redis unavailable during REMOVE for key {CacheKey}. Falling back to in-memory cache.", key);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Cache REMOVE failed for key {CacheKey}. Falling back to in-memory cache.",
+                key);
+
             return await _fallback.RemoveAsync(key, cancellationToken);
         }
     }
@@ -73,9 +96,17 @@ internal sealed class FallbackRedisCache : IRedisCache
         {
             return await _primary.ExistsAsync(key, cancellationToken);
         }
-        catch (Exception ex) when (IsRedisFailure(ex))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Redis unavailable during EXISTS for key {CacheKey}. Falling back to in-memory cache.", key);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Cache EXISTS failed for key {CacheKey}. Falling back to in-memory cache.",
+                key);
+
             return await _fallback.ExistsAsync(key, cancellationToken);
         }
     }
@@ -88,17 +119,18 @@ internal sealed class FallbackRedisCache : IRedisCache
             await _fallback.ExpireAsync(key, ttl, cancellationToken);
             return result;
         }
-        catch (Exception ex) when (IsRedisFailure(ex))
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(ex, "Redis unavailable during EXPIRE for key {CacheKey}. Falling back to in-memory cache.", key);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(
+                ex,
+                "Cache EXPIRE failed for key {CacheKey}. Falling back to in-memory cache.",
+                key);
+
             return await _fallback.ExpireAsync(key, ttl, cancellationToken);
         }
     }
-
-    private static bool IsRedisFailure(Exception ex)
-        => ex is RedisConnectionException
-           or RedisTimeoutException
-           or RedisServerException
-           or TimeoutException
-           or ObjectDisposedException;
 }

@@ -1,9 +1,10 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Domain.Tasks;
 using Pkm.Domain.Workspaces;
-using Pkm.Application.Features.Recommendations.Models;
+
 namespace Pkm.Infrastructure.Persistence.Repositories;
 
 internal sealed class WorkTaskRepository : IWorkTaskRepository
@@ -109,6 +110,7 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         return await query
             .OrderBy(x => x.Status)
             .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate == null)
             .ThenBy(x => x.DueDate)
             .ThenByDescending(x => x.CreatedDate)
             .Skip(skip)
@@ -162,6 +164,7 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         return await query
             .OrderBy(x => x.Status)
             .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate == null)
             .ThenBy(x => x.DueDate)
             .ThenByDescending(x => x.CreatedDate)
             .Skip(skip)
@@ -239,6 +242,153 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         _context.WorkTasks.Update(task);
     }
 
+    public Task<bool> HasActiveAssignedTaskAsync(
+        Guid userId,
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.WorkTasks
+            .AsNoTracking()
+            .Where(x =>
+                x.WorkspaceId == workspaceId &&
+                x.Status != StatusWorkTask.Done)
+            .AnyAsync(
+                x => _context.TaskAssignees.Any(a =>
+                    a.TaskId == x.Id &&
+                    a.UserId == userId),
+                cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<RecommendationCandidateReadModel>> ListRecommendationCandidatesAsync(
+        Guid userId,
+        Guid workspaceId,
+        Guid? pageId,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        take = take <= 0 ? 100 : Math.Min(take, 500);
+
+        var query = _context.WorkTasks
+            .AsNoTracking()
+            .Where(x => x.Status != StatusWorkTask.Done);
+
+        if (workspaceId != Guid.Empty)
+        {
+            query = query.Where(x => x.WorkspaceId == workspaceId);
+        }
+
+        if (pageId.HasValue && pageId.Value != Guid.Empty)
+        {
+            query = query.Where(x => x.PageId == pageId.Value);
+        }
+
+        return await query
+            .OrderByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate == null)
+            .ThenBy(x => x.DueDate)
+            .ThenByDescending(x => x.CreatedDate)
+            .Take(take)
+            .Select(x => new RecommendationCandidateReadModel(
+                x.Id,
+                x.WorkspaceId,
+                x.PageId,
+                x.Title,
+                x.Description,
+                x.Status,
+                x.Priority,
+                x.DueDate,
+                x.CreatedById,
+                x.CreatedDate,
+                x.UpdatedDate,
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id && a.UserId == userId),
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id)))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyDictionary<Guid, RecommendationCandidateReadModel>> ListRecommendationTaskDetailsByIdsAsync(
+        Guid userId,
+        IReadOnlyCollection<Guid> taskIds,
+        CancellationToken cancellationToken = default)
+    {
+        if (taskIds.Count == 0)
+            return new Dictionary<Guid, RecommendationCandidateReadModel>();
+
+        var normalizedTaskIds = taskIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        if (normalizedTaskIds.Length == 0)
+            return new Dictionary<Guid, RecommendationCandidateReadModel>();
+
+        return await _context.WorkTasks
+            .AsNoTracking()
+            .Where(x => normalizedTaskIds.Contains(x.Id))
+            .Select(x => new RecommendationCandidateReadModel(
+                x.Id,
+                x.WorkspaceId,
+                x.PageId,
+                x.Title,
+                x.Description,
+                x.Status,
+                x.Priority,
+                x.DueDate,
+                x.CreatedById,
+                x.CreatedDate,
+                x.UpdatedDate,
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id && a.UserId == userId),
+                _context.TaskAssignees.Any(a => a.TaskId == x.Id)))
+            .ToDictionaryAsync(x => x.TaskId, cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<WorkTaskListItemReadModel>> ListAssignedToUserAsync(
+        Guid userId,
+        Guid? workspaceId,
+        WorkTaskListFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        var pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
+        var pageSize = filter.PageSize <= 0 ? 20 : Math.Min(filter.PageSize, 100);
+        var skip = (pageNumber - 1) * pageSize;
+
+        var query = BuildAssignedToUserQuery(userId, workspaceId, filter);
+
+        return await query
+            .OrderBy(x => x.Status)
+            .ThenByDescending(x => x.Priority)
+            .ThenBy(x => x.DueDate == null)
+            .ThenBy(x => x.DueDate)
+            .ThenByDescending(x => x.CreatedDate)
+            .Skip(skip)
+            .Take(pageSize)
+            .Select(x => new WorkTaskListItemReadModel(
+                x.Id,
+                x.WorkspaceId,
+                x.PageId,
+                x.Title,
+                x.Description,
+                x.Status,
+                x.Priority,
+                x.DueDate,
+                x.CreatedById,
+                x.LastModifiedById,
+                x.CreatedDate,
+                x.UpdatedDate,
+                _context.TaskAssignees.Count(a => a.TaskId == x.Id)))
+            .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountAssignedToUserAsync(
+        Guid userId,
+        Guid? workspaceId,
+        WorkTaskListFilter filter,
+        CancellationToken cancellationToken = default)
+    {
+        var query = BuildAssignedToUserQuery(userId, workspaceId, filter);
+
+        return query.CountAsync(cancellationToken);
+    }
+
     private IQueryable<WorkTask> ApplyFilter(
         IQueryable<WorkTask> query,
         WorkTaskListFilter filter)
@@ -291,149 +441,6 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         return query;
     }
 
-    public Task<bool> HasActiveAssignedTaskAsync(
-    Guid userId,
-    Guid workspaceId,
-    CancellationToken cancellationToken = default)
-    {
-        return _context.WorkTasks
-            .AsNoTracking()
-            .Where(x =>
-                x.WorkspaceId == workspaceId &&
-                x.Status != StatusWorkTask.Done)
-            .AnyAsync(
-                x => _context.TaskAssignees.Any(a =>
-                    a.TaskId == x.Id &&
-                    a.UserId == userId),
-                cancellationToken);
-    }
-
-    public async Task<IReadOnlyList<RecommendationCandidateReadModel>> ListRecommendationCandidatesAsync(
-        Guid userId,
-        Guid workspaceId,
-        Guid? pageId,
-        int take,
-        CancellationToken cancellationToken = default)
-    {
-        take = take <= 0 ? 100 : Math.Min(take, 500);
-
-        var query = _context.WorkTasks
-            .AsNoTracking()
-            .Where(x => x.Status != StatusWorkTask.Done);
-
-        if (workspaceId != Guid.Empty)
-        {
-            query = query.Where(x => x.WorkspaceId == workspaceId);
-        }
-
-        if (pageId.HasValue && pageId.Value != Guid.Empty)
-        {
-            query = query.Where(x => x.PageId == pageId.Value);
-        }
-
-        return await query
-            .Select(x => new RecommendationCandidateReadModel(
-                x.Id,
-                x.WorkspaceId,
-                x.PageId,
-                x.Title,
-                x.Description,
-                x.Status,
-                x.Priority,
-                x.DueDate,
-                x.CreatedById,
-                x.CreatedDate,
-                x.UpdatedDate,
-                _context.TaskAssignees.Any(a => a.TaskId == x.Id && a.UserId == userId),
-                _context.TaskAssignees.Any(a => a.TaskId == x.Id)))
-            .OrderByDescending(x => x.Priority)
-            .ThenBy(x => x.DueDate ?? DateTimeOffset.MaxValue)
-            .ThenByDescending(x => x.CreatedDate)
-            .Take(take)
-            .ToListAsync(cancellationToken);
-    }
-    public async Task<IReadOnlyDictionary<Guid, RecommendationCandidateReadModel>> ListRecommendationTaskDetailsByIdsAsync(
-    Guid userId,
-    IReadOnlyCollection<Guid> taskIds,
-    CancellationToken cancellationToken = default)
-    {
-        if (taskIds.Count == 0)
-            return new Dictionary<Guid, RecommendationCandidateReadModel>();
-
-        var normalizedTaskIds = taskIds
-            .Where(x => x != Guid.Empty)
-            .Distinct()
-            .ToArray();
-
-        if (normalizedTaskIds.Length == 0)
-            return new Dictionary<Guid, RecommendationCandidateReadModel>();
-
-        return await _context.WorkTasks
-            .AsNoTracking()
-            .Where(x => normalizedTaskIds.Contains(x.Id))
-            .Select(x => new RecommendationCandidateReadModel(
-                x.Id,
-                x.WorkspaceId,
-                x.PageId,
-                x.Title,
-                x.Description,
-                x.Status,
-                x.Priority,
-                x.DueDate,
-                x.CreatedById,
-                x.CreatedDate,
-                x.UpdatedDate,
-                _context.TaskAssignees.Any(a => a.TaskId == x.Id && a.UserId == userId),
-                _context.TaskAssignees.Any(a => a.TaskId == x.Id)))
-            .ToDictionaryAsync(x => x.TaskId, cancellationToken);
-    }
-    public async Task<IReadOnlyList<WorkTaskListItemReadModel>> ListAssignedToUserAsync(
-    Guid userId,
-    Guid? workspaceId,
-    WorkTaskListFilter filter,
-    CancellationToken cancellationToken = default)
-    {
-        var pageNumber = filter.PageNumber <= 0 ? 1 : filter.PageNumber;
-        var pageSize = filter.PageSize <= 0 ? 20 : Math.Min(filter.PageSize, 100);
-        var skip = (pageNumber - 1) * pageSize;
-
-        var query = BuildAssignedToUserQuery(userId, workspaceId, filter);
-
-        return await query
-            .OrderBy(x => x.Status)
-            .ThenByDescending(x => x.Priority)
-            .ThenBy(x => x.DueDate)
-            .ThenByDescending(x => x.CreatedDate)
-            .Skip(skip)
-            .Take(pageSize)
-            .Select(x => new WorkTaskListItemReadModel(
-                x.Id,
-                x.WorkspaceId,
-                x.PageId,
-                x.Title,
-                x.Description,
-                x.Status,
-                x.Priority,
-                x.DueDate,
-                x.CreatedById,
-                x.LastModifiedById,
-                x.CreatedDate,
-                x.UpdatedDate,
-                _context.TaskAssignees.Count(a => a.TaskId == x.Id)))
-            .ToListAsync(cancellationToken);
-    }
-
-    public Task<int> CountAssignedToUserAsync(
-        Guid userId,
-        Guid? workspaceId,
-        WorkTaskListFilter filter,
-        CancellationToken cancellationToken = default)
-    {
-        var query = BuildAssignedToUserQuery(userId, workspaceId, filter);
-
-        return query.CountAsync(cancellationToken);
-    }
-
     private IQueryable<WorkTask> BuildAssignedToUserQuery(
         Guid userId,
         Guid? workspaceId,
@@ -455,7 +462,7 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
                     m.WorkspaceId == x.WorkspaceId &&
                     m.UserId == userId));
 
-        if (workspaceId.HasValue)
+        if (workspaceId.HasValue && workspaceId.Value != Guid.Empty)
         {
             query = query.Where(x => x.WorkspaceId == workspaceId.Value);
         }

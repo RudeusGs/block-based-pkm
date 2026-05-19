@@ -1,307 +1,443 @@
 <template>
   <aside
-    class="sidebar-left d-flex flex-column py-4 px-3 border-end border-outline-variant transition-300"
+    class="sidebar-left lunar-sidebar"
     :class="{ collapsed: isCollapsed, 'sidebar-clickable': isCollapsed }"
     @click="expandSidebar"
   >
-    <div
-      class="sidebar-header d-flex align-items-center mb-4 px-2"
-      :class="isCollapsed ? 'justify-content-center' : 'justify-content-between'"
-    >
-      <div class="d-flex align-items-center overflow-hidden">
-        <div
-          class="logo-box rounded-3 bg-dark d-flex align-items-center justify-content-center text-white flex-shrink-0"
+    <template v-if="isCollapsed">
+      <div class="lunar-rail">
+        <button
+          type="button"
+          class="lunar-rail-avatar"
+          title="Mở sidebar"
         >
-          <span class="material-symbols-outlined fill-1">grid_view</span>
-        </div>
+          <img
+            v-if="profileAvatarUrl"
+            :src="profileAvatarUrl"
+            :alt="profileDisplayName"
+          />
 
-        <div
-          v-if="!isCollapsed"
-          class="d-flex flex-column overflow-hidden ms-3 fade-in"
-        >
-          <span class="fs-6 fw-bold text-light text-nowrap">Block-based</span>
-          <span
-            class="text-uppercase text-on-surface-variant tracking-widest"
-            style="font-size: 10px"
-          >
-            Pro Workspace
+          <span v-else>
+            {{ profileInitial }}
           </span>
-        </div>
+        </button>
+
+        <button
+          type="button"
+          class="lunar-rail-btn"
+          title="AI gợi ý task"
+        >
+          <i class="bi bi-magic"></i>
+        </button>
+
+        <button
+          type="button"
+          class="lunar-rail-btn"
+          title="Workspaces"
+        >
+          <i class="bi bi-folder2-open"></i>
+        </button>
+
+        <button
+          type="button"
+          class="lunar-rail-btn"
+          title="My Tasks"
+        >
+          <i class="bi bi-check2-square"></i>
+        </button>
+
+        <button
+          type="button"
+          class="lunar-rail-btn mt-auto"
+          title="Settings"
+        >
+          <i class="bi bi-sliders2"></i>
+        </button>
       </div>
+    </template>
 
-      <button
-        v-if="!isCollapsed"
-        type="button"
-        class="btn-text-toggle fade-in flex-shrink-0"
-        @click.stop="collapseSidebar"
-      >
-        &lt;&lt;
-      </button>
-    </div>
-
-    <div class="mb-4 px-1">
-      <div
-        class="search-wrapper d-flex align-items-center rounded-4 border border-outline-variant transition-200"
-        :class="isCollapsed ? 'justify-content-center py-2' : 'px-3 py-2 gap-2'"
-      >
-        <span class="material-symbols-outlined text-on-surface-variant fs-6 flex-shrink-0">
-          search
-        </span>
-
-        <input
-          v-if="!isCollapsed"
-          type="text"
-          class="search-input bg-transparent border-0 flex-grow-1 text-white fs-7 fade-in"
-          placeholder="Search..."
-        />
-      </div>
-    </div>
-
-    <nav class="flex-grow-1 overflow-x-hidden overflow-y-auto scrollbar-hide">
-      <div class="px-1 pb-2">
-        <div class="accordion-projects position-relative">
-          <div
-            class="d-flex align-items-center nav-link-custom group-item position-relative"
-            :class="{ 'justify-content-center ps-0': isCollapsed }"
+    <template v-else>
+      <div class="lunar-shell">
+        <header class="lunar-header">
+          <button
+            type="button"
+            class="lunar-account-card"
+            title="Workspace switcher"
+            @click.stop
           >
+            <span class="lunar-account-avatar">
+              <img
+                v-if="profileAvatarUrl"
+                :src="profileAvatarUrl"
+                :alt="profileDisplayName"
+              />
+
+              <span v-else>
+                {{ profileInitial }}
+              </span>
+            </span>
+
+            <span class="lunar-account-meta">
+              <span class="lunar-account-name">
+                {{ isLoadingProfile ? 'Đang tải...' : profileDisplayName }}
+              </span>
+
+              <span class="lunar-account-subtitle">
+                {{ profileSubtitle }}
+              </span>
+            </span>
+
+            <span class="lunar-account-badge">
+              Pro
+            </span>
+
+            <i class="bi bi-chevron-down lunar-account-chevron"></i>
+          </button>
+
+          <button
+            type="button"
+            class="lunar-icon-btn"
+            title="Thu gọn sidebar"
+            @click.stop="collapseSidebar"
+          >
+            <i class="bi bi-layout-sidebar-inset"></i>
+          </button>
+        </header>
+
+        <section class="lunar-ai-card">
+          <div class="lunar-ai-head">
+            <div class="lunar-ai-title-wrap">
+
+              <div class="lunar-ai-title-text">
+                <span class="lunar-ai-title">
+                  AI gợi ý task
+                </span>
+
+                <span class="lunar-ai-subtitle">
+                  Dựa trên workspace/page đang chọn
+                </span>
+              </div>
+            </div>
+
             <button
               type="button"
-              class="border-0 d-flex align-items-center bg-transparent text-inherit w-100"
-              :class="isCollapsed ? 'justify-content-center p-0' : 'gap-2 py-2 ps-3'"
-              @click.stop="toggleWorkspaces"
+              class="lunar-ai-generate-btn"
+              :disabled="!selectedWorkspaceId || isGeneratingTaskRecommendations"
+              title="Tạo gợi ý task"
+              @click.stop="generateTaskRecommendations"
             >
-              <span class="material-symbols-outlined flex-shrink-0 text-white folder-icon">
-                workspaces
-              </span>
-
               <span
-                v-if="!isCollapsed"
-                class="fade-in text-start flex-grow-1 ms-1 fw-medium text-white"
-              >
-                Workspaces
-              </span>
+                v-if="isGeneratingTaskRecommendations"
+                class="lunar-ai-spinner"
+              ></span>
 
-              <span
-                v-if="!isCollapsed"
-                class="material-symbols-outlined fs-7 transition-200 me-2 text-on-surface-variant"
-                :class="{ 'rotate-minus-90': !isWorkspacesOpen }"
-              >
-                expand_more
-              </span>
-            </button>
-
-            <button
-              v-if="!isCollapsed"
-              type="button"
-              class="btn-add-small fade-in ms-auto me-2"
-              title="Tạo workspace"
-              @click.stop="openCreateWorkspaceModal"
-            >
-              <span class="material-symbols-outlined">add</span>
+              <i
+                v-else
+                class="bi bi-arrow-clockwise"
+              ></i>
             </button>
           </div>
 
-          <Transition name="expand">
-            <div
-              v-show="!isCollapsed && isWorkspacesOpen"
-              class="project-tree-container ms-4 ps-2 mt-1 border-start"
+          <div
+            v-if="!selectedWorkspaceId"
+            class="lunar-ai-empty"
+          >
+            Chọn workspace để AI gợi ý task.
+          </div>
+
+          <div
+            v-else-if="taskRecommendationError"
+            class="lunar-ai-error"
+          >
+            <p>
+              {{ taskRecommendationError }}
+            </p>
+
+            <button
+              type="button"
+              @click.stop="retryLoadTaskRecommendations"
             >
-              <div
-                v-if="isLoadingWorkspaces"
-                class="workspace-list-hint py-2 ps-2 fs-7 text-on-surface-variant"
-              >
-                Đang tải…
+              Tải lại
+            </button>
+          </div>
+
+          <div
+            v-else-if="isLoadingTaskRecommendations"
+            class="lunar-ai-empty"
+          >
+            Đang tải gợi ý…
+          </div>
+
+          <div
+            v-else-if="!hasTaskRecommendations"
+            class="lunar-ai-empty"
+          >
+            Chưa có gợi ý. Nhấn nút làm mới để AI tạo task phù hợp.
+          </div>
+
+          <div
+            v-else
+            class="lunar-ai-list"
+          >
+            <article
+              v-for="recommendation in taskRecommendations"
+              :key="recommendation.id"
+              class="lunar-ai-item"
+            >
+              <div class="lunar-ai-item-main">
+                <div class="lunar-ai-item-title">
+                  {{ recommendation.taskTitle }}
+                </div>
+
+                <div
+                  v-if="recommendation.reason"
+                  class="lunar-ai-item-reason"
+                >
+                  {{ recommendation.reason }}
+                </div>
+
+                <div class="lunar-ai-item-meta">
+                  <span>
+                    {{ recommendation.taskPriority }}
+                  </span>
+
+                  <span>
+                    Score {{ recommendation.score }}
+                  </span>
+                </div>
               </div>
 
-              <div
-                v-else-if="workspaceListError"
-                class="workspace-list-error py-2 ps-2"
-              >
-                <div class="fs-7 text-danger mb-2">
-                  {{ workspaceListError }}
-                </div>
+              <div class="lunar-ai-actions">
+                <button
+                  type="button"
+                  title="Chấp nhận gợi ý"
+                  @click.stop="acceptTaskRecommendation(recommendation.id)"
+                >
+                  <i class="bi bi-check-lg"></i>
+                </button>
 
                 <button
                   type="button"
-                  class="btn btn-sm btn-outline-light py-0 px-2 fs-7"
-                  @click.stop="retryLoadWorkspaces"
+                  title="Từ chối gợi ý"
+                  @click.stop="rejectTaskRecommendation(recommendation.id)"
                 >
-                  Thử lại
+                  <i class="bi bi-x-lg"></i>
                 </button>
               </div>
+            </article>
+          </div>
+        </section>
 
-              <div
-                v-else-if="!hasWorkspaces"
-                class="workspace-list-hint py-2 ps-2 fs-7 text-on-surface-variant"
+        <nav class="lunar-nav">
+          <div class="lunar-primary-nav">
+            <button
+              type="button"
+              class="lunar-nav-row"
+              @click.stop
+            >
+              <span class="lunar-nav-icon">
+                <i class="bi bi-clock-history"></i>
+              </span>
+
+              <span class="lunar-nav-label">
+                Updates
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="lunar-nav-row"
+              @click.stop
+            >
+              <span class="lunar-nav-icon">
+                <i class="bi bi-check2-square"></i>
+              </span>
+
+              <span class="lunar-nav-label">
+                My Tasks
+              </span>
+            </button>
+          </div>
+
+          <section class="lunar-section">
+            <div class="lunar-section-head">
+              <button
+                type="button"
+                class="lunar-section-toggle"
+                :aria-expanded="isWorkspacesOpen"
+                @click.stop="toggleWorkspaces"
               >
-                Chưa có workspace. Nhấn <span class="text-white">+</span> để tạo mới.
-              </div>
+                <i
+                  class="bi bi-caret-right-fill lunar-caret"
+                  :class="{ open: isWorkspacesOpen }"
+                ></i>
 
-              <template v-else>
+                <span>
+                  Workspaces
+                </span>
+              </button>
+
+              <button
+                type="button"
+                class="lunar-section-action"
+                title="Tạo workspace"
+                @click.stop="openCreateWorkspaceModal"
+              >
+                <i class="bi bi-plus-lg"></i>
+              </button>
+            </div>
+
+            <Transition name="lunar-expand">
+              <div
+                v-show="isWorkspacesOpen"
+                class="lunar-workspace-list"
+              >
                 <div
-                  v-for="ws in workspaces"
-                  :key="ws.id"
-                  class="workspace-tree-node"
+                  v-if="isLoadingWorkspaces"
+                  class="lunar-empty"
                 >
-                  <div class="d-flex align-items-center pe-2 group-item">
-                    <button
-                      type="button"
-                      class="workspace-branch-toggle"
-                      @click.stop="toggleWorkspaceBranch(ws)"
-                    >
-                      <span
-                        class="material-symbols-outlined"
-                        :class="{ 'rotate-90': isWorkspaceBranchOpen(ws.id) }"
-                      >
-                        chevron_right
-                      </span>
-                    </button>
+                  Đang tải workspace…
+                </div>
 
-                    <button
-                      type="button"
-                      class="project-child-link border-0 d-flex align-items-center py-1 px-0 bg-transparent fs-7 flex-grow-1 text-start w-100"
-                      :class="{ 'workspace-row-active': ws.id === selectedWorkspaceId }"
-                      @click.stop="toggleWorkspaceBranch(ws)"
-                    >
-                      <span class="tree-dot me-2 flex-shrink-0"></span>
-                      <span class="flex-grow-1 text-truncate">{{ ws.name }}</span>
-                    </button>
+                <div
+                  v-else-if="workspaceListError"
+                  class="lunar-error"
+                >
+                  <p>
+                    {{ workspaceListError }}
+                  </p>
 
-                    <button
-                      type="button"
-                      class="btn-add-child"
-                      title="Tạo page"
-                      @click.stop="openCreatePageModal(ws)"
-                    >
-                      <span class="material-symbols-outlined">add</span>
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    @click.stop="retryLoadWorkspaces"
+                  >
+                    Thử lại
+                  </button>
+                </div>
 
-                  <Transition name="expand">
+                <div
+                  v-else-if="!hasWorkspaces"
+                  class="lunar-empty"
+                >
+                  Chưa có workspace. Nhấn <strong>+</strong> để tạo mới.
+                </div>
+
+                <template v-else>
+                  <div
+                    v-for="ws in workspaces"
+                    :key="ws.id"
+                    class="lunar-workspace-node"
+                  >
                     <div
-                      v-show="isWorkspaceBranchOpen(ws.id)"
-                      class="workspace-pages-branch ms-3 ps-2 border-start"
+                      class="lunar-workspace-row"
+                      :class="{ active: ws.id === selectedWorkspaceId }"
                     >
-                      <div
-                        v-if="isLoadingPages(ws.id)"
-                        class="workspace-list-hint py-1 ps-2 fs-7 text-on-surface-variant"
+                      <button
+                        type="button"
+                        class="lunar-tree-toggle"
+                        :aria-expanded="isWorkspaceBranchOpen(ws.id)"
+                        @click.stop="toggleWorkspaceBranch(ws)"
                       >
-                        Đang tải page…
-                      </div>
+                        <i
+                          class="bi bi-caret-right-fill"
+                          :class="{ open: isWorkspaceBranchOpen(ws.id) }"
+                        ></i>
+                      </button>
 
-                      <div
-                        v-else-if="getPageListError(ws.id)"
-                        class="workspace-list-error py-1 ps-2"
+                      <button
+                        type="button"
+                        class="lunar-workspace-title"
+                        @click.stop="toggleWorkspaceBranch(ws)"
                       >
-                        <div class="fs-7 text-danger mb-1">
-                          {{ getPageListError(ws.id) }}
+                        <span class="lunar-workspace-orb">
+                          {{ ws.name.charAt(0).toUpperCase() || 'W' }}
+                        </span>
+
+                        <span class="lunar-row-text">
+                          {{ ws.name }}
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        class="lunar-row-action"
+                        title="Tạo page"
+                        @click.stop="openCreatePageModal(ws)"
+                      >
+                        <i class="bi bi-plus-lg"></i>
+                      </button>
+                    </div>
+
+                    <Transition name="lunar-expand">
+                      <div
+                        v-show="isWorkspaceBranchOpen(ws.id)"
+                        class="lunar-pages-branch"
+                      >
+                        <div
+                          v-if="isLoadingPages(ws.id)"
+                          class="lunar-empty compact"
+                        >
+                          Đang tải page…
                         </div>
 
-                        <button
-                          type="button"
-                          class="btn btn-sm btn-outline-light py-0 px-2 fs-7"
-                          @click.stop="retryLoadPages(ws.id)"
+                        <div
+                          v-else-if="getPageListError(ws.id)"
+                          class="lunar-error compact"
                         >
-                          Tải lại page
-                        </button>
+                          <p>
+                            {{ getPageListError(ws.id) }}
+                          </p>
+
+                          <button
+                            type="button"
+                            @click.stop="retryLoadPages(ws.id)"
+                          >
+                            Tải lại page
+                          </button>
+                        </div>
+
+                        <div
+                          v-else-if="!getWorkspacePages(ws.id).length"
+                          class="lunar-empty compact"
+                        >
+                          Chưa có page.
+                        </div>
+
+                        <SidebarPageTree
+                          v-else
+                          :pages="getWorkspacePages(ws.id)"
+                          :selected-page-id="selectedPageId"
+                          :opened-page-ids="openedPageIds"
+                          @select-page="selectPage"
+                          @create-child="handleCreateChildPage(ws, $event)"
+                          @toggle-page="togglePageBranch($event.id)"
+                        />
                       </div>
+                    </Transition>
+                  </div>
+                </template>
+              </div>
+            </Transition>
+          </section>
+        </nav>
 
-                      <div
-                        v-else-if="!getWorkspacePages(ws.id).length"
-                        class="workspace-list-hint py-1 ps-2 fs-7 text-on-surface-variant"
-                      >
-                        Chưa có page.
-                      </div>
-
-                      <SidebarPageTree
-                        v-else
-                        :pages="getWorkspacePages(ws.id)"
-                        :selected-page-id="selectedPageId"
-                        :opened-page-ids="openedPageIds"
-                        @select-page="selectPage"
-                        @create-child="handleCreateChildPage(ws, $event)"
-                        @toggle-page="togglePageBranch($event.id)"
-                      />
-                    </div>
-                  </Transition>
-                </div>
-              </template>
-            </div>
-          </Transition>
-        </div>
-
-        <div
-          class="d-flex align-items-center nav-link-custom position-relative"
-          :class="[isCollapsed ? 'justify-content-center ps-0 mt-4' : 'mt-1']"
-        >
-          <button
-            type="button"
-            class="border-0 d-flex align-items-center bg-transparent text-inherit w-100"
-            :class="isCollapsed ? 'justify-content-center p-0' : 'gap-2 py-2 ps-3'"
+        <footer class="lunar-footer">
+          <a
+            href="#"
+            class="lunar-footer-row"
+            @click.prevent.stop
           >
-            <span class="material-symbols-outlined flex-shrink-0 text-white folder-icon">
-              task_alt
+            <span class="lunar-footer-icon">
+              <i class="bi bi-sliders2"></i>
             </span>
 
-            <span
-              v-if="!isCollapsed"
-              class="fade-in text-start flex-grow-1 ms-1 fw-medium text-white"
-            >
-              My Tasks
+            <span class="lunar-footer-label">
+              Settings
             </span>
-          </button>
-        </div>
+          </a>
+        </footer>
       </div>
-    </nav>
-
-    <div class="mt-auto px-1 pb-2 pt-3 border-top border-outline-variant">
-      <div class="d-flex flex-column gap-1">
-        <a
-          href="#"
-          class="nav-link-custom sidebar-profile-link d-flex align-items-center rounded-3"
-          :class="isCollapsed ? 'justify-content-center py-2' : 'gap-3 py-2 ps-3 pe-2'"
-          title="Profile"
-        >
-          <span class="sidebar-profile-avatar flex-shrink-0">
-            <img
-              v-if="profileAvatarUrl"
-              :src="profileAvatarUrl"
-              :alt="profileDisplayName"
-              class="sidebar-profile-avatar-img"
-            />
-
-            <span
-              v-else
-              class="sidebar-profile-avatar-fallback"
-            >
-              {{ profileInitial }}
-            </span>
-          </span>
-
-          <span
-            v-if="!isCollapsed"
-            class="sidebar-profile-meta fade-in min-w-0"
-          >
-            <span class="sidebar-profile-name text-truncate">
-              {{ isLoadingProfile ? 'Đang tải...' : profileDisplayName }}
-            </span>
-
-            <span class="sidebar-profile-subtitle text-truncate">
-              {{ profileSubtitle }}
-            </span>
-          </span>
-        </a>
-
-        <a
-          href="#"
-          class="nav-link-custom d-flex align-items-center rounded-3"
-          :class="isCollapsed ? 'justify-content-center py-2' : 'gap-3 py-2 ps-3'"
-        >
-          <span class="material-symbols-outlined flex-shrink-0">settings</span>
-          <span v-if="!isCollapsed" class="fade-in">Settings</span>
-        </a>
-      </div>
-    </div>
+    </template>
 
     <CreateWorkspaceModal
       v-model="isCreateWorkspaceModalOpen"
@@ -348,6 +484,12 @@ const {
   profileInitial,
   isLoadingProfile,
 
+  taskRecommendations,
+  hasTaskRecommendations,
+  isLoadingTaskRecommendations,
+  isGeneratingTaskRecommendations,
+  taskRecommendationError,
+
   expandSidebar,
   collapseSidebar,
   toggleWorkspaces,
@@ -365,6 +507,11 @@ const {
   handleWorkspaceCreated,
   handlePageCreated,
   retryLoadWorkspaces,
+
+  retryLoadTaskRecommendations,
+  generateTaskRecommendations,
+  acceptTaskRecommendation,
+  rejectTaskRecommendation,
 } = useSidebarLeft()
 
 function handleCreateChildPage(
