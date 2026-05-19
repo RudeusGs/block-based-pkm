@@ -60,6 +60,7 @@ using Pkm.Application.Features.Tasks.Queries.ListMyAssignedTasks;
 using Pkm.Application.Features.Tasks.Queries.ListPageTasks;
 using Pkm.Application.Features.Tasks.Queries.ListTaskComments;
 using Pkm.Application.Features.Tasks.Queries.ListWorkspaceTasks;
+using Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
 using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
@@ -124,6 +125,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<UpdateWorkspaceHandler>();
         services.AddScoped<DeleteWorkspaceHandler>();
         services.AddScoped<AddWorkspaceMemberHandler>();
+        services.AddScoped<AcceptWorkspaceInvitationHandler>();
         services.AddScoped<ChangeWorkspaceMemberRoleHandler>();
         services.AddScoped<RemoveWorkspaceMemberHandler>();
 

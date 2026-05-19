@@ -35,3 +35,14 @@ public sealed record WorkspacePagedResultResponse(
     int PageSize,
     int TotalCount,
     IReadOnlyList<WorkspaceListItemResponse> Items);
+
+public sealed record WorkspaceInvitationResponse(
+    Guid Id,
+    Guid WorkspaceId,
+    string Email,
+    string Role,
+    Guid InvitedByUserId,
+    DateTimeOffset ExpiresAtUtc,
+    DateTimeOffset? AcceptedAtUtc,
+    DateTimeOffset CreatedDate,
+    DateTimeOffset? UpdatedDate);

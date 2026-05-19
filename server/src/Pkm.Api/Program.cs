@@ -3,6 +3,7 @@ using Pkm.Application;
 using Pkm.Infrastructure.Authentication;
 using Pkm.Infrastructure.Cache;
 using Pkm.Infrastructure.Persistence;
+using Pkm.Infrastructure.Email;
 using Pkm.Infrastructure.Realtime;
 using Pkm.Infrastructure.Realtime.Hubs;
 using Pkm.Infrastructure.Time;
@@ -30,6 +31,11 @@ builder.Services.AddAuthenticationInfrastructure(builder.Configuration);
 // - Đăng ký Redis cache base
 // - Đăng ký Redis key factory + serializer
 builder.Services.AddCacheInfrastructure(builder.Configuration);
+
+// Email:
+// - Đăng ký SMTP email sender
+// - Đăng ký link factory cho workspace invitation
+builder.Services.AddEmailInfrastructure(builder.Configuration);
 
 // Realtime:
 // - Đăng ký SignalR hub
