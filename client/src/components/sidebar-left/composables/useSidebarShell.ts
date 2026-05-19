@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export type SidebarPanel = 'updates' | 'myTasks' | 'settings' | null
+export type SidebarPanel = 'myTasks' | 'settings' | null
 
 export function useSidebarShell() {
   const isCollapsed = ref(false)

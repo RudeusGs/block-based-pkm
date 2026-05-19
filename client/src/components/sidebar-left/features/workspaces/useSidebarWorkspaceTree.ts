@@ -1,6 +1,7 @@
 import { computed, ref, watch } from 'vue'
 import { pageController } from '@/api/services/page.api'
 import { useMyWorkspaces } from '@/modules/workspaces/composables/useMyWorkspaces'
+import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import {
   getApiErrorMessage,
   getApiResultErrorMessage,
@@ -8,10 +9,18 @@ import {
 import type { Guid } from '@/api/models/common.model'
 import type { PageResponse } from '@/api/models/page.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
-import type { PageTreeItem, SidebarWorkspaceLike } from '@/components/sidebar-left/types/sidebar.types'
-import { buildPageTree, insertPageIntoTree } from '@/components/sidebar-left/utils/page-tree.util'
+import type {
+  PageTreeItem,
+  SidebarWorkspaceLike,
+} from '@/components/sidebar-left/types/sidebar.types'
+import {
+  buildPageTree,
+  insertPageIntoTree,
+} from '@/components/sidebar-left/utils/page-tree.util'
 
 export function useSidebarWorkspaceTree() {
+  const workspaceNavigation = useWorkspaceNavigation()
+
   const isWorkspacesOpen = ref(true)
 
   const selectedWorkspaceId = ref<Guid | null>(null)
@@ -62,11 +71,28 @@ export function useSidebarWorkspaceTree() {
   })
 
   watch(
+    selectedWorkspace,
+    (workspace) => {
+      if (!workspace) {
+        workspaceNavigation.setWorkspace(null)
+        return
+      }
+
+      workspaceNavigation.setWorkspace({
+        id: workspace.id,
+        name: workspace.name,
+      })
+    },
+    { immediate: true }
+  )
+
+  watch(
     workspaces,
     (list) => {
       if (!list.length) {
         selectedWorkspaceId.value = null
         selectedPageId.value = null
+        workspaceNavigation.clearNavigation()
         return
       }
 
@@ -79,6 +105,12 @@ export function useSidebarWorkspaceTree() {
           !list.some((workspace) => workspace.id === currentWorkspaceId))
       ) {
         selectedWorkspaceId.value = firstWorkspace.id
+
+        workspaceNavigation.setWorkspace({
+          id: firstWorkspace.id,
+          name: firstWorkspace.name,
+        })
+
         openWorkspaceBranch(firstWorkspace.id)
         void fetchWorkspacePages(firstWorkspace.id)
       }
@@ -100,6 +132,12 @@ export function useSidebarWorkspaceTree() {
     parentPageId: Guid | null = null
   ) {
     selectedWorkspaceId.value = workspace.id
+
+    workspaceNavigation.setWorkspace({
+      id: workspace.id,
+      name: workspace.name,
+    })
+
     createPageWorkspaceId.value = workspace.id
     createPageWorkspaceName.value = workspace.name
     createPageParentPageId.value = parentPageId
@@ -124,6 +162,11 @@ export function useSidebarWorkspaceTree() {
 
   function toggleWorkspaceBranch(workspace: SidebarWorkspaceLike) {
     selectedWorkspaceId.value = workspace.id
+
+    workspaceNavigation.setWorkspace({
+      id: workspace.id,
+      name: workspace.name,
+    })
 
     if (isWorkspaceBranchOpen(workspace.id)) {
       closeWorkspaceBranch(workspace.id)
@@ -205,6 +248,18 @@ export function useSidebarWorkspaceTree() {
         ...pageTreesByWorkspaceId.value,
         [workspaceId]: buildPageTree(result.data.items),
       }
+
+      const currentSelectedPageId = selectedPageId.value
+      const hasCurrentPage =
+        Boolean(currentSelectedPageId) &&
+        result.data.items.some((page) => page.id === currentSelectedPageId)
+
+      if (!hasCurrentPage) {
+        const firstPage = result.data.items[0] ?? null
+
+        selectedPageId.value = firstPage?.id ?? null
+        workspaceNavigation.setPage(firstPage)
+      }
     } catch (error) {
       pageListErrorsByWorkspaceId.value = {
         ...pageListErrorsByWorkspaceId.value,
@@ -232,18 +287,30 @@ export function useSidebarWorkspaceTree() {
   function selectPage(page: PageResponse) {
     selectedPageId.value = page.id
     selectedWorkspaceId.value = page.workspaceId
+    workspaceNavigation.setPage(page)
   }
 
   function handleWorkspaceCreated(workspace: WorkspaceResponse) {
     prependWorkspace(workspace)
     isWorkspacesOpen.value = true
     selectedWorkspaceId.value = workspace.id
+
+    workspaceNavigation.setWorkspace({
+      id: workspace.id,
+      name: workspace.name,
+    })
+
+    workspaceNavigation.setPage(null)
+
     openWorkspaceBranch(workspace.id)
   }
 
   function handlePageCreated(page: PageResponse) {
     selectedWorkspaceId.value = page.workspaceId
     selectedPageId.value = page.id
+
+    workspaceNavigation.setPage(page)
+
     openWorkspaceBranch(page.workspaceId)
 
     if (page.parentPageId) {

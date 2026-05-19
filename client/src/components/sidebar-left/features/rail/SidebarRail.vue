@@ -39,21 +39,6 @@
     <button
       type="button"
       class="lunar-rail-btn"
-      title="Updates"
-      aria-label="Mở Updates"
-      @click.stop="emit('open-updates')"
-    >
-      <i class="bi bi-clock-history"></i>
-
-      <span
-        v-if="unreadCount > 0"
-        class="lunar-rail-dot"
-      ></span>
-    </button>
-
-    <button
-      type="button"
-      class="lunar-rail-btn"
       title="My Tasks"
       aria-label="Mở My Tasks"
       @click.stop="emit('open-my-tasks')"
@@ -85,13 +70,11 @@ const props = defineProps<{
   displayName: string
   avatarUrl: string | null
   initial: string
-  unreadCount: number
   openTaskCount: number
 }>()
 
 const emit = defineEmits<{
   expand: []
-  'open-updates': []
   'open-my-tasks': []
   'open-settings': []
 }>()
