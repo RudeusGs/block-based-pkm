@@ -35,35 +35,7 @@
           @logout="account.logout"
         />
 
-        <section class="lunar-workspace-hero">
-          <div class="lunar-workspace-orb large">
-            {{ workspaceTree.selectedWorkspaceInitial.value }}
-          </div>
-
-          <div class="lunar-workspace-hero-meta">
-            <span class="lunar-workspace-hero-label">
-              Current workspace
-            </span>
-
-            <strong>
-              {{ workspaceTree.selectedWorkspaceName.value }}
-            </strong>
-          </div>
-        </section>
-
-        <SidebarRecommendationsCard
-          :workspace-id="workspaceTree.selectedWorkspaceId.value"
-          :recommendations="recommendations.taskRecommendations.value"
-          :is-loading="recommendations.isLoadingTaskRecommendations.value"
-          :is-generating="recommendations.isGeneratingTaskRecommendations.value"
-          :error="recommendations.taskRecommendationError.value"
-          @generate="generateRecommendations"
-          @retry="refreshRecommendations"
-          @accept="acceptRecommendation"
-          @reject="recommendations.rejectRecommendation"
-        />
-
-        <nav class="lunar-nav">
+        <nav class="lunar-nav" aria-label="Sidebar navigation">
           <div class="lunar-primary-nav">
             <button
               type="button"
@@ -154,6 +126,19 @@
             @retry-pages="workspaceTree.retryLoadPages"
             @select-page="workspaceTree.selectPage"
             @toggle-page="workspaceTree.togglePageBranch"
+          />
+
+          <SidebarRecommendationsCard
+            class="lunar-recommendations-section"
+            :workspace-id="workspaceTree.selectedWorkspaceId.value"
+            :recommendations="recommendations.taskRecommendations.value"
+            :is-loading="recommendations.isLoadingTaskRecommendations.value"
+            :is-generating="recommendations.isGeneratingTaskRecommendations.value"
+            :error="recommendations.taskRecommendationError.value"
+            @generate="generateRecommendations"
+            @retry="refreshRecommendations"
+            @accept="acceptRecommendation"
+            @reject="recommendations.rejectRecommendation"
           />
         </nav>
 
@@ -399,3 +384,150 @@ onMounted(() => {
   void workspaceTree.fetchMyWorkspaces()
 })
 </script>
+
+<style scoped>
+.sidebar-left {
+  width: 280px;
+  min-width: 280px;
+  background: #141414;
+}
+
+.sidebar-left.collapsed {
+  width: 54px;
+  min-width: 54px;
+}
+
+:deep(.lunar-shell) {
+  padding: 8px;
+}
+
+:deep(.lunar-header) {
+  min-height: 36px;
+  margin-bottom: 6px;
+}
+
+:deep(.lunar-account-card),
+:deep(.lunar-nav-row),
+:deep(.lunar-footer-row),
+:deep(.lunar-workspace-row),
+:deep(.lunar-section-toggle),
+:deep(.lunar-page-row) {
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+}
+
+:deep(.lunar-account-card:hover),
+:deep(.lunar-nav-row:hover),
+:deep(.lunar-nav-row.active),
+:deep(.lunar-footer-row:hover),
+:deep(.lunar-footer-row.active),
+:deep(.lunar-workspace-row:hover),
+:deep(.lunar-workspace-row.active),
+:deep(.lunar-section-toggle:hover),
+:deep(.lunar-page-row:hover),
+:deep(.lunar-page-row.active) {
+  border-color: transparent;
+  background: #242424;
+}
+
+:deep(.lunar-account-avatar),
+:deep(.lunar-account-menu-avatar),
+:deep(.lunar-workspace-orb),
+:deep(.lunar-rail-avatar) {
+  border: 0;
+  border-radius: 6px;
+  background: #2a2a2a;
+}
+
+:deep(.lunar-workspace-orb) {
+  width: 18px;
+  height: 18px;
+  font-size: 10px;
+}
+
+:deep(.lunar-icon-btn),
+:deep(.lunar-section-action),
+:deep(.lunar-row-action),
+:deep(.lunar-tree-toggle),
+:deep(.lunar-page-toggle),
+:deep(.lunar-page-action),
+:deep(.lunar-rail-btn) {
+  border-color: transparent;
+  border-radius: 6px;
+  background: transparent;
+}
+
+:deep(.lunar-icon-btn:hover),
+:deep(.lunar-section-action:hover),
+:deep(.lunar-row-action:hover),
+:deep(.lunar-tree-toggle:hover),
+:deep(.lunar-page-toggle:hover),
+:deep(.lunar-page-action:hover),
+:deep(.lunar-rail-btn:hover) {
+  border-color: transparent;
+  background: #242424;
+}
+
+:deep(.lunar-count-badge),
+:deep(.lunar-role-chip),
+:deep(.lunar-account-badge) {
+  border: 0;
+  background: transparent;
+  color: #8a8a8a;
+}
+
+:deep(.lunar-pages-branch) {
+  margin-left: 10px;
+  padding-left: 8px;
+}
+
+:deep(.lunar-ai-card) {
+  margin: 8px 0 0;
+  padding: 4px 0 8px;
+  border: 0;
+  border-top: 1px solid #2b2b2b;
+  border-radius: 0;
+  background: transparent;
+}
+
+:deep(.lunar-ai-icon),
+:deep(.lunar-ai-item),
+:deep(.lunar-ai-item-meta span) {
+  border: 0;
+  background: transparent;
+}
+
+:deep(.lunar-ai-icon) {
+  width: 20px;
+  color: #777;
+}
+
+:deep(.lunar-ai-head) {
+  padding: 0 4px 4px 7px;
+}
+
+:deep(.lunar-ai-list) {
+  gap: 1px;
+}
+
+:deep(.lunar-ai-item) {
+  border-radius: 6px;
+  padding: 6px 7px 6px 34px;
+}
+
+:deep(.lunar-ai-item:hover) {
+  background: #242424;
+}
+
+:deep(.lunar-ai-empty),
+:deep(.lunar-ai-error) {
+  padding-left: 34px;
+}
+
+:deep(.lunar-footer) {
+  padding-top: 7px;
+  border-top: 1px solid #2b2b2b;
+}
+</style>
