@@ -1,9 +1,14 @@
-﻿using Pkm.Domain.Workspaces;
+﻿using System.Text.RegularExpressions;
+using Pkm.Domain.Workspaces;
 
 namespace Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 
 public sealed class AddWorkspaceMemberCommandValidator
 {
+    private static readonly Regex EmailRegex = new(
+        @"^[^@\s]+@[^@\s]+\.[^@\s]+$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     public IReadOnlyList<string> Validate(AddWorkspaceMemberCommand command)
     {
         var errors = new List<string>();
@@ -13,9 +18,13 @@ public sealed class AddWorkspaceMemberCommandValidator
             errors.Add("WorkspaceId không hợp lệ.");
         }
 
-        if (command.UserId == Guid.Empty)
+        if (string.IsNullOrWhiteSpace(command.Email))
         {
-            errors.Add("UserId không hợp lệ.");
+            errors.Add("Email không được để trống.");
+        }
+        else if (!EmailRegex.IsMatch(command.Email.Trim()))
+        {
+            errors.Add("Email không đúng định dạng.");
         }
 
         if (!Enum.IsDefined(typeof(WorkspaceRole), command.Role))

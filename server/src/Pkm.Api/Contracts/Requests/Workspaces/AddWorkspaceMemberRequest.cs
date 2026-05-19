@@ -1,5 +1,5 @@
 ﻿namespace Pkm.Api.Contracts.Requests.Workspaces;
 
 public sealed record AddWorkspaceMemberRequest(
-    Guid UserId,
+    string Email,
     string Role);

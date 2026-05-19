@@ -59,6 +59,48 @@ public static class WorkspaceErrors
         "Không thể tự thay đổi hoặc tự xóa chính mình trong thao tác này.",
         ResultStatus.Unprocessable);
 
+
+    public static readonly Error WorkspaceInvitationAlreadyPending = new(
+        "Workspace.InvitationAlreadyPending",
+        "Email này đã có lời mời đang chờ xác nhận trong workspace.",
+        ResultStatus.Conflict);
+
+    public static readonly Error InvalidInvitationToken = new(
+        "Workspace.InvalidInvitationToken",
+        "Token xác nhận lời mời không hợp lệ.",
+        ResultStatus.Validation);
+
+    public static readonly Error InvitationNotFound = new(
+        "Workspace.InvitationNotFound",
+        "Không tìm thấy lời mời workspace.",
+        ResultStatus.NotFound);
+
+    public static readonly Error InvitationExpired = new(
+        "Workspace.InvitationExpired",
+        "Lời mời workspace đã hết hạn.",
+        ResultStatus.Unprocessable);
+
+    public static readonly Error InvitationAlreadyAccepted = new(
+        "Workspace.InvitationAlreadyAccepted",
+        "Lời mời workspace đã được xác nhận trước đó.",
+        ResultStatus.Conflict);
+
+    public static readonly Error InvitationEmailMismatch = new(
+        "Workspace.InvitationEmailMismatch",
+        "Email tài khoản không khớp với email trong lời mời.",
+        ResultStatus.Forbidden);
+
+    public static readonly Error WorkspaceInvitationEmailFailed = new(
+        "Workspace.InvitationEmailFailed",
+        "Tạo lời mời thành công nhưng gửi email thất bại. Kiểm tra cấu hình SMTP.",
+        ResultStatus.Failure);
+
+    public static Error TargetUserNotFoundByEmail(string email)
+        => new(
+            "Workspace.TargetUserNotFoundByEmail",
+            $"Không tìm thấy tài khoản với email '{email}'. Người được mời cần đăng ký bằng đúng email này trước khi xác nhận.",
+            ResultStatus.NotFound);
+
     public static Error InvalidCreateRequest(IReadOnlyList<string> details)
         => new(
             "Workspace.InvalidCreateRequest",

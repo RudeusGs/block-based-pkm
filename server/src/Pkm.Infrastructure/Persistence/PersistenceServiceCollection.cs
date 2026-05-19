@@ -34,6 +34,7 @@ public static class PersistenceServiceCollection
 
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
         services.AddScoped<IWorkspaceMemberRepository, WorkspaceMemberRepository>();
+        services.AddScoped<IWorkspaceInvitationRepository, WorkspaceInvitationRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
         services.AddScoped<IBlockRepository, BlockRepository>();
         services.AddScoped<IPageRevisionRepository, PageRevisionRepository>();

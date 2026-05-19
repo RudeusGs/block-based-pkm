@@ -7,6 +7,7 @@ using Pkm.Api.Contracts.Responses.Workspaces;
 using Pkm.Application.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Workspaces;
+using Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
 using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
@@ -29,6 +30,7 @@ public sealed class WorkspacesController : BaseController
     private readonly GetWorkspaceByIdHandler _getWorkspaceByIdHandler;
     private readonly ListWorkspaceMembersHandler _listWorkspaceMembersHandler;
     private readonly AddWorkspaceMemberHandler _addWorkspaceMemberHandler;
+    private readonly AcceptWorkspaceInvitationHandler _acceptWorkspaceInvitationHandler;
     private readonly ChangeWorkspaceMemberRoleHandler _changeWorkspaceMemberRoleHandler;
     private readonly RemoveWorkspaceMemberHandler _removeWorkspaceMemberHandler;
 
@@ -40,6 +42,7 @@ public sealed class WorkspacesController : BaseController
         GetWorkspaceByIdHandler getWorkspaceByIdHandler,
         ListWorkspaceMembersHandler listWorkspaceMembersHandler,
         AddWorkspaceMemberHandler addWorkspaceMemberHandler,
+        AcceptWorkspaceInvitationHandler acceptWorkspaceInvitationHandler,
         ChangeWorkspaceMemberRoleHandler changeWorkspaceMemberRoleHandler,
         RemoveWorkspaceMemberHandler removeWorkspaceMemberHandler)
         : base(currentUser)
@@ -50,6 +53,7 @@ public sealed class WorkspacesController : BaseController
         _getWorkspaceByIdHandler = getWorkspaceByIdHandler;
         _listWorkspaceMembersHandler = listWorkspaceMembersHandler;
         _addWorkspaceMemberHandler = addWorkspaceMemberHandler;
+        _acceptWorkspaceInvitationHandler = acceptWorkspaceInvitationHandler;
         _changeWorkspaceMemberRoleHandler = changeWorkspaceMemberRoleHandler;
         _removeWorkspaceMemberHandler = removeWorkspaceMemberHandler;
     }
@@ -137,33 +141,51 @@ public sealed class WorkspacesController : BaseController
     }
 
     [HttpPost("{workspaceId:guid}/members")]
-    [ProducesResponseType(typeof(ApiResult<WorkspaceMemberResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceInvitationResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 400)]
     [ProducesResponseType(typeof(ApiResult), 403)]
     [ProducesResponseType(typeof(ApiResult), 404)]
     [ProducesResponseType(typeof(ApiResult), 409)]
     [ProducesResponseType(typeof(ApiResult), 422)]
-    public async Task<ActionResult<ApiResult<WorkspaceMemberResponse>>> AddMember(
+    public async Task<ActionResult<ApiResult<WorkspaceInvitationResponse>>> InviteMember(
         [FromRoute] Guid workspaceId,
         [FromBody] AddWorkspaceMemberRequest request,
         CancellationToken cancellationToken)
     {
         if (!TryParseWorkspaceRole(request.Role, out var role))
         {
-            return HandleResult<WorkspaceMemberResponse>(
-                Result.Failure<WorkspaceMemberResponse>(
+            return HandleResult<WorkspaceInvitationResponse>(
+                Result.Failure<WorkspaceInvitationResponse>(
                     WorkspaceErrors.InvalidAddMemberRequest(new[]
                     {
-                        "Role không hợp lệ. Giá trị hợp lệ: owner, manager, member, viewer."
+                        "Role không hợp lệ. Giá trị hợp lệ: manager, member, viewer."
                     })));
         }
 
         var command = new AddWorkspaceMemberCommand(
             workspaceId,
-            request.UserId,
+            request.Email,
             role);
 
         var result = await _addWorkspaceMemberHandler.HandleAsync(command, cancellationToken);
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [AllowAnonymous]
+    [HttpGet("/api/v1/workspace-invitations/accept")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceMemberResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 409)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<WorkspaceMemberResponse>>> AcceptInvitation(
+        [FromQuery] string token,
+        CancellationToken cancellationToken)
+    {
+        var result = await _acceptWorkspaceInvitationHandler.HandleAsync(
+            new AcceptWorkspaceInvitationCommand(token),
+            cancellationToken);
+
         return HandleResult(result, x => x.ToResponse());
     }
 

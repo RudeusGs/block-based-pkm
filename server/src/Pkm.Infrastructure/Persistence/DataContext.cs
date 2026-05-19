@@ -23,6 +23,7 @@ public sealed class DataContext : DbContext
 
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
+    public DbSet<WorkspaceInvitation> WorkspaceInvitations => Set<WorkspaceInvitation>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<PageRevision> PageRevisions => Set<PageRevision>();
     public DbSet<Block> Blocks => Set<Block>();

@@ -170,6 +170,18 @@ public static class ResponseMappings
             dto.CreatedDate,
             dto.UpdatedDate);
 
+    public static WorkspaceInvitationResponse ToResponse(this AppWorkspaces.WorkspaceInvitationDto dto)
+        => new(
+            dto.Id,
+            dto.WorkspaceId,
+            dto.Email,
+            dto.Role.ToString(),
+            dto.InvitedByUserId,
+            dto.ExpiresAtUtc,
+            dto.AcceptedAtUtc,
+            dto.CreatedDate,
+            dto.UpdatedDate);
+
     public static WorkspacePagedResultResponse ToResponse(this AppWorkspaces.WorkspacePagedResultDto dto)
         => new(
             dto.PageNumber,
