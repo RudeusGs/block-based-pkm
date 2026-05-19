@@ -12,10 +12,8 @@
       :display-name="account.profileDisplayName.value"
       :avatar-url="account.profileAvatarUrl.value"
       :initial="account.profileInitial.value"
-      :unread-count="updates.unreadNotificationCount.value"
       :open-task-count="myTasks.openTaskCount.value"
       @expand="expandSidebar"
-      @open-updates="openCollapsedPanel('updates')"
       @open-my-tasks="openCollapsedPanel('myTasks')"
       @open-settings="openSettingsModal"
     />
@@ -40,30 +38,6 @@
             <button
               type="button"
               class="lunar-nav-row"
-              :class="{ active: shell.activePanel.value === 'updates' }"
-              @click.stop="openPanel('updates')"
-            >
-              <span class="lunar-nav-icon">
-                <i class="bi bi-clock-history"></i>
-              </span>
-
-              <span class="lunar-nav-label">Updates</span>
-
-              <span
-                v-if="updates.unreadNotificationCount.value > 0"
-                class="lunar-count-badge"
-              >
-                {{
-                  updates.unreadNotificationCount.value > 99
-                    ? '99+'
-                    : updates.unreadNotificationCount.value
-                }}
-              </span>
-            </button>
-
-            <button
-              type="button"
-              class="lunar-nav-row"
               :class="{ active: shell.activePanel.value === 'myTasks' }"
               @click.stop="openPanel('myTasks')"
             >
@@ -81,18 +55,6 @@
               </span>
             </button>
           </div>
-
-          <Transition name="lunar-expand">
-            <SidebarUpdatesPanel
-              v-if="shell.activePanel.value === 'updates'"
-              :notifications="updates.notifications.value"
-              :is-loading="updates.isLoadingNotifications.value"
-              :error="updates.notificationError.value"
-              @refresh="refreshUpdates"
-              @mark-all="markAllNotificationsAsRead"
-              @mark-read="markNotificationAsRead"
-            />
-          </Transition>
 
           <Transition name="lunar-expand">
             <SidebarMyTasksPanel
@@ -210,7 +172,6 @@ import type { Guid } from '@/api/models/common.model'
 import SidebarRail from './features/rail/SidebarRail.vue'
 import SidebarAccountHeader from './features/account/SidebarAccountHeader.vue'
 import SidebarRecommendationsCard from './features/recommendations/SidebarRecommendationsCard.vue'
-import SidebarUpdatesPanel from './features/updates/SidebarUpdatesPanel.vue'
 import SidebarMyTasksPanel from './features/my-tasks/SidebarMyTasksPanel.vue'
 import SidebarSettingsPanel from './features/settings/SidebarSettingsPanel.vue'
 import SidebarWorkspaceSection from './features/workspaces/SidebarWorkspaceSection.vue'
@@ -220,7 +181,6 @@ import { useSidebarAccount } from './features/account/useSidebarAccount'
 import { useSidebarWorkspaceTree } from './features/workspaces/useSidebarWorkspaceTree'
 import { useSidebarRecommendations } from './features/recommendations/useSidebarRecommendations'
 import { useSidebarMyTasks } from './features/my-tasks/useSidebarMyTasks'
-import { useSidebarUpdates } from './features/updates/useSidebarUpdates'
 import { useSidebarSettings } from './features/settings/useSidebarSettings'
 
 import './css/SidebarLeft.css'
@@ -232,7 +192,6 @@ const account = useSidebarAccount()
 const workspaceTree = useSidebarWorkspaceTree()
 const recommendations = useSidebarRecommendations()
 const myTasks = useSidebarMyTasks()
-const updates = useSidebarUpdates()
 const settings = useSidebarSettings()
 
 const isSettingsModalOpen = ref(false)
@@ -242,11 +201,6 @@ watch(
   (workspaceId) => {
     void recommendations.fetchPendingRecommendations(workspaceId)
     void myTasks.fetchMyTasks(workspaceId)
-    void updates.fetchUnreadCount(workspaceId)
-
-    if (shell.activePanel.value === 'updates') {
-      void updates.fetchNotifications(workspaceId)
-    }
 
     if (isSettingsModalOpen.value) {
       void settings.fetchTaskPreference(workspaceId)
@@ -265,12 +219,6 @@ function expandSidebar() {
 }
 
 function loadPanelData(panel: SidebarPanel) {
-  if (panel === 'updates') {
-    void updates.fetchNotifications(workspaceTree.selectedWorkspaceId.value)
-    void updates.fetchUnreadCount(workspaceTree.selectedWorkspaceId.value)
-    return
-  }
-
   if (panel === 'myTasks') {
     void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
   }
@@ -336,23 +284,6 @@ async function acceptRecommendation(recommendationId: Guid) {
   if (accepted) {
     void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
   }
-}
-
-function refreshUpdates() {
-  void updates.fetchNotifications(workspaceTree.selectedWorkspaceId.value)
-}
-
-function markNotificationAsRead(notificationId: Guid) {
-  void updates.markNotificationAsRead(
-    notificationId,
-    workspaceTree.selectedWorkspaceId.value
-  )
-}
-
-function markAllNotificationsAsRead() {
-  void updates.markAllNotificationsAsRead(
-    workspaceTree.selectedWorkspaceId.value
-  )
 }
 
 function refreshMyTasks() {

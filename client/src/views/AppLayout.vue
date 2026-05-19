@@ -3,42 +3,7 @@
     <SidebarLeft />
 
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
-      <header class="top-app-bar sticky-top d-flex align-items-center justify-content-between px-3 border-bottom border-soft">
-        <nav class="breadcrumb-nav d-flex align-items-center gap-1 small fw-medium text-on-surface-variant">
-          <button class="breadcrumb-pill btn btn-sm border-0 px-2 py-1">Workspace</button>
-          <span class="text-outline">/</span>
-          <button class="breadcrumb-pill btn btn-sm border-0 px-2 py-1">Projects</button>
-          <span class="text-outline">/</span>
-          <span class="text-on-surface fw-semibold px-2 py-1">Q4 Roadmap</span>
-        </nav>
-
-        <div class="d-flex align-items-center gap-1">
-          <button
-            class="task-jump-btn btn btn-sm border-0 d-inline-flex align-items-center gap-1"
-            title="Jump to Work Tasks"
-            @click="scrollToTasks"
-          >
-            <span class="material-symbols-outlined">table_chart</span>
-            Tasks
-          </button>
-
-          <button class="top-icon-btn btn border-0" title="Share">
-            <span class="material-symbols-outlined">share</span>
-          </button>
-
-          <button class="top-icon-btn btn border-0" title="Star">
-            <span class="material-symbols-outlined">star</span>
-          </button>
-
-          <button class="top-icon-btn btn border-0" title="History">
-            <span class="material-symbols-outlined">history</span>
-          </button>
-
-          <button class="top-icon-btn btn border-0" title="More">
-            <span class="material-symbols-outlined">more_vert</span>
-          </button>
-        </div>
-      </header>
+      <AppTopNav @jump-to-tasks="scrollToTasks" />
 
       <main class="page-scroll pb-5">
         <div class="page-container container position-relative px-4 pt-5 pb-5">
@@ -221,13 +186,13 @@
                   </div>
 
                   <pre class="code-body mb-0 p-3 outline-none" contenteditable="true">{
-  "milestone": "Q4_Alpha",
-  "features": [
-    "dark_mode_editor",
-    "block_drag_drop"
-  ],
-  "status": "in_progress"
-}</pre>
+                    "milestone": "Q4_Alpha",
+                    "features": [
+                      "dark_mode_editor",
+                      "block_drag_drop"
+                    ],
+                    "status": "in_progress"
+                  }</pre>
                 </div>
               </div>
             </article>
@@ -422,6 +387,7 @@
 <script setup>
 import { computed, defineComponent, h, ref } from 'vue'
 import SidebarLeft from '@/components/sidebar-left/SidebarLeft.vue'
+import AppTopNav from '@/components/layout/AppTopNav.vue'
 import TaskDetailDrawer from '@/components/task/TaskDetailDrawer.vue'
 
 const emptyBlockRef = ref(null)
