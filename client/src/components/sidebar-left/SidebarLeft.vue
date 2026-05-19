@@ -1,20 +1,23 @@
 <template>
   <aside
     class="sidebar-left lunar-sidebar"
-    :class="{ collapsed: shell.isCollapsed, 'sidebar-clickable': shell.isCollapsed }"
-    @click="shell.expandSidebar"
+    :class="{
+      collapsed: shell.isCollapsed.value,
+      'sidebar-clickable': shell.isCollapsed.value,
+    }"
+    @click="handleSidebarClick"
   >
     <SidebarRail
-      v-if="shell.isCollapsed"
+      v-if="shell.isCollapsed.value"
       :display-name="account.profileDisplayName.value"
       :avatar-url="account.profileAvatarUrl.value"
       :initial="account.profileInitial.value"
       :unread-count="updates.unreadNotificationCount.value"
       :open-task-count="myTasks.openTaskCount.value"
-      @expand="shell.expandSidebar"
-      @open-updates="openPanel('updates')"
-      @open-my-tasks="openPanel('myTasks')"
-      @open-settings="openPanel('settings')"
+      @expand="expandSidebar"
+      @open-updates="openCollapsedPanel('updates')"
+      @open-my-tasks="openCollapsedPanel('myTasks')"
+      @open-settings="openSettingsModal"
     />
 
     <template v-else>
@@ -27,7 +30,7 @@
           :workspace-role="workspaceTree.selectedWorkspaceRole.value"
           :is-loading="account.isLoadingProfile.value"
           @collapse="shell.collapseSidebar"
-          @open-settings="openPanel('settings')"
+          @open-settings="openSettingsModal"
           @open-my-tasks="openPanel('myTasks')"
           @logout="account.logout"
         />
@@ -130,33 +133,6 @@
             />
           </Transition>
 
-          <Transition name="lunar-expand">
-            <SidebarSettingsPanel
-              v-if="shell.activePanel.value === 'settings'"
-              :workspace-id="workspaceTree.selectedWorkspaceId.value"
-              :profile-form="settings.profileForm"
-              :password-form="settings.passwordForm"
-              :task-preference-form="settings.taskPreferenceForm"
-              :preferred-day-options="settings.preferredDayOptions"
-              :is-loading-profile-settings="settings.isLoadingProfileSettings.value"
-              :is-saving-profile-settings="settings.isSavingProfileSettings.value"
-              :profile-settings-error="settings.profileSettingsError.value"
-              :profile-settings-success="settings.profileSettingsSuccess.value"
-              :is-changing-password="settings.isChangingPassword.value"
-              :password-settings-error="settings.passwordSettingsError.value"
-              :password-settings-success="settings.passwordSettingsSuccess.value"
-              :is-loading-task-preference="settings.isLoadingTaskPreference.value"
-              :is-saving-task-preference="settings.isSavingTaskPreference.value"
-              :task-preference-error="settings.taskPreferenceError.value"
-              :task-preference-success="settings.taskPreferenceSuccess.value"
-              @close="openPanel(null)"
-              @save-profile="saveProfileSettings"
-              @change-password="settings.changePassword"
-              @toggle-preferred-day="settings.togglePreferredDay"
-              @save-task-preference="saveTaskPreference"
-            />
-          </Transition>
-
           <SidebarWorkspaceSection
             :is-open="workspaceTree.isWorkspacesOpen.value"
             :workspaces="workspaceTree.workspaces.value"
@@ -185,8 +161,8 @@
           <button
             type="button"
             class="lunar-footer-row"
-            :class="{ active: shell.activePanel.value === 'settings' }"
-            @click.stop="openPanel('settings')"
+            :class="{ active: isSettingsModalOpen }"
+            @click.stop="openSettingsModal"
           >
             <span class="lunar-footer-icon">
               <i class="bi bi-sliders2"></i>
@@ -199,6 +175,31 @@
         </footer>
       </div>
     </template>
+
+    <SidebarSettingsPanel
+      v-if="isSettingsModalOpen"
+      :workspace-id="workspaceTree.selectedWorkspaceId.value"
+      :profile-form="settings.profileForm"
+      :password-form="settings.passwordForm"
+      :task-preference-form="settings.taskPreferenceForm"
+      :preferred-day-options="settings.preferredDayOptions"
+      :is-loading-profile-settings="settings.isLoadingProfileSettings.value"
+      :is-saving-profile-settings="settings.isSavingProfileSettings.value"
+      :profile-settings-error="settings.profileSettingsError.value"
+      :profile-settings-success="settings.profileSettingsSuccess.value"
+      :is-changing-password="settings.isChangingPassword.value"
+      :password-settings-error="settings.passwordSettingsError.value"
+      :password-settings-success="settings.passwordSettingsSuccess.value"
+      :is-loading-task-preference="settings.isLoadingTaskPreference.value"
+      :is-saving-task-preference="settings.isSavingTaskPreference.value"
+      :task-preference-error="settings.taskPreferenceError.value"
+      :task-preference-success="settings.taskPreferenceSuccess.value"
+      @close="closeSettingsModal"
+      @save-profile="saveProfileSettings"
+      @change-password="settings.changePassword"
+      @toggle-preferred-day="settings.togglePreferredDay"
+      @save-task-preference="saveTaskPreference"
+    />
 
     <CreateWorkspaceModal
       v-model="workspaceTree.isCreateWorkspaceModalOpen.value"
@@ -216,7 +217,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, watch } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 import CreateWorkspaceModal from '@/components/workspace/CreateWorkspaceModal.vue'
 import CreatePageModal from '@/components/page/CreatePageModal.vue'
 import type { Guid } from '@/api/models/common.model'
@@ -239,6 +240,8 @@ import { useSidebarSettings } from './features/settings/useSidebarSettings'
 
 import './css/SidebarLeft.css'
 
+type NonNullSidebarPanel = Exclude<SidebarPanel, null>
+
 const shell = useSidebarShell()
 const account = useSidebarAccount()
 const workspaceTree = useSidebarWorkspaceTree()
@@ -246,6 +249,8 @@ const recommendations = useSidebarRecommendations()
 const myTasks = useSidebarMyTasks()
 const updates = useSidebarUpdates()
 const settings = useSidebarSettings()
+
+const isSettingsModalOpen = ref(false)
 
 watch(
   workspaceTree.selectedWorkspaceId,
@@ -258,28 +263,73 @@ watch(
       void updates.fetchNotifications(workspaceId)
     }
 
-    if (shell.activePanel.value === 'settings') {
+    if (isSettingsModalOpen.value) {
       void settings.fetchTaskPreference(workspaceId)
     }
   }
 )
 
-function openPanel(panel: SidebarPanel) {
-  shell.openPanel(panel)
+function handleSidebarClick() {
+  if (!shell.isCollapsed.value) return
 
-  if (shell.activePanel.value === 'updates') {
+  shell.expandSidebar()
+}
+
+function expandSidebar() {
+  shell.expandSidebar()
+}
+
+function loadPanelData(panel: SidebarPanel) {
+  if (panel === 'updates') {
     void updates.fetchNotifications(workspaceTree.selectedWorkspaceId.value)
     void updates.fetchUnreadCount(workspaceTree.selectedWorkspaceId.value)
+    return
   }
 
-  if (shell.activePanel.value === 'myTasks') {
+  if (panel === 'myTasks') {
     void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
   }
+}
 
-  if (shell.activePanel.value === 'settings') {
-    void settings.fetchProfileSettings()
-    void settings.fetchTaskPreference(workspaceTree.selectedWorkspaceId.value)
+function openPanel(panel: SidebarPanel) {
+  if (panel === 'settings') {
+    openSettingsModal()
+    return
   }
+
+  shell.openPanel(panel)
+  loadPanelData(shell.activePanel.value)
+}
+
+function openCollapsedPanel(panel: NonNullSidebarPanel) {
+  if (panel === 'settings') {
+    openSettingsModal()
+    return
+  }
+
+  shell.expandSidebar()
+
+  if (shell.activePanel.value !== panel) {
+    shell.openPanel(panel)
+  }
+
+  loadPanelData(panel)
+}
+
+function openSettingsModal() {
+  if (shell.isCollapsed.value) {
+    shell.expandSidebar()
+  }
+
+  shell.activePanel.value = null
+  isSettingsModalOpen.value = true
+
+  void settings.fetchProfileSettings()
+  void settings.fetchTaskPreference(workspaceTree.selectedWorkspaceId.value)
+}
+
+function closeSettingsModal() {
+  isSettingsModalOpen.value = false
 }
 
 function refreshRecommendations() {

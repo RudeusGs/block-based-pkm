@@ -5,6 +5,7 @@ import {
   getApiResultErrorMessage,
 } from '@/api/utils/api-error.util'
 import type { UserProfileResponse } from '@/api/models/me.model'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 
 export function useMyProfile() {
   const profile = ref<UserProfileResponse | null>(null)
@@ -33,9 +34,7 @@ export function useMyProfile() {
   })
 
   const profileAvatarUrl = computed(() => {
-    const avatarUrl = profile.value?.avatarUrl?.trim()
-
-    return avatarUrl || null
+    return normalizeImageUrl(profile.value?.avatarUrl)
   })
 
   const profileInitial = computed(() => {
@@ -64,7 +63,10 @@ export function useMyProfile() {
         return
       }
 
-      profile.value = result.data
+      profile.value = {
+        ...result.data,
+        avatarUrl: normalizeImageUrl(result.data.avatarUrl),
+      }
     } catch (error) {
       profileError.value = getApiErrorMessage(
         error,

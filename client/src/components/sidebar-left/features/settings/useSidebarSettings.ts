@@ -11,6 +11,7 @@ import type {
   UpdateUserTaskPreferenceRequest,
   UserTaskPreferenceResponse,
 } from '@/api/models/recommendation.model'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 
 export type SidebarSettingsTab = 'profile' | 'ai' | 'security'
 
@@ -33,6 +34,21 @@ const DEFAULT_TASK_PREFERENCE: UpdateUserTaskPreferenceRequest = {
   recommendationSensitivity: 50,
   recommendationIntervalMinutes: 30,
   enableAutoRecommendation: true,
+}
+
+function applyTaskPreference(
+  target: UpdateUserTaskPreferenceRequest,
+  source: UserTaskPreferenceResponse | UpdateUserTaskPreferenceRequest
+) {
+  target.workDayStartHour = source.workDayStartHour
+  target.workDayEndHour = source.workDayEndHour
+  target.preferredDaysOfWeek = [...source.preferredDaysOfWeek]
+  target.maxRecommendationsPerSession = source.maxRecommendationsPerSession
+  target.minPriorityForRecommendation =
+    source.minPriorityForRecommendation as PriorityRequest
+  target.recommendationSensitivity = source.recommendationSensitivity
+  target.recommendationIntervalMinutes = source.recommendationIntervalMinutes
+  target.enableAutoRecommendation = source.enableAutoRecommendation
 }
 
 export function useSidebarSettings() {
@@ -62,6 +78,7 @@ export function useSidebarSettings() {
 
   const taskPreferenceForm = reactive<UpdateUserTaskPreferenceRequest>({
     ...DEFAULT_TASK_PREFERENCE,
+    preferredDaysOfWeek: [...DEFAULT_TASK_PREFERENCE.preferredDaysOfWeek],
   })
 
   async function fetchProfileSettings() {
@@ -83,7 +100,7 @@ export function useSidebarSettings() {
       }
 
       profileForm.fullName = result.data.fullName
-      profileForm.avatarUrl = result.data.avatarUrl ?? ''
+      profileForm.avatarUrl = normalizeImageUrl(result.data.avatarUrl) ?? ''
     } catch (error) {
       profileSettingsError.value = getApiErrorMessage(
         error,
@@ -96,6 +113,7 @@ export function useSidebarSettings() {
 
   async function saveProfileSettings() {
     const fullName = profileForm.fullName.trim()
+    const avatarUrl = normalizeImageUrl(profileForm.avatarUrl)
 
     if (!fullName || isSavingProfileSettings.value) return false
 
@@ -106,7 +124,7 @@ export function useSidebarSettings() {
     try {
       const result = await meController.updateMyProfile({
         fullName,
-        avatarUrl: profileForm.avatarUrl.trim() || null,
+        avatarUrl,
       })
 
       if (!result.isSuccess || !result.data) {
@@ -117,7 +135,10 @@ export function useSidebarSettings() {
         return false
       }
 
-      profileSettingsSuccess.value = 'Đã lưu hồ sơ.'
+      profileForm.fullName = result.data.fullName
+      profileForm.avatarUrl = normalizeImageUrl(result.data.avatarUrl) ?? ''
+      profileSettingsSuccess.value = 'Đã cập nhật hồ sơ.'
+
       return true
     } catch (error) {
       profileSettingsError.value = getApiErrorMessage(
@@ -132,11 +153,11 @@ export function useSidebarSettings() {
 
   async function changePassword() {
     if (
+      isChangingPassword.value ||
       !passwordForm.currentPassword ||
-      !passwordForm.newPassword ||
-      isChangingPassword.value
+      !passwordForm.newPassword
     ) {
-      return
+      return false
     }
 
     isChangingPassword.value = true
@@ -154,17 +175,20 @@ export function useSidebarSettings() {
           result,
           'Không thể đổi mật khẩu.'
         )
-        return
+        return false
       }
 
-      passwordSettingsSuccess.value = 'Đã đổi mật khẩu.'
       passwordForm.currentPassword = ''
       passwordForm.newPassword = ''
+      passwordSettingsSuccess.value = 'Đã đổi mật khẩu.'
+
+      return true
     } catch (error) {
       passwordSettingsError.value = getApiErrorMessage(
         error,
         'Không thể đổi mật khẩu.'
       )
+      return false
     } finally {
       isChangingPassword.value = false
     }
@@ -183,62 +207,24 @@ export function useSidebarSettings() {
       if (!result.isSuccess || !result.data) {
         taskPreferenceError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải cấu hình AI gợi ý.'
+          'Không thể tải cấu hình AI.'
         )
         return
       }
 
-      applyTaskPreference(result.data)
+      applyTaskPreference(taskPreferenceForm, result.data)
     } catch (error) {
       taskPreferenceError.value = getApiErrorMessage(
         error,
-        'Không thể tải cấu hình AI gợi ý.'
+        'Không thể tải cấu hình AI.'
       )
     } finally {
       isLoadingTaskPreference.value = false
     }
   }
 
-  function applyTaskPreference(preference: UserTaskPreferenceResponse) {
-    taskPreferenceForm.workDayStartHour = preference.workDayStartHour
-    taskPreferenceForm.workDayEndHour = preference.workDayEndHour
-    taskPreferenceForm.preferredDaysOfWeek = [...preference.preferredDaysOfWeek]
-    taskPreferenceForm.maxRecommendationsPerSession =
-      preference.maxRecommendationsPerSession
-    taskPreferenceForm.minPriorityForRecommendation =
-      preference.minPriorityForRecommendation.toLowerCase() as PriorityRequest
-    taskPreferenceForm.recommendationSensitivity =
-      preference.recommendationSensitivity
-    taskPreferenceForm.recommendationIntervalMinutes =
-      preference.recommendationIntervalMinutes
-    taskPreferenceForm.enableAutoRecommendation =
-      preference.enableAutoRecommendation
-  }
-
-  function togglePreferredDay(day: number) {
-    const current = new Set(taskPreferenceForm.preferredDaysOfWeek)
-
-    if (current.has(day)) {
-      current.delete(day)
-    } else {
-      current.add(day)
-    }
-
-    taskPreferenceForm.preferredDaysOfWeek = Array.from(current).sort()
-  }
-
   async function saveTaskPreference(workspaceId: Guid | null) {
     if (!workspaceId || isSavingTaskPreference.value) return false
-
-    if (taskPreferenceForm.workDayStartHour >= taskPreferenceForm.workDayEndHour) {
-      taskPreferenceError.value = 'Giờ bắt đầu phải nhỏ hơn giờ kết thúc.'
-      return false
-    }
-
-    if (!taskPreferenceForm.preferredDaysOfWeek.length) {
-      taskPreferenceError.value = 'Chọn ít nhất một ngày làm việc.'
-      return false
-    }
 
     isSavingTaskPreference.value = true
     taskPreferenceError.value = null
@@ -248,31 +234,55 @@ export function useSidebarSettings() {
       const result = await recommendationController.updatePreference(
         workspaceId,
         {
-          ...taskPreferenceForm,
+          workDayStartHour: taskPreferenceForm.workDayStartHour,
+          workDayEndHour: taskPreferenceForm.workDayEndHour,
           preferredDaysOfWeek: [...taskPreferenceForm.preferredDaysOfWeek],
+          maxRecommendationsPerSession:
+            taskPreferenceForm.maxRecommendationsPerSession,
+          minPriorityForRecommendation:
+            taskPreferenceForm.minPriorityForRecommendation,
+          recommendationSensitivity: taskPreferenceForm.recommendationSensitivity,
+          recommendationIntervalMinutes:
+            taskPreferenceForm.recommendationIntervalMinutes,
+          enableAutoRecommendation: taskPreferenceForm.enableAutoRecommendation,
         }
       )
 
       if (!result.isSuccess || !result.data) {
         taskPreferenceError.value = getApiResultErrorMessage(
           result,
-          'Không thể lưu cấu hình AI gợi ý.'
+          'Không thể lưu cấu hình AI.'
         )
         return false
       }
 
-      applyTaskPreference(result.data)
-      taskPreferenceSuccess.value = 'Đã lưu cấu hình AI gợi ý.'
+      applyTaskPreference(taskPreferenceForm, result.data)
+      taskPreferenceSuccess.value = 'Đã lưu cấu hình AI.'
+
       return true
     } catch (error) {
       taskPreferenceError.value = getApiErrorMessage(
         error,
-        'Không thể lưu cấu hình AI gợi ý.'
+        'Không thể lưu cấu hình AI.'
       )
       return false
     } finally {
       isSavingTaskPreference.value = false
     }
+  }
+
+  function togglePreferredDay(day: number) {
+    const index = taskPreferenceForm.preferredDaysOfWeek.indexOf(day)
+
+    if (index === -1) {
+      taskPreferenceForm.preferredDaysOfWeek.push(day)
+      taskPreferenceForm.preferredDaysOfWeek.sort()
+      return
+    }
+
+    if (taskPreferenceForm.preferredDaysOfWeek.length <= 1) return
+
+    taskPreferenceForm.preferredDaysOfWeek.splice(index, 1)
   }
 
   return {
@@ -299,7 +309,7 @@ export function useSidebarSettings() {
     saveProfileSettings,
     changePassword,
     fetchTaskPreference,
-    togglePreferredDay,
     saveTaskPreference,
+    togglePreferredDay,
   }
 }
