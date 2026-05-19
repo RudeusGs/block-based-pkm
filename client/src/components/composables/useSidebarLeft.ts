@@ -1,5 +1,6 @@
-import { onMounted, ref, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { pageController } from '@/api/services/page.api'
+import { recommendationController } from '@/api/services/recommendation.api'
 import { useMyWorkspaces } from '@/modules/workspaces/composables/useMyWorkspaces'
 import { useMyProfile } from '@/modules/account/composables/useMyProfile'
 import {
@@ -9,6 +10,7 @@ import {
 import type { Guid } from '@/api/models/common.model'
 import type { PageResponse } from '@/api/models/page.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
+import type { TaskRecommendationResponse } from '@/api/models/recommendation.model'
 
 import type { PageTreeItem, SidebarWorkspaceLike } from '../types/sidebar.types'
 import { buildPageTree, insertPageIntoTree } from '../utils/page-tree.util'
@@ -33,6 +35,15 @@ export function useSidebarLeft() {
 
   const pageTreesByWorkspaceId = ref<Record<Guid, PageTreeItem[]>>({})
   const pageListErrorsByWorkspaceId = ref<Record<Guid, string | null>>({})
+
+  const taskRecommendations = ref<TaskRecommendationResponse[]>([])
+  const isLoadingTaskRecommendations = ref(false)
+  const isGeneratingTaskRecommendations = ref(false)
+  const taskRecommendationError = ref<string | null>(null)
+
+  const hasTaskRecommendations = computed(() => {
+    return taskRecommendations.value.length > 0
+  })
 
   const {
     workspaces,
@@ -75,6 +86,19 @@ export function useSidebarLeft() {
       }
     },
     { immediate: true }
+  )
+
+  watch(
+    selectedWorkspaceId,
+    (workspaceId) => {
+      if (!workspaceId) {
+        taskRecommendations.value = []
+        taskRecommendationError.value = null
+        return
+      }
+
+      void fetchTaskRecommendations(workspaceId)
+    }
   )
 
   function expandSidebar() {
@@ -170,6 +194,7 @@ export function useSidebarLeft() {
       closePageBranch(pageId)
       return
     }
+
     openPageBranch(pageId)
   }
 
@@ -234,8 +259,138 @@ export function useSidebarLeft() {
     }
   }
 
+  async function fetchTaskRecommendations(
+    workspaceId: Guid | null = selectedWorkspaceId.value
+  ) {
+    if (!workspaceId) {
+      taskRecommendations.value = []
+      taskRecommendationError.value = null
+      return
+    }
+
+    if (isLoadingTaskRecommendations.value) return
+
+    isLoadingTaskRecommendations.value = true
+    taskRecommendationError.value = null
+
+    try {
+      const result = await recommendationController.list({
+        workspaceId,
+        status: 'pending',
+        pageNumber: 1,
+        pageSize: 3,
+      })
+
+      if (!result.isSuccess || !result.data) {
+        taskRecommendationError.value = getApiResultErrorMessage(
+          result,
+          'Không thể tải gợi ý task.'
+        )
+
+        return
+      }
+
+      taskRecommendations.value = result.data.items
+    } catch (error) {
+      taskRecommendationError.value = getApiErrorMessage(
+        error,
+        'Không thể tải gợi ý task.'
+      )
+    } finally {
+      isLoadingTaskRecommendations.value = false
+    }
+  }
+
+  async function generateTaskRecommendations() {
+    const workspaceId = selectedWorkspaceId.value
+
+    if (!workspaceId || isGeneratingTaskRecommendations.value) return
+
+    isGeneratingTaskRecommendations.value = true
+    taskRecommendationError.value = null
+
+    try {
+      const result = await recommendationController.generate(workspaceId, {
+        pageId: selectedPageId.value ?? null,
+        force: true,
+      })
+
+      if (!result.isSuccess || !result.data) {
+        taskRecommendationError.value = getApiResultErrorMessage(
+          result,
+          'Không thể tạo gợi ý task.'
+        )
+
+        return
+      }
+
+      taskRecommendations.value = result.data
+        .filter((item) => item.status.toLowerCase() === 'pending')
+        .slice(0, 3)
+    } catch (error) {
+      taskRecommendationError.value = getApiErrorMessage(
+        error,
+        'Không thể tạo gợi ý task.'
+      )
+    } finally {
+      isGeneratingTaskRecommendations.value = false
+    }
+  }
+
+  async function acceptTaskRecommendation(recommendationId: Guid) {
+    try {
+      const result = await recommendationController.accept(recommendationId)
+
+      if (!result.isSuccess) {
+        taskRecommendationError.value = getApiResultErrorMessage(
+          result,
+          'Không thể chấp nhận gợi ý task.'
+        )
+
+        return
+      }
+
+      taskRecommendations.value = taskRecommendations.value.filter(
+        (item) => item.id !== recommendationId
+      )
+    } catch (error) {
+      taskRecommendationError.value = getApiErrorMessage(
+        error,
+        'Không thể chấp nhận gợi ý task.'
+      )
+    }
+  }
+
+  async function rejectTaskRecommendation(recommendationId: Guid) {
+    try {
+      const result = await recommendationController.reject(recommendationId)
+
+      if (!result.isSuccess) {
+        taskRecommendationError.value = getApiResultErrorMessage(
+          result,
+          'Không thể từ chối gợi ý task.'
+        )
+
+        return
+      }
+
+      taskRecommendations.value = taskRecommendations.value.filter(
+        (item) => item.id !== recommendationId
+      )
+    } catch (error) {
+      taskRecommendationError.value = getApiErrorMessage(
+        error,
+        'Không thể từ chối gợi ý task.'
+      )
+    }
+  }
+
   function retryLoadPages(workspaceId: Guid) {
     void fetchWorkspacePages(workspaceId)
+  }
+
+  function retryLoadTaskRecommendations() {
+    void fetchTaskRecommendations()
   }
 
   function selectWorkspace(id: Guid) {
@@ -303,6 +458,12 @@ export function useSidebarLeft() {
     profileInitial,
     isLoadingProfile,
 
+    taskRecommendations,
+    hasTaskRecommendations,
+    isLoadingTaskRecommendations,
+    isGeneratingTaskRecommendations,
+    taskRecommendationError,
+
     expandSidebar,
     collapseSidebar,
     toggleWorkspaces,
@@ -324,5 +485,11 @@ export function useSidebarLeft() {
     handleWorkspaceCreated,
     handlePageCreated,
     retryLoadWorkspaces,
+
+    fetchTaskRecommendations,
+    retryLoadTaskRecommendations,
+    generateTaskRecommendations,
+    acceptTaskRecommendation,
+    rejectTaskRecommendation,
   }
 }

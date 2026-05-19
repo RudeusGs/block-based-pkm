@@ -13,3 +13,4 @@ server/src/Pkm.Infrastructure/bin
 server/src/Pkm.Infrastructure/obj
 server/src/Pkm.Infrastructure/Migrations
 server/.vs
+server/src/Pkm.Infrastructure/Persistence/Migrations

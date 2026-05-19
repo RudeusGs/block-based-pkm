@@ -129,7 +129,11 @@ public sealed class GenerateTaskRecommendationsHandler
                 request.WorkspaceId,
                 currentUserId);
 
-            if (await _redisCache.ExistsAsync(throttleKey, cancellationToken))
+            var isThrottled = await CacheExistsBestEffortAsync(
+                throttleKey,
+                cancellationToken);
+
+            if (isThrottled)
             {
                 return Result.Failure<IReadOnlyList<TaskRecommendationDto>>(
                     RecommendationErrors.Throttled);
@@ -205,6 +209,7 @@ public sealed class GenerateTaskRecommendationsHandler
             _taskRecommendationRepository.AddRange(recommendations);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
             await SetThrottleAsync(preference, request.WorkspaceId, currentUserId, cancellationToken);
             await InvalidateUserRecommendationCacheAsync(currentUserId, cancellationToken);
 
@@ -218,32 +223,18 @@ public sealed class GenerateTaskRecommendationsHandler
                 })
                 .ToArray();
 
-            await _recommendationRealtimePublisher.PublishToUserAsync(
-                new RecommendationRealtimeEnvelope(
-                    EventName: "TaskRecommendationsGenerated",
-                    UserId: currentUserId,
-                    WorkspaceId: request.WorkspaceId,
-                    PageId: request.PageId,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Payload: new
-                    {
-                        workspaceId = request.WorkspaceId,
-                        pageId = request.PageId,
-                        recommendations = dto
-                    }),
+            await PublishGeneratedBestEffortAsync(
+                currentUserId,
+                request.WorkspaceId,
+                request.PageId,
+                now,
+                dto,
                 cancellationToken);
 
-            await _notificationService.NotifyAsync(
+            await NotifyGeneratedBestEffortAsync(
                 currentUserId,
-                new NotificationDispatchRequest(
-                    Type: NotificationType.RecommendationGenerated,
-                    Title: "Có task được gợi ý cho bạn",
-                    Message: $"Hệ thống vừa gợi ý {dto.Length} task phù hợp với lịch sử làm việc của bạn.",
-                    ActorUserId: currentUserId,
-                    WorkspaceId: request.WorkspaceId,
-                    ReferenceId: dto.FirstOrDefault()?.Id,
-                    ReferenceType: "TaskRecommendation"),
+                request.WorkspaceId,
+                dto,
                 cancellationToken);
 
             return Result.Success<IReadOnlyList<TaskRecommendationDto>>(dto);
@@ -266,10 +257,6 @@ public sealed class GenerateTaskRecommendationsHandler
             workspaceId,
             userId);
 
-        var cached = await _redisCache.GetAsync<UserTaskPreferenceDto>(
-            cacheKey,
-            cancellationToken);
-
         var preference = await _preferenceRepository.GetByUserAndWorkspaceAsync(
             userId,
             workspaceId,
@@ -287,7 +274,7 @@ public sealed class GenerateTaskRecommendationsHandler
         _preferenceRepository.Add(preference);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _redisCache.SetAsync(
+        await CacheSetBestEffortAsync(
             cacheKey,
             preference.ToDto(),
             TimeSpan.FromMinutes(15),
@@ -306,7 +293,7 @@ public sealed class GenerateTaskRecommendationsHandler
             workspaceId,
             userId);
 
-        var cached = await _redisCache.GetAsync<UserTaskHistoryStatsDto>(
+        var cached = await CacheGetBestEffortAsync<UserTaskHistoryStatsDto>(
             cacheKey,
             cancellationToken);
 
@@ -318,7 +305,7 @@ public sealed class GenerateTaskRecommendationsHandler
             workspaceId,
             cancellationToken);
 
-        await _redisCache.SetAsync(
+        await CacheSetBestEffortAsync(
             cacheKey,
             stats,
             TimeSpan.FromMinutes(10),
@@ -338,7 +325,7 @@ public sealed class GenerateTaskRecommendationsHandler
             workspaceId,
             userId);
 
-        await _redisCache.SetAsync(
+        await CacheSetBestEffortAsync(
             throttleKey,
             "1",
             TimeSpan.FromMinutes(preference.RecommendationIntervalMinutes),
@@ -353,10 +340,129 @@ public sealed class GenerateTaskRecommendationsHandler
             _redisKeyFactory,
             userId);
 
-        await _redisCache.SetAsync(
+        await CacheSetBestEffortAsync(
             versionKey,
             Guid.NewGuid().ToString("N"),
             TimeSpan.FromDays(7),
             cancellationToken);
+    }
+
+    private async Task<T?> CacheGetBestEffortAsync<T>(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _redisCache.GetAsync<T>(key, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    private async Task<bool> CacheExistsBestEffortAsync(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _redisCache.ExistsAsync(key, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task CacheSetBestEffortAsync<T>(
+        string key,
+        T value,
+        TimeSpan ttl,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _redisCache.SetAsync(key, value, ttl, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task PublishGeneratedBestEffortAsync(
+        Guid currentUserId,
+        Guid workspaceId,
+        Guid? pageId,
+        DateTimeOffset now,
+        IReadOnlyList<TaskRecommendationDto> recommendations,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _recommendationRealtimePublisher.PublishToUserAsync(
+                new RecommendationRealtimeEnvelope(
+                    EventName: "TaskRecommendationsGenerated",
+                    UserId: currentUserId,
+                    WorkspaceId: workspaceId,
+                    PageId: pageId,
+                    ActorId: currentUserId,
+                    OccurredAtUtc: now,
+                    Payload: new
+                    {
+                        workspaceId,
+                        pageId,
+                        recommendations
+                    }),
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+        }
+    }
+
+    private async Task NotifyGeneratedBestEffortAsync(
+        Guid currentUserId,
+        Guid workspaceId,
+        IReadOnlyList<TaskRecommendationDto> recommendations,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _notificationService.NotifyAsync(
+                currentUserId,
+                new NotificationDispatchRequest(
+                    Type: NotificationType.RecommendationGenerated,
+                    Title: "Có task được gợi ý cho bạn",
+                    Message: $"Hệ thống vừa gợi ý {recommendations.Count} task phù hợp với lịch sử làm việc của bạn.",
+                    ActorUserId: currentUserId,
+                    WorkspaceId: workspaceId,
+                    ReferenceId: recommendations.FirstOrDefault()?.Id,
+                    ReferenceType: "TaskRecommendation"),
+                cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+        }
     }
 }

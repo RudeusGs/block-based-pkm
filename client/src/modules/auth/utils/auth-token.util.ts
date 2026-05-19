@@ -15,3 +15,7 @@ export function saveAuthToken(token: string): void {
 export function clearAuthToken(): void {
   Cookies.remove(TOKEN_COOKIE, { path: '/' })
 }
+
+export function getAuthToken(): string | undefined {
+  return Cookies.get(TOKEN_COOKIE)
+}

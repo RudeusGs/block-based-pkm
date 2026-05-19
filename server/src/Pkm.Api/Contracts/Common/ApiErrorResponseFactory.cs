@@ -50,6 +50,10 @@ public static class ApiErrorResponseFactory
 
             NpgsqlException npgEx => MapNpgsqlException(npgEx),
 
+            InvalidOperationException invalidOperationException
+                when TryFindPostgresException(invalidOperationException, out var wrappedPostgres)
+                => MapPostgresException(wrappedPostgres!),
+
             DomainException => new ErrorDescriptor(
                 StatusCodes.Status422UnprocessableEntity,
                 "domain_error",
@@ -80,6 +84,21 @@ public static class ApiErrorResponseFactory
                 Details: descriptor.Details),
             statusCode: descriptor.StatusCode,
             traceId: traceId);
+    }
+
+    private static bool TryFindPostgresException(Exception exception, out PostgresException? postgresException)
+    {
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is PostgresException postgres)
+            {
+                postgresException = postgres;
+                return true;
+            }
+        }
+
+        postgresException = null;
+        return false;
     }
 
     private static bool IsPostgresUniqueViolation(DbUpdateException exception)

@@ -1,50 +1,52 @@
 <template>
-  <ul class="sidebar-page-tree">
+  <ul class="lunar-page-tree">
     <li
       v-for="page in pages"
       :key="page.id"
-      class="sidebar-page-node"
+      class="lunar-page-node"
     >
       <div
-        class="sidebar-page-row"
-        :class="{ 'sidebar-page-row-active': page.id === selectedPageId }"
-        :style="{ paddingLeft: `calc(4px + ${Math.min(depth, maxVisualDepth)} * 12px)` }"
+        class="lunar-page-row"
+        :class="{ active: page.id === selectedPageId }"
+        :style="{ paddingLeft: `${Math.min(depth, maxVisualDepth) * 14}px` }"
         @click.stop="emit('selectPage', page)"
       >
         <button
           v-if="page.children.length > 0"
           type="button"
-          class="sidebar-page-arrow"
-          :class="{ 'sidebar-page-arrow-open': openedPageIds.has(page.id) }"
+          class="lunar-page-toggle"
+          :class="{ open: openedPageIds.has(page.id) }"
           @click.stop="emit('togglePage', page)"
         >
-          <span class="material-symbols-outlined">arrow_right</span>
+          <i class="bi bi-caret-right-fill"></i>
         </button>
-        <div v-else class="sidebar-page-arrow-spacer"></div>
 
-        <div class="sidebar-page-main">
-          <span class="sidebar-page-icon">
-            {{ page.icon || '📄' }}
-          </span>
+        <span
+          v-else
+          class="lunar-page-toggle-spacer"
+        ></span>
 
-          <span class="sidebar-page-title">
-            {{ page.title }}
-          </span>
-        </div>
+        <span class="lunar-page-icon">
+          {{ page.icon || '◇' }}
+        </span>
+
+        <span class="lunar-page-title">
+          {{ page.title }}
+        </span>
 
         <button
           type="button"
-          class="sidebar-page-plus-button"
+          class="lunar-page-action"
           title="Tạo subpage"
           @click.stop="emit('createChild', page)"
         >
-          <span class="material-symbols-outlined">add</span>
+          <i class="bi bi-plus-lg"></i>
         </button>
       </div>
 
       <SidebarPageTree
         v-if="page.children.length > 0 && openedPageIds.has(page.id)"
-        class="sidebar-page-children"
+        class="lunar-page-children"
         :pages="page.children"
         :selected-page-id="selectedPageId"
         :opened-page-ids="openedPageIds"

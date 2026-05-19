@@ -69,6 +69,8 @@ builder.Services.AddControllers();
 
 var app = builder.Build();
 
+await app.ApplyDatabaseMigrationsAsync();
+
 // =========================
 // HTTP Pipeline
 // =========================

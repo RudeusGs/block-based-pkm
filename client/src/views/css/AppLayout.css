@@ -2,9 +2,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
 
 .workspace-shell {
-  background: #151218;
+  background: #0f0f0f;
   overflow: hidden;
-  color: #e7e0e9;
+  color: #f1f1f1;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -14,25 +14,25 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #151218;
-  color: #e7e0e9;
+  background: #0f0f0f;
+  color: #f1f1f1;
   font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .text-on-surface {
-  color: #e7e0e9;
+  color: #f1f1f1;
 }
 
 .text-on-surface-variant {
-  color: #ccc3d3;
+  color: #a3a3a3;
 }
 
 .text-outline {
-  color: #968e9c;
+  color: #737373;
 }
 
 .border-soft {
-  border-color: #4a4451 !important;
+  border-color: #2f2f2f !important;
 }
 
 .material-symbols-outlined {
@@ -44,29 +44,55 @@
 .top-app-bar {
   height: 48px;
   z-index: 50;
-  background: rgba(21, 18, 24, 0.9);
-  backdrop-filter: blur(14px);
+  background: rgba(15, 15, 15, 0.92);
+  backdrop-filter: blur(12px);
 }
 
 .breadcrumb-pill,
 .top-icon-btn,
+.task-jump-btn,
 .task-action-btn,
 .toolbar-btn,
 .handle-btn,
 .copy-btn {
-  color: #ccc3d3;
+  color: #a3a3a3;
   background: transparent;
-  transition: background 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    opacity 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .breadcrumb-pill:hover,
 .top-icon-btn:hover,
+.task-jump-btn:hover,
 .task-action-btn:hover,
 .toolbar-btn:hover,
 .handle-btn:hover,
 .copy-btn:hover {
-  color: #e7e0e9;
-  background: #37333a;
+  color: #f1f1f1;
+  background: #202020;
+}
+
+.task-jump-btn {
+  height: 32px;
+  border-radius: 8px;
+  padding-inline: 10px;
+  color: #f1f1f1;
+  background: #171717;
+  border: 1px solid #2f2f2f !important;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.task-jump-btn:hover {
+  background: #242424;
+  border-color: #404040 !important;
+}
+
+.task-jump-btn .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .top-icon-btn {
@@ -82,6 +108,27 @@
 .page-scroll {
   flex: 1;
   overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+.page-scroll::-webkit-scrollbar {
+  width: 12px;
+}
+
+.page-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.page-scroll::-webkit-scrollbar-thumb {
+  border: 4px solid transparent;
+  border-radius: 999px;
+  background: #3a3a3a;
+  background-clip: content-box;
+}
+
+.page-scroll::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+  background-clip: content-box;
 }
 
 .page-container {
@@ -92,8 +139,9 @@
   top: 340px;
   left: 250px;
   z-index: 40;
-  background: #1e2227;
-  border: 1px solid #4a4451;
+  background: #171717;
+  border: 1px solid #2f2f2f;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.32) !important;
 }
 
 .toolbar-btn {
@@ -112,26 +160,28 @@
 .toolbar-divider {
   width: 1px;
   height: 18px;
-  background: #4a4451;
+  background: #2f2f2f;
   display: inline-block;
   margin: 0 4px;
 }
 
 .cover-wrap {
   height: 192px;
-  background: #211e25;
+  background: #171717;
+  border: 1px solid #242424;
 }
 
 .cover-image {
-  opacity: 0.92;
+  opacity: 0.66;
+  filter: grayscale(0.5) contrast(0.9);
 }
 
 .change-cover-btn {
   right: 16px;
   bottom: 16px;
-  color: #e7e0e9;
-  background: rgba(21, 18, 24, 0.78);
-  border: 1px solid #4a4451;
+  color: #f1f1f1;
+  background: rgba(15, 15, 15, 0.82);
+  border: 1px solid #2f2f2f;
   backdrop-filter: blur(12px);
   opacity: 0;
   transition: opacity 0.15s ease, background 0.15s ease;
@@ -142,7 +192,7 @@
 }
 
 .change-cover-btn:hover {
-  background: #211e25;
+  background: #202020;
 }
 
 .page-emoji-wrap {
@@ -150,7 +200,7 @@
   height: 76px;
   margin-top: -64px;
   margin-left: 16px;
-  background: #151218;
+  background: #0f0f0f;
   border-radius: 18px;
 }
 
@@ -161,8 +211,8 @@
 
 .emoji-overlay {
   inset: 0;
-  color: #e7e0e9;
-  background: rgba(255, 255, 255, 0.05);
+  color: #f1f1f1;
+  background: rgba(255, 255, 255, 0.06);
   opacity: 0;
   transition: opacity 0.15s ease;
 }
@@ -176,7 +226,7 @@
 }
 
 .page-title-input {
-  color: #e7e0e9;
+  color: #f1f1f1;
   font-size: clamp(2rem, 4vw, 2.5rem);
   line-height: 1.2;
   font-weight: 700;
@@ -184,11 +234,11 @@
 }
 
 .page-title-input:focus {
-  color: #e7e0e9;
+  color: #f1f1f1;
 }
 
 .page-title-input::placeholder {
-  color: #968e9c;
+  color: #737373;
 }
 
 .meta-icon {
@@ -196,8 +246,8 @@
 }
 
 .status-chip {
-  background: #211e25;
-  border-color: #4a4451 !important;
+  background: #171717;
+  border-color: #2f2f2f !important;
 }
 
 .status-dot,
@@ -212,13 +262,13 @@
 .status-dot {
   width: 8px;
   height: 8px;
-  background: #e5c360;
+  background: #a3a3a3;
 }
 
 .tiny-separator {
   width: 4px;
   height: 4px;
-  background: #4a4451;
+  background: #404040;
 }
 
 .avatar-stack .avatar:not(:first-child) {
@@ -229,7 +279,7 @@
   width: 24px;
   height: 24px;
   object-fit: cover;
-  border: 1px solid #151218;
+  border: 1px solid #0f0f0f;
 }
 
 .avatar-muted {
@@ -283,7 +333,7 @@
 }
 
 .editor-heading {
-  color: #e7e0e9;
+  color: #f1f1f1;
   font-size: 30px;
   line-height: 1.3;
   font-weight: 600;
@@ -299,14 +349,14 @@
 }
 
 .highlight-text {
-  color: #d7baff;
-  background: rgba(215, 186, 255, 0.2);
+  color: #f1f1f1;
+  background: #2a2a2a;
 }
 
 .callout-block {
-  color: #e7e0e9;
-  background: rgba(229, 195, 96, 0.1);
-  border-color: rgba(229, 195, 96, 0.2) !important;
+  color: #f1f1f1;
+  background: #171717;
+  border-color: #2f2f2f !important;
 }
 
 .callout-emoji {
@@ -318,13 +368,13 @@
   width: 18px;
   height: 18px;
   margin-top: 5px;
-  border: 2px solid #4a4451;
+  border: 2px solid #404040;
 }
 
 .todo-box-checked {
-  color: #401479;
-  background: #d7baff;
-  border-color: #d7baff;
+  color: #0f0f0f;
+  background: #f1f1f1;
+  border-color: #f1f1f1;
 }
 
 .todo-box .material-symbols-outlined {
@@ -337,18 +387,18 @@
 }
 
 .code-card {
-  background: #16191e;
-  border-color: #4a4451 !important;
+  background: #121212;
+  border-color: #2f2f2f !important;
 }
 
 .code-header {
-  color: #ccc3d3;
-  background: #37333a;
-  border-color: #4a4451 !important;
+  color: #a3a3a3;
+  background: #1a1a1a;
+  border-color: #2f2f2f !important;
 }
 
 .code-body {
-  color: #a2c9ff;
+  color: #d4d4d4;
   font-size: 14px;
   line-height: 1.5;
   font-family: "JetBrains Mono", monospace;
@@ -357,7 +407,7 @@
 }
 
 .copy-btn {
-  color: #ccc3d3;
+  color: #a3a3a3;
   opacity: 0;
 }
 
@@ -370,11 +420,24 @@
 }
 
 .empty-block {
-  color: #968e9c;
+  color: #737373;
+}
+
+.work-tasks-section {
+  scroll-margin-top: 72px;
+}
+
+.task-section-toolbar {
+  position: sticky;
+  top: 48px;
+  z-index: 20;
+  background: rgba(15, 15, 15, 0.96);
+  backdrop-filter: blur(12px);
+  padding-top: 12px;
 }
 
 .section-title {
-  color: #e7e0e9;
+  color: #f1f1f1;
   font-size: 24px;
   line-height: 1.4;
   font-weight: 600;
@@ -384,20 +447,30 @@
   font-size: 24px;
 }
 
+.section-subtitle {
+  color: #737373;
+}
+
 .new-task-btn {
-  color: #d7baff;
-  background: rgba(215, 186, 255, 0.1);
-  border: 1px solid transparent;
+  color: #f1f1f1;
+  background: #242424;
+  border: 1px solid #404040;
   border-radius: 10px;
 }
 
 .new-task-btn:hover {
-  color: #eddcff;
-  background: rgba(215, 186, 255, 0.2);
+  color: #ffffff;
+  background: #2f2f2f;
 }
 
 .task-action-btn {
   border-radius: 8px;
+  color: #a3a3a3;
+  border: 1px solid transparent;
+}
+
+.task-action-btn:hover {
+  border-color: #2f2f2f;
 }
 
 .task-action-btn .material-symbols-outlined,
@@ -411,42 +484,42 @@
 }
 
 .summary-todo {
-  border: 1px solid #4a4451;
+  border: 1px solid #737373;
 }
 
 .summary-doing {
-  background: #a2c9ff;
+  background: #a3a3a3;
 }
 
 .summary-done {
-  background: #d7baff;
+  background: #f1f1f1;
 }
 
 .task-database {
-  background: #1e2227;
-  border-color: #2d333b !important;
+  background: #121212;
+  border-color: #2f2f2f !important;
 }
 
 .task-table {
-  color: #e7e0e9;
+  color: #f1f1f1;
   --bs-table-bg: transparent;
-  --bs-table-color: #e7e0e9;
-  --bs-table-border-color: rgba(45, 51, 59, 0.55);
-  --bs-table-hover-bg: rgba(255, 255, 255, 0.02);
+  --bs-table-color: #f1f1f1;
+  --bs-table-border-color: #2f2f2f;
+  --bs-table-hover-bg: #1a1a1a;
 }
 
 .task-table thead th {
-  color: #ccc3d3;
+  color: #a3a3a3;
   font-size: 12px;
   line-height: 1.2;
   letter-spacing: 0.01em;
-  background: rgba(29, 26, 33, 0.5);
-  border-bottom: 1px solid #2d333b;
+  background: #171717;
+  border-bottom: 1px solid #2f2f2f;
   padding: 10px 16px;
 }
 
 .task-table tbody td {
-  border-color: rgba(45, 51, 59, 0.5);
+  border-color: #242424;
   padding: 12px 16px;
   vertical-align: middle;
 }
@@ -457,7 +530,7 @@
 }
 
 .task-row:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: #171717;
 }
 
 .task-completed {
@@ -465,7 +538,7 @@
 }
 
 .drag-row-icon {
-  color: #968e9c;
+  color: #737373;
   font-size: 16px;
   opacity: 0;
   transition: opacity 0.15s ease;
@@ -476,7 +549,7 @@
 }
 
 .task-description {
-  color: #968e9c;
+  color: #737373;
   max-width: 360px;
 }
 
@@ -493,71 +566,71 @@
 }
 
 .status-todo {
-  color: #ccc3d3;
-  background: #211e25;
-  border-color: #4a4451;
+  color: #a3a3a3;
+  background: #171717;
+  border-color: #2f2f2f;
 }
 
 .status-todo .status-pill-dot {
-  border: 1px solid #968e9c;
+  border: 1px solid #737373;
 }
 
 .status-doing {
-  color: #a2c9ff;
-  background: rgba(162, 201, 255, 0.1);
-  border-color: rgba(162, 201, 255, 0.3);
+  color: #f1f1f1;
+  background: #242424;
+  border-color: #404040;
 }
 
 .status-doing .status-pill-dot {
-  background: #a2c9ff;
+  background: #a3a3a3;
 }
 
 .status-done {
-  color: #d7baff;
-  background: rgba(215, 186, 255, 0.1);
-  border-color: rgba(215, 186, 255, 0.3);
+  color: #f1f1f1;
+  background: #2a2a2a;
+  border-color: #4a4a4a;
 }
 
 .status-done .status-pill-dot {
-  background: #d7baff;
+  background: #f1f1f1;
 }
 
 .priority-high {
-  color: #ffb4ab;
-  background: rgba(255, 180, 171, 0.1);
-  border-color: rgba(255, 180, 171, 0.2);
+  color: #f1f1f1;
+  background: #2a2a2a;
+  border-color: #4a4a4a;
 }
 
 .priority-medium {
-  color: #e5c360;
-  background: rgba(229, 195, 96, 0.1);
-  border-color: rgba(229, 195, 96, 0.2);
+  color: #d4d4d4;
+  background: #202020;
+  border-color: #3a3a3a;
 }
 
 .priority-low {
-  color: #968e9c;
-  background: #211e25;
-  border-color: #4a4451;
+  color: #a3a3a3;
+  background: #171717;
+  border-color: #2f2f2f;
 }
 
 .task-date {
-  color: #ccc3d3;
+  color: #a3a3a3;
 }
 
 .date-overdue {
-  color: #ffb4ab;
+  color: #f1f1f1;
 }
 
 .add-row-btn {
-  color: #ccc3d3;
+  color: #a3a3a3;
   background: transparent;
-  border-top: 1px solid rgba(45, 51, 59, 0.5);
+  border-top: 1px solid #2f2f2f;
   font-size: 14px;
 }
 
 .add-row-btn:hover {
-  color: #e7e0e9;
-  background: rgba(255, 255, 255, 0.02);
+  color: #f1f1f1;
+  background: #171717;
 }
 
 .add-row-btn .material-symbols-outlined {
@@ -575,31 +648,34 @@
 }
 
 .related-card {
-  color: #e7e0e9;
-  border-color: rgba(74, 68, 81, 0.5) !important;
-  transition: background 0.15s ease, border-color 0.15s ease;
+  color: #f1f1f1;
+  border-color: #2f2f2f !important;
+  background: transparent;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease;
 }
 
 .related-card:hover {
-  background: #37333a;
-  border-color: #4a4451 !important;
+  background: #171717;
+  border-color: #404040 !important;
 }
 
 .related-icon {
   width: 40px;
   height: 40px;
   font-size: 20px;
-  background: #211e25;
+  background: #171717;
 }
 
 .related-card-title {
-  color: #e7e0e9;
+  color: #f1f1f1;
   font-size: 14px;
   transition: color 0.15s ease;
 }
 
 .related-card:hover .related-card-title {
-  color: #d7baff;
+  color: #ffffff;
 }
 
 .min-w-0 {
@@ -619,6 +695,10 @@
   .breadcrumb-nav {
     max-width: 100%;
     overflow-x: auto;
+  }
+
+  .task-jump-btn {
+    order: -1;
   }
 
   .page-container {
@@ -641,6 +721,14 @@
 
   .page-emoji-wrap {
     margin-left: 0;
+  }
+
+  .task-section-toolbar {
+    top: 48px;
+    margin-left: -20px;
+    margin-right: -20px;
+    padding-left: 20px;
+    padding-right: 20px;
   }
 
   .task-name-cell {

@@ -3,172 +3,224 @@
     <SidebarLeft />
 
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
-    <header class="top-app-bar sticky-top d-flex align-items-center justify-content-between px-3 border-bottom border-soft">
-      <nav class="breadcrumb-nav d-flex align-items-center gap-1 small fw-medium text-on-surface-variant">
-        <button class="breadcrumb-pill btn btn-sm border-0 px-2 py-1">Workspace</button>
-        <span class="text-outline">/</span>
-        <button class="breadcrumb-pill btn btn-sm border-0 px-2 py-1">Projects</button>
-        <span class="text-outline">/</span>
-        <span class="text-on-surface fw-semibold px-2 py-1">Q4 Roadmap</span>
-      </nav>
+      <header class="top-app-bar sticky-top d-flex align-items-center justify-content-between px-3 border-bottom border-soft">
+        <nav class="breadcrumb-nav d-flex align-items-center gap-1 small fw-medium text-on-surface-variant">
+          <button class="breadcrumb-pill btn btn-sm border-0 px-2 py-1">Workspace</button>
+          <span class="text-outline">/</span>
+          <button class="breadcrumb-pill btn btn-sm border-0 px-2 py-1">Projects</button>
+          <span class="text-outline">/</span>
+          <span class="text-on-surface fw-semibold px-2 py-1">Q4 Roadmap</span>
+        </nav>
 
-      <div class="d-flex align-items-center gap-1">
-        <button class="top-icon-btn btn border-0" title="Share">
-          <span class="material-symbols-outlined">share</span>
-        </button>
-        <button class="top-icon-btn btn border-0" title="Star">
-          <span class="material-symbols-outlined">star</span>
-        </button>
-        <button class="top-icon-btn btn border-0" title="History">
-          <span class="material-symbols-outlined">history</span>
-        </button>
-        <button class="top-icon-btn btn border-0" title="More">
-          <span class="material-symbols-outlined">more_vert</span>
-        </button>
-      </div>
-    </header>
+        <div class="d-flex align-items-center gap-1">
+          <button
+            class="task-jump-btn btn btn-sm border-0 d-inline-flex align-items-center gap-1"
+            title="Jump to Work Tasks"
+            @click="scrollToTasks"
+          >
+            <span class="material-symbols-outlined">table_chart</span>
+            Tasks
+          </button>
 
-    <main class="page-scroll pb-5">
-      <div class="page-container container position-relative px-4 pt-5 pb-5">
-        <div class="format-toolbar position-absolute d-none d-md-flex align-items-center gap-1 p-1 rounded-3 shadow-lg">
-          <button class="toolbar-btn btn border-0 p-1" title="Bold"><span class="material-symbols-outlined">format_bold</span></button>
-          <button class="toolbar-btn btn border-0 p-1" title="Italic"><span class="material-symbols-outlined">format_italic</span></button>
-          <button class="toolbar-btn btn border-0 p-1" title="Underline"><span class="material-symbols-outlined">format_underlined</span></button>
-          <span class="toolbar-divider"></span>
-          <button class="toolbar-btn btn border-0 p-1" title="Code"><span class="material-symbols-outlined">code</span></button>
-          <button class="toolbar-btn btn border-0 p-1" title="Link"><span class="material-symbols-outlined">link</span></button>
-          <span class="toolbar-divider"></span>
-          <button class="toolbar-btn btn border-0 p-1" title="More"><span class="material-symbols-outlined">more_horiz</span></button>
+          <button class="top-icon-btn btn border-0" title="Share">
+            <span class="material-symbols-outlined">share</span>
+          </button>
+
+          <button class="top-icon-btn btn border-0" title="Star">
+            <span class="material-symbols-outlined">star</span>
+          </button>
+
+          <button class="top-icon-btn btn border-0" title="History">
+            <span class="material-symbols-outlined">history</span>
+          </button>
+
+          <button class="top-icon-btn btn border-0" title="More">
+            <span class="material-symbols-outlined">more_vert</span>
+          </button>
         </div>
+      </header>
 
-        <section class="page-header mb-5">
-          <div class="cover-wrap position-relative rounded-4 overflow-hidden mb-4">
-            <img
-              class="cover-image w-100 h-100 object-fit-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNrH2IqDS1nw-O5efFDqmWmrlhvlcn46tJr6h0gIkgw2tkipH-LW2Qz2l7ymULHHV57PnluCGimtxrIupw7-0R_4ZZklC3s_ux5thQFjKdZpyc94GJFRXh7gsjwEFUs88KDXTLmZQGLjZhoxL5KoStiewu1DGGOTrjBg7h1eAM3h-Pzqri-5QiW5lbxh032FaBpjwHG5Xgg-kln_DuMI6gbuqlhuM4JnaBA6KNJoHAwP-iH4ahmbcjwa7U3_nxUiQqi8tNc2Bk7eY"
-              alt="Abstract dark purple workspace cover"
-            />
-            <button class="change-cover-btn btn btn-sm position-absolute d-flex align-items-center gap-2">
-              <span class="material-symbols-outlined">image</span>
-              Change cover
+      <main class="page-scroll pb-5">
+        <div class="page-container container position-relative px-4 pt-5 pb-5">
+          <div class="format-toolbar position-absolute d-none d-md-flex align-items-center gap-1 p-1 rounded-3 shadow-lg">
+            <button class="toolbar-btn btn border-0 p-1" title="Bold">
+              <span class="material-symbols-outlined">format_bold</span>
+            </button>
+
+            <button class="toolbar-btn btn border-0 p-1" title="Italic">
+              <span class="material-symbols-outlined">format_italic</span>
+            </button>
+
+            <button class="toolbar-btn btn border-0 p-1" title="Underline">
+              <span class="material-symbols-outlined">format_underlined</span>
+            </button>
+
+            <span class="toolbar-divider"></span>
+
+            <button class="toolbar-btn btn border-0 p-1" title="Code">
+              <span class="material-symbols-outlined">code</span>
+            </button>
+
+            <button class="toolbar-btn btn border-0 p-1" title="Link">
+              <span class="material-symbols-outlined">link</span>
+            </button>
+
+            <span class="toolbar-divider"></span>
+
+            <button class="toolbar-btn btn border-0 p-1" title="More">
+              <span class="material-symbols-outlined">more_horiz</span>
             </button>
           </div>
 
-          <div class="page-emoji-wrap position-relative d-inline-flex align-items-center justify-content-center mb-3">
-            <span class="page-emoji">🚀</span>
-            <button class="emoji-overlay btn border-0 p-0 position-absolute rounded-circle" title="Change icon">
-              <span class="material-symbols-outlined">emoji_emotions</span>
-            </button>
-          </div>
-
-          <input
-            v-model="page.title"
-            class="page-title-input form-control bg-transparent border-0 shadow-none px-0 py-0 mb-3"
-            placeholder="Untitled"
-          />
-
-          <div class="page-meta d-flex flex-wrap align-items-center gap-3 small fw-medium text-on-surface-variant">
-            <span class="d-inline-flex align-items-center gap-2">
-              <span class="material-symbols-outlined meta-icon">schedule</span>
-              Edited {{ page.updatedDate }}
-            </span>
-            <span class="d-inline-flex align-items-center gap-2">
-              <span class="material-symbols-outlined meta-icon">sell</span>
-              v{{ page.currentRevision }}
-            </span>
-            <span class="status-chip d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 border">
-              <span class="status-dot"></span>
-              Planning
-            </span>
-            <span class="avatar-stack d-inline-flex align-items-center">
+          <section class="page-header mb-5">
+            <div class="cover-wrap position-relative rounded-4 overflow-hidden mb-4">
               <img
-                v-for="member in collaborators"
-                :key="member.id"
-                class="avatar rounded-circle"
-                :src="member.avatarUrl"
-                :alt="member.name"
+                class="cover-image w-100 h-100 object-fit-cover"
+                src="https://lh3.googleusercontent.com/aida-public/AB6AXuBNrH2IqDS1nw-O5efFDqmWmrlhvlcn46tJr6h0gIkgw2tkipH-LW2Qz2l7ymULHHV57PnluCGimtxrIupw7-0R_4ZZklC3s_ux5thQFjKdZpyc94GJFRXh7gsjwEFUs88KDXTLmZQGLjZhoxL5KoStiewu1DGGOTrjBg7h1eAM3h-Pzqri-5QiW5lbxh032FaBpjwHG5Xgg-kln_DuMI6gbuqlhuM4JnaBA6KNJoHAwP-iH4ahmbcjwa7U3_nxUiQqi8tNc2Bk7eY"
+                alt="Abstract dark purple workspace cover"
               />
-            </span>
-          </div>
-        </section>
 
-        <section class="block-editor mb-5" @click.self="focusEmptyBlock">
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
-            <BlockHandles />
-            <div class="col block-content">
-              <h2 class="editor-heading outline-none mb-2 mt-4" contenteditable="true">Strategic Objectives</h2>
+              <button class="change-cover-btn btn btn-sm position-absolute d-flex align-items-center gap-2">
+                <span class="material-symbols-outlined">image</span>
+                Change cover
+              </button>
             </div>
-          </article>
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
-            <BlockHandles />
-            <div class="col block-content">
-              <p class="editor-paragraph text-on-surface-variant mb-0 outline-none" contenteditable="true">
-                This quarter focuses on scaling our core infrastructure while expanding market reach. The primary goal is to achieve
-                <span class="highlight-text px-1 rounded fw-semibold">seamless integration</span>
-                across all major platforms.
-              </p>
+            <div class="page-emoji-wrap position-relative d-inline-flex align-items-center justify-content-center mb-3">
+              <span class="page-emoji">🚀</span>
+
+              <button class="emoji-overlay btn border-0 p-0 position-absolute rounded-circle" title="Change icon">
+                <span class="material-symbols-outlined">emoji_emotions</span>
+              </button>
             </div>
-          </article>
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-2 my-3">
-            <BlockHandles align="top-lg" />
-            <div class="col block-content">
-              <div class="callout-block d-flex gap-3 p-3 rounded-3 border">
-                <span class="callout-emoji">💡</span>
-                <div class="editor-paragraph mb-0 outline-none" contenteditable="true">
-                  <strong>Key Insight:</strong> Q3 metrics indicate a strong preference for API-first solutions among enterprise clients. We must prioritize documentation.
+            <input
+              v-model="page.title"
+              class="page-title-input form-control bg-transparent border-0 shadow-none px-0 py-0 mb-3"
+              placeholder="Untitled"
+            />
+
+            <div class="page-meta d-flex flex-wrap align-items-center gap-3 small fw-medium text-on-surface-variant">
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="material-symbols-outlined meta-icon">schedule</span>
+                Edited {{ page.updatedDate }}
+              </span>
+
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="material-symbols-outlined meta-icon">sell</span>
+                v{{ page.currentRevision }}
+              </span>
+
+              <span class="status-chip d-inline-flex align-items-center gap-2 px-2 py-1 rounded-2 border">
+                <span class="status-dot"></span>
+                Planning
+              </span>
+
+              <span class="avatar-stack d-inline-flex align-items-center">
+                <img
+                  v-for="member in collaborators"
+                  :key="member.id"
+                  class="avatar rounded-circle"
+                  :src="member.avatarUrl"
+                  :alt="member.name"
+                />
+              </span>
+            </div>
+          </section>
+
+          <section class="block-editor mb-5" @click.self="focusEmptyBlock">
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
+              <BlockHandles />
+
+              <div class="col block-content">
+                <h2 class="editor-heading outline-none mb-2 mt-4" contenteditable="true">
+                  Strategic Objectives
+                </h2>
+              </div>
+            </article>
+
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
+              <BlockHandles />
+
+              <div class="col block-content">
+                <p class="editor-paragraph text-on-surface-variant mb-0 outline-none" contenteditable="true">
+                  This quarter focuses on scaling our core infrastructure while expanding market reach. The primary goal is to achieve
+                  <span class="highlight-text px-1 rounded fw-semibold">seamless integration</span>
+                  across all major platforms.
+                </p>
+              </div>
+            </article>
+
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-2 my-3">
+              <BlockHandles align="top-lg" />
+
+              <div class="col block-content">
+                <div class="callout-block d-flex gap-3 p-3 rounded-3 border">
+                  <span class="callout-emoji">💡</span>
+
+                  <div class="editor-paragraph mb-0 outline-none" contenteditable="true">
+                    <strong>Key Insight:</strong> Q3 metrics indicate a strong preference for API-first solutions among enterprise clients. We must prioritize documentation.
+                  </div>
                 </div>
               </div>
-            </div>
-          </article>
+            </article>
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
-            <BlockHandles />
-            <div class="col block-content">
-              <label class="todo-line d-flex align-items-start gap-3 mb-0">
-                <span class="todo-box todo-box-checked d-inline-flex align-items-center justify-content-center rounded-1">
-                  <span class="material-symbols-outlined">check</span>
-                </span>
-                <span class="text-on-surface-variant text-decoration-line-through outline-none flex-grow-1" contenteditable="true">
-                  Finalize Q3 post-mortem analysis
-                </span>
-              </label>
-            </div>
-          </article>
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
+              <BlockHandles />
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
-            <BlockHandles />
-            <div class="col block-content">
-              <label class="todo-line d-flex align-items-start gap-3 mb-0">
-                <span class="todo-box d-inline-flex align-items-center justify-content-center rounded-1"></span>
-                <span class="outline-none flex-grow-1" contenteditable="true">Draft engineering OKRs</span>
-              </label>
-            </div>
-          </article>
+              <div class="col block-content">
+                <label class="todo-line d-flex align-items-start gap-3 mb-0">
+                  <span class="todo-box todo-box-checked d-inline-flex align-items-center justify-content-center rounded-1">
+                    <span class="material-symbols-outlined">check</span>
+                  </span>
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1 mt-3">
-            <BlockHandles />
-            <div class="col block-content">
-              <ul class="editor-list text-on-surface-variant mb-0 outline-none" contenteditable="true">
-                <li>Phase 1: Research and Prototyping</li>
-                <li>Phase 2: Alpha Release (Internal)</li>
-              </ul>
-            </div>
-          </article>
+                  <span class="text-on-surface-variant text-decoration-line-through outline-none flex-grow-1" contenteditable="true">
+                    Finalize Q3 post-mortem analysis
+                  </span>
+                </label>
+              </div>
+            </article>
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-2 mt-3">
-            <BlockHandles align="top-lg" />
-            <div class="col block-content">
-              <div class="code-card rounded-3 overflow-hidden border">
-                <div class="code-header d-flex align-items-center justify-content-between px-3 py-2 small fw-medium border-bottom">
-                  <span>JSON</span>
-                  <button class="copy-btn btn btn-sm border-0 d-flex align-items-center gap-1 p-0">
-                    <span class="material-symbols-outlined">content_copy</span>
-                    Copy
-                  </button>
-                </div>
-                <pre class="code-body mb-0 p-3 outline-none" contenteditable="true">{
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1">
+              <BlockHandles />
+
+              <div class="col block-content">
+                <label class="todo-line d-flex align-items-start gap-3 mb-0">
+                  <span class="todo-box d-inline-flex align-items-center justify-content-center rounded-1"></span>
+
+                  <span class="outline-none flex-grow-1" contenteditable="true">
+                    Draft engineering OKRs
+                  </span>
+                </label>
+              </div>
+            </article>
+
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1 mt-3">
+              <BlockHandles />
+
+              <div class="col block-content">
+                <ul class="editor-list text-on-surface-variant mb-0 outline-none" contenteditable="true">
+                  <li>Phase 1: Research and Prototyping</li>
+                  <li>Phase 2: Alpha Release (Internal)</li>
+                </ul>
+              </div>
+            </article>
+
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-2 mt-3">
+              <BlockHandles align="top-lg" />
+
+              <div class="col block-content">
+                <div class="code-card rounded-3 overflow-hidden border">
+                  <div class="code-header d-flex align-items-center justify-content-between px-3 py-2 small fw-medium border-bottom">
+                    <span>JSON</span>
+
+                    <button class="copy-btn btn btn-sm border-0 d-flex align-items-center gap-1 p-0">
+                      <span class="material-symbols-outlined">content_copy</span>
+                      Copy
+                    </button>
+                  </div>
+
+                  <pre class="code-body mb-0 p-3 outline-none" contenteditable="true">{
   "milestone": "Q4_Alpha",
   "features": [
     "dark_mode_editor",
@@ -176,133 +228,207 @@
   ],
   "status": "in_progress"
 }</pre>
+                </div>
+              </div>
+            </article>
+
+            <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1 mt-2">
+              <BlockHandles />
+
+              <div class="col block-content">
+                <p ref="emptyBlockRef" class="empty-block mb-0 outline-none fst-italic" contenteditable="true">
+                  Type '/' for commands
+                </p>
+              </div>
+            </article>
+          </section>
+
+          <section ref="taskSectionRef" class="work-tasks-section mt-5 mb-5">
+            <div class="task-section-toolbar d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 pb-3 border-bottom border-soft mb-3">
+              <div>
+                <h2 class="section-title d-flex align-items-center gap-2 mb-1">
+                  <span class="material-symbols-outlined">table_chart</span>
+                  Work Tasks
+                </h2>
+
+                <p class="section-subtitle d-flex flex-wrap align-items-center gap-2 mb-0 small text-on-surface-variant">
+                  <span>{{ tasks.length }} tasks</span>
+                  <span class="tiny-separator"></span>
+                  <span>Tasks linked to this page</span>
+                </p>
+              </div>
+
+              <div class="d-flex flex-wrap align-items-center gap-2">
+                <button class="task-action-btn btn btn-sm d-flex align-items-center gap-1">
+                  <span class="material-symbols-outlined">filter_list</span>
+                  Filter
+                </button>
+
+                <button class="task-action-btn btn btn-sm d-flex align-items-center gap-1">
+                  <span class="material-symbols-outlined">sort</span>
+                  Sort
+                </button>
+
+                <button class="new-task-btn btn btn-sm d-flex align-items-center gap-1 ms-lg-2">
+                  <span class="material-symbols-outlined">add</span>
+                  New Task
+                </button>
               </div>
             </div>
-          </article>
 
-          <article class="editor-block block-hover position-relative row gx-0 align-items-start py-1 mt-2">
-            <BlockHandles />
-            <div class="col block-content">
-              <p ref="emptyBlockRef" class="empty-block mb-0 outline-none fst-italic" contenteditable="true">
-                Type '/' for commands
-              </p>
-            </div>
-          </article>
-        </section>
+            <div class="task-summary d-flex flex-wrap gap-3 small fw-medium text-on-surface-variant mb-3">
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="summary-dot summary-todo"></span>
+                3 To Do
+              </span>
 
-        <section class="work-tasks-section mt-5 mb-5">
-          <div class="d-flex flex-column flex-lg-row justify-content-between align-items-lg-end gap-3 pb-3 border-bottom border-soft mb-3">
-            <div>
-              <h2 class="section-title d-flex align-items-center gap-2 mb-1">
-                <span class="material-symbols-outlined">table_chart</span>
-                Work Tasks
-              </h2>
-              <p class="section-subtitle d-flex flex-wrap align-items-center gap-2 mb-0 small text-on-surface-variant">
-                <span>{{ tasks.length }} tasks</span>
-                <span class="tiny-separator"></span>
-                <span>Tasks linked to this page</span>
-              </p>
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="summary-dot summary-doing"></span>
+                2 Doing
+              </span>
+
+              <span class="d-inline-flex align-items-center gap-2">
+                <span class="summary-dot summary-done"></span>
+                3 Done
+              </span>
             </div>
 
-            <div class="d-flex flex-wrap align-items-center gap-2">
-              <button class="task-action-btn btn btn-sm d-flex align-items-center gap-1">
-                <span class="material-symbols-outlined">filter_list</span>
-                Filter
-              </button>
-              <button class="task-action-btn btn btn-sm d-flex align-items-center gap-1">
-                <span class="material-symbols-outlined">sort</span>
-                Sort
-              </button>
-              <button class="new-task-btn btn btn-sm d-flex align-items-center gap-1 ms-lg-2">
+            <div class="task-database rounded-3 overflow-hidden border">
+              <div class="table-responsive">
+                <table class="table task-table align-middle mb-0">
+                  <thead>
+                    <tr>
+                      <th class="fw-normal ps-4">Task</th>
+                      <th class="fw-normal">Status</th>
+                      <th class="fw-normal">Priority</th>
+                      <th class="fw-normal">Due Date</th>
+                      <th class="fw-normal">Assignee</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr
+                      v-for="task in tasks"
+                      :key="task.id"
+                      class="task-row"
+                      :class="{
+                        'task-completed': task.status === 'done',
+                        'task-row-selected': selectedTask?.id === task.id
+                      }"
+                      tabindex="0"
+                      @click="openTaskDetail(task)"
+                      @keydown.enter="openTaskDetail(task)"
+                    >
+                      <td class="ps-4 task-name-cell">
+                        <div class="d-flex align-items-center gap-2 fw-semibold text-on-surface">
+                          <span class="material-symbols-outlined drag-row-icon">drag_indicator</span>
+
+                          <span :class="{ 'text-decoration-line-through': task.status === 'done' }">
+                            {{ task.title }}
+                          </span>
+                        </div>
+
+                        <div class="task-description small mt-1 ms-4 text-truncate">
+                          {{ task.description }}
+                        </div>
+                      </td>
+
+                      <td>
+                        <span class="status-pill d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1" :class="statusClass(task.status)">
+                          <span class="status-pill-dot"></span>
+                          {{ statusLabel(task.status) }}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span class="priority-pill d-inline-block rounded-2 px-2 py-1" :class="priorityClass(task.priority)">
+                          {{ priorityLabel(task.priority) }}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span class="task-date small" :class="{ 'date-overdue': task.overdue }">
+                          {{ task.dueDate }}
+                        </span>
+                      </td>
+
+                      <td>
+                        <img
+                          class="avatar rounded-circle"
+                          :class="{ 'avatar-muted': task.status === 'done' }"
+                          :src="task.assignee.avatarUrl"
+                          :alt="task.assignee.name"
+                        />
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <button class="add-row-btn btn w-100 text-start rounded-0 d-flex align-items-center gap-2 px-4 py-2">
                 <span class="material-symbols-outlined">add</span>
-                New Task
+                Add a row
               </button>
             </div>
-          </div>
+          </section>
 
-          <div class="task-summary d-flex flex-wrap gap-3 small fw-medium text-on-surface-variant mb-3">
-            <span class="d-inline-flex align-items-center gap-2"><span class="summary-dot summary-todo"></span>3 To Do</span>
-            <span class="d-inline-flex align-items-center gap-2"><span class="summary-dot summary-doing"></span>2 Doing</span>
-            <span class="d-inline-flex align-items-center gap-2"><span class="summary-dot summary-done"></span>3 Done</span>
-          </div>
+          <section class="related-pages-section mt-5 pt-4 border-top border-soft">
+            <h3 class="related-title d-flex align-items-center gap-2 mb-3 text-on-surface-variant">
+              <span class="material-symbols-outlined">account_tree</span>
+              Related Pages
+            </h3>
 
-          <div class="task-database rounded-3 overflow-hidden border">
-            <div class="table-responsive">
-              <table class="table task-table align-middle mb-0">
-                <thead>
-                  <tr>
-                    <th class="fw-normal ps-4">Task</th>
-                    <th class="fw-normal">Status</th>
-                    <th class="fw-normal">Priority</th>
-                    <th class="fw-normal">Due Date</th>
-                    <th class="fw-normal">Assignee</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr v-for="task in tasks" :key="task.id" class="task-row" :class="{ 'task-completed': task.status === 'done' }">
-                    <td class="ps-4 task-name-cell">
-                      <div class="d-flex align-items-center gap-2 fw-semibold text-on-surface">
-                        <span class="material-symbols-outlined drag-row-icon">drag_indicator</span>
-                        <span :class="{ 'text-decoration-line-through': task.status === 'done' }">{{ task.title }}</span>
-                      </div>
-                      <div class="task-description small mt-1 ms-4 text-truncate">{{ task.description }}</div>
-                    </td>
-                    <td>
-                      <span class="status-pill d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1" :class="statusClass(task.status)">
-                        <span class="status-pill-dot"></span>
-                        {{ statusLabel(task.status) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="priority-pill d-inline-block rounded-2 px-2 py-1" :class="priorityClass(task.priority)">
-                        {{ priorityLabel(task.priority) }}
-                      </span>
-                    </td>
-                    <td>
-                      <span class="task-date small" :class="{ 'date-overdue': task.overdue }">{{ task.dueDate }}</span>
-                    </td>
-                    <td>
-                      <img class="avatar rounded-circle" :class="{ 'avatar-muted': task.status === 'done' }" :src="task.assignee.avatarUrl" :alt="task.assignee.name" />
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+            <div class="row g-3">
+              <div
+                v-for="subpage in subpages"
+                :key="subpage.id"
+                class="col-12 col-md-6"
+              >
+                <a
+                  class="related-card d-flex align-items-center gap-3 p-3 rounded-3 border text-decoration-none"
+                  href="#"
+                >
+                  <span class="related-icon d-inline-flex align-items-center justify-content-center rounded-3">
+                    {{ subpage.icon }}
+                  </span>
+
+                  <span class="flex-grow-1 min-w-0">
+                    <span class="related-card-title d-block fw-semibold">
+                      {{ subpage.title }}
+                    </span>
+
+                    <span class="small text-outline d-block mt-1">
+                      Updated {{ subpage.updatedDate }}
+                    </span>
+                  </span>
+                </a>
+              </div>
             </div>
-            <button class="add-row-btn btn w-100 text-start rounded-0 d-flex align-items-center gap-2 px-4 py-2">
-              <span class="material-symbols-outlined">add</span>
-              Add a row
-            </button>
-          </div>
-        </section>
-
-        <section class="related-pages-section mt-5 pt-4 border-top border-soft">
-          <h3 class="related-title d-flex align-items-center gap-2 mb-3 text-on-surface-variant">
-            <span class="material-symbols-outlined">account_tree</span>
-            Related Pages
-          </h3>
-          <div class="row g-3">
-            <div v-for="subpage in subpages" :key="subpage.id" class="col-12 col-md-6">
-              <a class="related-card d-flex align-items-center gap-3 p-3 rounded-3 border text-decoration-none" href="#">
-                <span class="related-icon d-inline-flex align-items-center justify-content-center rounded-3">{{ subpage.icon }}</span>
-                <span class="flex-grow-1 min-w-0">
-                  <span class="related-card-title d-block fw-semibold">{{ subpage.title }}</span>
-                  <span class="small text-outline d-block mt-1">Updated {{ subpage.updatedDate }}</span>
-                </span>
-              </a>
-            </div>
-          </div>
-        </section>
-      </div>
-    </main>
+          </section>
+        </div>
+      </main>
     </section>
+
+    <TaskDetailDrawer
+      :open="isTaskDetailOpen"
+      :task="selectedTask"
+      :comments="selectedTaskComments"
+      @close="closeTaskDetail"
+      @add-comment="addTaskComment"
+    />
   </div>
 </template>
 
 <script setup>
-import { defineComponent, h, ref } from 'vue'
+import { computed, defineComponent, h, ref } from 'vue'
 import SidebarLeft from '@/components/SidebarLeft.vue'
+import TaskDetailDrawer from '@/components/task/TaskDetailDrawer.vue'
 
 const emptyBlockRef = ref(null)
+const taskSectionRef = ref(null)
+
+const selectedTask = ref(null)
+const isTaskDetailOpen = ref(false)
 
 const page = ref({
   id: 'page-q4-roadmap',
@@ -322,7 +448,7 @@ const collaborators = [
   {
     id: 'u-2',
     name: 'Minh Pham',
-    avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDusCM62Zdd2CG4O62O1nPKPj7vxv-Yajz0_nBAKjvlZ0s5falAkkCjTxt1wKdaNLMZkyig2mEUMj-uZREmyfVzR9xs8zAnweNU9Z5GfI95GOJ6559x7wkTellI0lYVdhLsHo0XVQrLOdbqwjpFxpF9HAErxA3TM_jRHvPIDp57xyM6VaAW4QkPhjF23jOV7FIFcgMgNFX59HfqC5Uobpf2lEZ7g5NzZcw3zm2ToZDDaclYxmRRjWty7fkPJmCGcL63WyxnpsOY89s'
+    avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDusCM62Zdd2CG4O62O1nPKPj7vxv-Yajz0_nBAKjvlZ0s5falAkkCjTxt1wKdaNLMZkyig2mEUMj-uZREmyfVzR9xs8zAnweNU9Z5GfI95GOJ6559x7wkTellI0lYVdhLsHo0XVQrLOdbqwjpF9HAErxA3TM_jRHvPIDp57xyM6VaAW4QkPhjF23jOV7FIFcgMgNFX59HfqC5Uobpf2lEZ7g5NzZcw3zm2ToZDDaclYxmRRjWty7fkPJmCGcL63WyxnpsOY89s'
   }
 ]
 
@@ -368,6 +494,79 @@ const tasks = [
   }
 ]
 
+const taskCommentsByTaskId = ref({
+  'task-1': [
+    {
+      id: 'comment-1',
+      author: {
+        name: 'Linh Tran',
+        role: 'Product',
+        avatarUrl: collaborators[0].avatarUrl
+      },
+      content: 'Mình nghĩ nên check thêm spacing token và trạng thái hover/focus để đồng bộ với sidebar mới.',
+      createdAt: '12m ago',
+      likes: 3,
+      replies: [
+        {
+          id: 'reply-1',
+          author: {
+            name: 'Nhi',
+            role: 'Assignee',
+            avatarUrl: tasks[0].assignee.avatarUrl
+          },
+          content: 'Đúng rồi, mình sẽ thêm checklist riêng cho interaction state.'
+        }
+      ]
+    },
+    {
+      id: 'comment-2',
+      author: {
+        name: 'Minh Pham',
+        role: 'Engineer',
+        avatarUrl: collaborators[1].avatarUrl
+      },
+      content: 'Nếu cần mình có thể map lại token từ CSS hiện tại sang format design system.',
+      createdAt: '5m ago',
+      likes: 1,
+      replies: []
+    }
+  ],
+  'task-2': [
+    {
+      id: 'comment-3',
+      author: {
+        name: 'Minh Pham',
+        role: 'Engineer',
+        avatarUrl: collaborators[1].avatarUrl
+      },
+      content: 'Phần endpoint v2 nên tách riêng auth, task, recommendation để dễ review.',
+      createdAt: '20m ago',
+      likes: 2,
+      replies: []
+    }
+  ],
+  'task-3': [
+    {
+      id: 'comment-4',
+      author: {
+        name: 'Linh Tran',
+        role: 'Product',
+        avatarUrl: collaborators[0].avatarUrl
+      },
+      content: 'Meeting này đã hoàn tất, chỉ còn cần tổng hợp lại owner cho từng hạng mục.',
+      createdAt: '1d ago',
+      likes: 4,
+      replies: []
+    }
+  ]
+})
+
+const selectedTaskComments = computed(() => {
+  if (!selectedTask.value) return []
+
+  return taskCommentsByTaskId.value[selectedTask.value.id] || []
+})
+
 const subpages = [
   { id: 'sub-1', icon: '📊', title: 'Market Research', updatedDate: 'yesterday' },
   { id: 'sub-2', icon: '👥', title: 'Resource Allocation', updatedDate: '3 days ago' }
@@ -400,6 +599,49 @@ const BlockHandles = defineComponent({
 
 function focusEmptyBlock() {
   emptyBlockRef.value?.focus()
+}
+
+function scrollToTasks() {
+  taskSectionRef.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start'
+  })
+}
+
+function openTaskDetail(task) {
+  selectedTask.value = task
+  isTaskDetailOpen.value = true
+}
+
+function closeTaskDetail() {
+  isTaskDetailOpen.value = false
+}
+
+function addTaskComment(content) {
+  if (!selectedTask.value || !content.trim()) return
+
+  const taskId = selectedTask.value.id
+
+  const newComment = {
+    id: `comment-${Date.now()}`,
+    author: {
+      name: 'Alex Rivera',
+      role: 'You',
+      avatarUrl: selectedTask.value.assignee.avatarUrl
+    },
+    content: content.trim(),
+    createdAt: 'Just now',
+    likes: 0,
+    replies: []
+  }
+
+  taskCommentsByTaskId.value = {
+    ...taskCommentsByTaskId.value,
+    [taskId]: [
+      ...(taskCommentsByTaskId.value[taskId] || []),
+      newComment
+    ]
+  }
 }
 
 function statusLabel(status) {
