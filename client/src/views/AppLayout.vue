@@ -421,7 +421,7 @@
 
 <script setup>
 import { computed, defineComponent, h, ref } from 'vue'
-import SidebarLeft from '@/components/SidebarLeft.vue'
+import SidebarLeft from '@/components/sidebar-left/SidebarLeft.vue'
 import TaskDetailDrawer from '@/components/task/TaskDetailDrawer.vue'
 
 const emptyBlockRef = ref(null)
