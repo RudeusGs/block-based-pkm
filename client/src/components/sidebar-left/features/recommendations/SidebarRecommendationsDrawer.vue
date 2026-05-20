@@ -45,25 +45,34 @@
             <div class="notion-ai-meta-item">
               <i class="bi bi-grid-1x2"></i>
               <div>
-                <span>Workspace</span>
-                <strong>{{ workspaceName || 'Chưa chọn' }}</strong>
+                <span>Nguồn gợi ý</span>
+                <strong>Tất cả workspace</strong>
               </div>
             </div>
 
             <div class="notion-ai-meta-item">
-              <i class="bi bi-file-earmark-text"></i>
+              <i class="bi bi-broadcast-pin"></i>
               <div>
-                <span>Page</span>
-                <strong>{{ pageName || 'Chưa chọn' }}</strong>
+                <span>Cập nhật</span>
+                <strong>Realtime theo user</strong>
               </div>
             </div>
           </section>
+
+          <p
+            v-if="realtimeError"
+            class="notion-ai-realtime-warning"
+          >
+            <i class="bi bi-wifi-off"></i>
+            {{ realtimeError }}
+          </p>
 
           <section class="notion-ai-command-box">
             <div>
               <h3>Gợi ý task bằng AI</h3>
               <p>
-                AI sẽ đọc ngữ cảnh workspace, page và lịch sử task để đề xuất việc nên làm tiếp.
+                AI tổng hợp task pending của bạn trên toàn bộ workspace.
+                Mỗi gợi ý sẽ tự hiển thị nó thuộc workspace/page nào.
               </p>
             </div>
 
@@ -90,13 +99,13 @@
           <section class="notion-ai-list-head">
             <div>
               <strong>{{ recommendations.length }}</strong>
-              <span>gợi ý</span>
+              <span>gợi ý pending</span>
             </div>
 
             <button
               type="button"
               class="notion-ai-ghost"
-              :disabled="!workspaceId || isLoading"
+              :disabled="isLoading"
               @click="emit('retry')"
             >
               <i
@@ -109,19 +118,7 @@
 
           <section class="notion-ai-content">
             <div
-              v-if="!workspaceId"
-              class="notion-ai-empty"
-            >
-              <div class="notion-ai-empty-icon">
-                <i class="bi bi-folder2-open"></i>
-              </div>
-
-              <h3>Chưa chọn workspace</h3>
-              <p>Chọn workspace trước để AI có dữ liệu phân tích task.</p>
-            </div>
-
-            <div
-              v-else-if="error"
+              v-if="error"
               class="notion-ai-empty notion-ai-error"
             >
               <div class="notion-ai-empty-icon">
@@ -164,7 +161,10 @@
               </div>
 
               <h3>Chưa có gợi ý</h3>
-              <p>Nhấn “Tạo gợi ý” để AI phân tích và đề xuất task phù hợp.</p>
+              <p>
+                Chưa có gợi ý pending nào. Khi backend tạo gợi ý mới,
+                panel này sẽ tự cập nhật qua realtime.
+              </p>
             </div>
 
             <div
@@ -185,11 +185,23 @@
                   </span>
 
                   <span class="notion-ai-score">
-                    {{ scoreLabel(recommendation.score) }}
+                    Score {{ scoreLabel(recommendation.score) }}
                   </span>
                 </div>
 
                 <h3>{{ recommendation.taskTitle }}</h3>
+
+                <div class="notion-ai-location">
+                  <span>
+                    <i class="bi bi-grid-1x2"></i>
+                    {{ recommendation.workspaceName }}
+                  </span>
+
+                  <span>
+                    <i class="bi bi-file-earmark-text"></i>
+                    {{ recommendation.pageName }}
+                  </span>
+                </div>
 
                 <p
                   v-if="recommendation.taskDescription"
@@ -235,17 +247,18 @@
 
 <script setup lang="ts">
 import type { Guid } from '@/api/models/common.model'
-import type { TaskRecommendationResponse } from '@/api/models/recommendation.model'
+import type { TaskRecommendationViewModel } from './useSidebarRecommendations'
 
 defineProps<{
   open: boolean
   workspaceId: Guid | null
   workspaceName: string
   pageName: string
-  recommendations: TaskRecommendationResponse[]
+  recommendations: TaskRecommendationViewModel[]
   isLoading: boolean
   isGenerating: boolean
   error: string | null
+  realtimeError?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -295,20 +308,22 @@ function scoreLabel(score: number) {
 .notion-ai-panel {
   position: fixed;
   z-index: 90;
-  top: 12px;
-  bottom: 12px;
-  left: 304px;
-  width: min(430px, calc(100vw - 328px));
+  top: 18px;
+  right: 18px;
+  bottom: 18px;
+  left: auto;
+  width: min(560px, calc(100vw - 36px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
   border: 1px solid #2a2a2a;
-  border-radius: 12px;
+  border-radius: 18px;
   color: #e6e6e6;
-  background: #191919;
+  background:
+    linear-gradient(180deg, rgba(32, 32, 32, 0.98), rgba(20, 20, 20, 0.98));
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.48),
-    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    0 28px 90px rgba(0, 0, 0, 0.58),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .notion-ai-header {
@@ -319,7 +334,7 @@ function scoreLabel(score: number) {
   gap: 12px;
   padding: 14px 16px;
   border-bottom: 1px solid #2a2a2a;
-  background: #191919;
+  background: rgba(25, 25, 25, 0.92);
 }
 
 .notion-ai-title-group {
@@ -435,6 +450,19 @@ function scoreLabel(score: number) {
   font-weight: 560;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.notion-ai-realtime-warning {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 16px 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(245, 158, 11, 0.32);
+  border-radius: 12px;
+  color: #fbbf24;
+  background: rgba(245, 158, 11, 0.08);
+  font-size: 12px;
 }
 
 .notion-ai-command-box {
@@ -652,6 +680,32 @@ function scoreLabel(score: number) {
   line-height: 1.4;
 }
 
+.notion-ai-location {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0 10px;
+}
+
+.notion-ai-location span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid #303030;
+  border-radius: 999px;
+  color: #bdbdbd;
+  background: #202020;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.notion-ai-location i {
+  color: #8b8b8b;
+  font-size: 13px;
+}
+
 .notion-ai-description {
   margin: 7px 0 0;
   color: #a8a8a8;
@@ -825,7 +879,7 @@ function scoreLabel(score: number) {
 .notion-ai-panel-enter-from,
 .notion-ai-panel-leave-to {
   opacity: 0;
-  transform: translateX(-10px) scale(0.985);
+  transform: translateX(12px) scale(0.985);
 }
 
 @keyframes notion-ai-spin {
@@ -844,10 +898,11 @@ function scoreLabel(score: number) {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 720px) {
   .notion-ai-panel {
-    inset: 10px;
+    inset: 8px;
     width: auto;
+    border-radius: 16px;
   }
 
   .notion-ai-meta {

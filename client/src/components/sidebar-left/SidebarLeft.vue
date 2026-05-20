@@ -135,12 +135,13 @@
     <SidebarRecommendationsDrawer
       :open="shell.activePanel.value === 'recommendations'"
       :workspace-id="workspaceTree.selectedWorkspaceId.value"
-      :workspace-name="workspaceTree.selectedWorkspaceName.value"
-      :page-name="workspaceNavigation.pageName.value"
+      workspace-name="Tất cả workspace"
+      page-name="Tự động tổng hợp theo task"
       :recommendations="recommendations.taskRecommendations.value"
       :is-loading="recommendations.isLoadingTaskRecommendations.value"
       :is-generating="recommendations.isGeneratingTaskRecommendations.value"
       :error="recommendations.taskRecommendationError.value"
+      :realtime-error="recommendations.realtimeError.value"
       @close="shell.closePanel"
       @generate="generateRecommendations"
       @retry="refreshRecommendations"
@@ -189,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref, watch } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import CreateWorkspaceModal from '@/components/workspace/CreateWorkspaceModal.vue'
 import CreatePageModal from '@/components/page/CreatePageModal.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
@@ -226,8 +227,8 @@ const isSettingsModalOpen = ref(false)
 watch(
   workspaceTree.selectedWorkspaceId,
   (workspaceId) => {
-    void recommendations.fetchPendingRecommendations(workspaceId)
     void myTasks.fetchMyTasks(workspaceId)
+    void recommendations.fetchPendingRecommendations()
 
     if (isSettingsModalOpen.value) {
       void settings.fetchTaskPreference(workspaceId)
@@ -251,9 +252,7 @@ function loadPanelData(panel: SidebarPanel) {
   }
 
   if (panel === 'recommendations') {
-    void recommendations.fetchPendingRecommendations(
-      workspaceTree.selectedWorkspaceId.value
-    )
+    void recommendations.fetchPendingRecommendations()
   }
 }
 
@@ -299,9 +298,7 @@ function closeSettingsModal() {
 }
 
 function refreshRecommendations() {
-  void recommendations.fetchPendingRecommendations(
-    workspaceTree.selectedWorkspaceId.value
-  )
+  void recommendations.fetchPendingRecommendations()
 }
 
 async function generateRecommendations() {
@@ -311,9 +308,7 @@ async function generateRecommendations() {
   )
 
   if (generated) {
-    void recommendations.fetchPendingRecommendations(
-      workspaceTree.selectedWorkspaceId.value
-    )
+    void recommendations.fetchPendingRecommendations()
   }
 }
 
@@ -322,11 +317,16 @@ async function acceptRecommendation(recommendationId: Guid) {
 
   if (accepted) {
     void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
+    void recommendations.fetchPendingRecommendations()
   }
 }
 
 async function rejectRecommendation(recommendationId: Guid) {
-  await recommendations.rejectRecommendation(recommendationId)
+  const rejected = await recommendations.rejectRecommendation(recommendationId)
+
+  if (rejected) {
+    void recommendations.fetchPendingRecommendations()
+  }
 }
 
 function refreshMyTasks() {
@@ -347,15 +347,19 @@ async function saveTaskPreference() {
   )
 
   if (saved) {
-    void recommendations.fetchPendingRecommendations(
-      workspaceTree.selectedWorkspaceId.value
-    )
+    void recommendations.fetchPendingRecommendations()
   }
 }
 
 onMounted(() => {
   void account.fetchMyProfile()
   void workspaceTree.fetchMyWorkspaces()
+  void recommendations.fetchPendingRecommendations()
+  void recommendations.startRecommendationRealtime()
+})
+
+onBeforeUnmount(() => {
+  recommendations.stopRecommendationRealtime()
 })
 </script>
 

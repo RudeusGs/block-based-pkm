@@ -73,17 +73,26 @@ public sealed class AcceptTaskRecommendationHandler
             cancellationToken);
 
         if (recommendation is null)
-            return Result.Failure<TaskRecommendationDto>(RecommendationErrors.RecommendationNotFound);
+        {
+            return Result.Failure<TaskRecommendationDto>(
+                RecommendationErrors.RecommendationNotFound);
+        }
 
         if (recommendation.UserId != currentUserId)
-            return Result.Failure<TaskRecommendationDto>(RecommendationErrors.RecommendationForbidden);
+        {
+            return Result.Failure<TaskRecommendationDto>(
+                RecommendationErrors.RecommendationForbidden);
+        }
 
         var task = await _workTaskRepository.GetByIdForUpdateAsync(
             recommendation.TaskId,
             cancellationToken);
 
         if (task is null)
-            return Result.Failure<TaskRecommendationDto>(RecommendationErrors.TaskNotFound);
+        {
+            return Result.Failure<TaskRecommendationDto>(
+                RecommendationErrors.TaskNotFound);
+        }
 
         try
         {
@@ -100,7 +109,10 @@ public sealed class AcceptTaskRecommendationHandler
             if (!alreadyAssigned)
             {
                 _taskAssigneeRepository.Add(
-                    TaskAssignee.Create(recommendation.TaskId, currentUserId, now));
+                    TaskAssignee.Create(
+                        recommendation.TaskId,
+                        currentUserId,
+                        now));
 
                 task.RecordAssignmentChange(currentUserId, now);
                 _workTaskRepository.Update(task);
@@ -127,7 +139,17 @@ public sealed class AcceptTaskRecommendationHandler
                 ? task.ToDto()
                 : taskDetail.ToDto();
 
-            var recommendationDto = recommendation.ToDto();
+            var recommendationTaskMap =
+                await _workTaskRepository.ListRecommendationTaskDetailsByIdsAsync(
+                    currentUserId,
+                    new[] { recommendation.TaskId },
+                    cancellationToken);
+
+            recommendationTaskMap.TryGetValue(
+                recommendation.TaskId,
+                out var recommendationTask);
+
+            var recommendationDto = recommendation.ToDto(recommendationTask);
 
             await _realtimePublisher.PublishToUserAsync(
                 new RecommendationRealtimeEnvelope(
@@ -140,7 +162,9 @@ public sealed class AcceptTaskRecommendationHandler
                     Payload: new
                     {
                         recommendation = recommendationDto,
-                        task = taskDto
+                        task = taskDto,
+                        recommendationId = recommendation.Id,
+                        taskId = task.Id
                     }),
                 cancellationToken);
 
@@ -158,6 +182,22 @@ public sealed class AcceptTaskRecommendationHandler
                         recommendation = recommendationDto,
                         taskId = task.Id,
                         recommendationId = recommendation.Id,
+                        assigneeUserId = currentUserId
+                    }),
+                cancellationToken);
+
+            await _taskRealtimePublisher.PublishToPageAsync(
+                new TaskRealtimeEnvelope(
+                    EventName: "TaskAssigned",
+                    WorkspaceId: task.WorkspaceId,
+                    PageId: task.PageId,
+                    TaskId: task.Id,
+                    ActorId: currentUserId,
+                    OccurredAtUtc: now,
+                    Payload: new
+                    {
+                        task = taskDto,
+                        taskId = task.Id,
                         assigneeUserId = currentUserId
                     }),
                 cancellationToken);
