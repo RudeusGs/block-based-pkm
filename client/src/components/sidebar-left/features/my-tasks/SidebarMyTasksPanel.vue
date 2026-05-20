@@ -1,118 +1,179 @@
 <template>
-  <section class="notion-sidebar-panel tasks-panel">
-    <header class="notion-panel-header">
-      <div class="notion-panel-title">
-        <strong>My Tasks</strong>
-        <span>{{ openTaskCount }} open</span>
-      </div>
-
-      <button
-        type="button"
-        class="notion-panel-action"
-        title="Tải lại"
-        :disabled="isLoading"
-        @click.stop="emit('refresh')"
-      >
-        <i
-          class="bi bi-arrow-clockwise"
-          :class="{ spinning: isLoading }"
-        ></i>
-      </button>
-    </header>
-
-    <div
-      v-if="isLoading"
-      class="notion-skeleton-list"
-    >
+  <Teleport to="body">
+    <Transition name="notion-task-overlay">
       <div
-        v-for="index in 3"
-        :key="index"
-        class="notion-skeleton-row"
-      >
-        <span></span>
-        <span></span>
-      </div>
-    </div>
+        v-if="open"
+        class="notion-task-overlay"
+        @click="emit('close')"
+      ></div>
+    </Transition>
 
-    <div
-      v-else-if="error"
-      class="notion-empty-state error"
-    >
-      <strong>Không thể tải My Tasks</strong>
-      <p>{{ error }}</p>
-
-      <button
-        type="button"
-        @click.stop="emit('refresh')"
-      >
-        Thử lại
-      </button>
-    </div>
-
-    <div
-      v-else-if="!tasks.length"
-      class="notion-empty-state"
-    >
-      <strong>Bạn chưa có task đang mở</strong>
-      <p>Task được assign cho bạn sẽ hiện ở đây.</p>
-    </div>
-
-    <div
-      v-else
-      class="notion-task-list"
-    >
-      <button
-        v-for="task in sortedTasks"
-        :key="task.id"
-        type="button"
-        class="notion-task-row"
-        :class="taskDueClass(task.dueDate)"
+    <Transition name="notion-task-panel">
+      <aside
+        v-if="open"
+        class="notion-task-drawer"
+        role="dialog"
+        aria-modal="true"
+        aria-label="My tasks"
         @click.stop
       >
-        <span
-          class="notion-task-check"
-          :class="taskStatusClass(task.status)"
-          aria-hidden="true"
-        >
-          <i :class="statusIcon(task.status)"></i>
-        </span>
+        <header class="notion-task-header">
+          <div class="notion-task-title-content">
+            <span>My Tasks</span>
+            <h2>Việc của bạn</h2>
+          </div>
 
-        <span class="notion-task-content">
-          <span class="notion-task-title-line">
-            <span class="notion-task-title">
-              {{ task.title }}
-            </span>
-
-            <span
-              class="notion-priority-dot"
-              :class="taskPriorityClass(task.priority)"
-              :title="priorityLabel(task.priority)"
-            ></span>
-          </span>
-
-          <span
-            v-if="task.description"
-            class="notion-task-description"
+          <button
+            type="button"
+            class="notion-task-icon-btn"
+            title="Đóng"
+            aria-label="Đóng My Tasks"
+            @click="emit('close')"
           >
-            {{ task.description }}
-          </span>
+            <span aria-hidden="true">×</span>
+          </button>
+        </header>
 
-          <span class="notion-task-meta">
-            <span>{{ statusLabel(task.status) }}</span>
-            <span>{{ priorityLabel(task.priority) }}</span>
-            <span v-if="task.dueDate">{{ dueLabel(task.dueDate) }}</span>
-          </span>
-        </span>
-      </button>
-    </div>
+        <main class="notion-task-body">
+          <section class="notion-task-command-box">
+            <div>
+              <h3>Inbox công việc cá nhân</h3>
 
-    <footer
-      v-if="totalCount > tasks.length && !isLoading && !error"
-      class="notion-panel-footer"
-    >
-      Showing {{ tasks.length }} of {{ totalCount }} tasks
-    </footer>
-  </section>
+              <p>
+                Tất cả task được assign cho bạn sẽ hiển thị tại đây, không cần
+                chọn đúng workspace hay page.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              class="notion-task-primary"
+              :disabled="isLoading"
+              @click="emit('refresh')"
+            >
+              {{ isLoading ? 'Đang tải...' : 'Tải lại' }}
+            </button>
+          </section>
+
+          <section class="notion-task-stat-grid">
+            <article class="notion-task-stat-card">
+              <span>Open</span>
+              <strong>{{ openTaskCount }}</strong>
+            </article>
+
+            <article class="notion-task-stat-card">
+              <span>Overdue</span>
+              <strong>{{ overdueTaskCount }}</strong>
+            </article>
+
+            <article class="notion-task-stat-card">
+              <span>High</span>
+              <strong>{{ highPriorityCount }}</strong>
+            </article>
+          </section>
+
+          <section class="notion-task-list-head">
+            <div>
+              <strong>{{ tasks.length }}</strong>
+              <span>task đang hiển thị</span>
+            </div>
+
+            <span v-if="totalCount > tasks.length">
+              {{ tasks.length }} / {{ totalCount }}
+            </span>
+          </section>
+
+          <section class="notion-task-content">
+            <div
+              v-if="error"
+              class="notion-task-empty notion-task-error"
+            >
+              <h3>Không tải được My Tasks</h3>
+              <p>{{ error }}</p>
+
+              <button
+                type="button"
+                class="notion-task-primary small"
+                @click="emit('refresh')"
+              >
+                Thử lại
+              </button>
+            </div>
+
+            <div
+              v-else-if="isLoading"
+              class="notion-task-skeleton-list"
+            >
+              <div
+                v-for="index in 5"
+                :key="index"
+                class="notion-task-skeleton-card"
+              >
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+
+            <div
+              v-else-if="!tasks.length"
+              class="notion-task-empty"
+            >
+              <h3>Chưa có task đang mở</h3>
+
+              <p>
+                Khi có task được assign cho bạn, nó sẽ tự xuất hiện ở đây.
+              </p>
+            </div>
+
+            <div
+              v-else
+              class="notion-task-list"
+            >
+              <article
+                v-for="task in sortedTasks"
+                :key="task.id"
+                class="notion-task-card"
+                :class="taskDueClass(task.dueDate)"
+              >
+                <div class="notion-task-check">
+                  <span>{{ statusMark(task.status) }}</span>
+                </div>
+
+                <div class="notion-task-card-main">
+                  <div class="notion-task-card-header">
+                    <h3>{{ task.title }}</h3>
+
+                    <span
+                      v-if="task.dueDate"
+                      class="notion-task-due"
+                      :class="taskDueClass(task.dueDate)"
+                    >
+                      {{ dueLabel(task.dueDate) }}
+                    </span>
+                  </div>
+
+                  <p
+                    v-if="task.description"
+                    class="notion-task-description"
+                  >
+                    {{ task.description }}
+                  </p>
+
+                  <div class="notion-task-meta-line">
+                    <span>{{ statusLabel(task.status) }}</span>
+                    <span>{{ priorityLabel(task.priority) }}</span>
+                    <span v-if="task.pageId">Page task</span>
+                    <span v-else>No page</span>
+                  </div>
+                </div>
+              </article>
+            </div>
+          </section>
+        </main>
+      </aside>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -125,6 +186,7 @@ import {
 } from '../../utils/sidebar-format.util'
 
 const props = defineProps<{
+  open: boolean
   tasks: WorkTaskResponse[]
   totalCount: number
   isLoading: boolean
@@ -132,11 +194,20 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  close: []
   refresh: []
 }>()
 
 const openTaskCount = computed(() => {
   return props.tasks.filter((task) => normalize(task.status) !== 'done').length
+})
+
+const overdueTaskCount = computed(() => {
+  return props.tasks.filter((task) => dueState(task.dueDate) === 'overdue').length
+})
+
+const highPriorityCount = computed(() => {
+  return props.tasks.filter((task) => normalize(task.priority) === 'high').length
 })
 
 const sortedTasks = computed(() => {
@@ -187,35 +258,6 @@ function taskScore(task: WorkTaskResponse) {
   )
 }
 
-function taskPriorityClass(priority: string) {
-  const normalized = normalize(priority)
-
-  if (normalized === 'high') return 'high'
-  if (normalized === 'medium') return 'medium'
-  if (normalized === 'low') return 'low'
-
-  return 'none'
-}
-
-function taskStatusClass(status: string) {
-  const normalized = normalize(status)
-
-  if (normalized === 'doing') return 'doing'
-  if (normalized === 'done') return 'done'
-  if (normalized === 'todo') return 'todo'
-
-  return 'todo'
-}
-
-function statusIcon(status: string) {
-  const normalized = normalize(status)
-
-  if (normalized === 'done') return 'bi bi-check2'
-  if (normalized === 'doing') return 'bi bi-dash'
-
-  return 'bi bi-circle'
-}
-
 function dueState(dueDate: string | null) {
   if (!dueDate) return 'none'
 
@@ -228,6 +270,7 @@ function dueState(dueDate: string | null) {
     now.getMonth(),
     now.getDate()
   )
+
   const startTomorrow = new Date(startToday)
   startTomorrow.setDate(startToday.getDate() + 1)
 
@@ -253,270 +296,448 @@ function dueLabel(dueDate: string) {
 
   return formatDateTime(dueDate)
 }
+
+function statusMark(status: string) {
+  const normalized = normalize(status)
+
+  if (normalized === 'done') return '✓'
+  if (normalized === 'doing') return '−'
+
+  return ''
+}
 </script>
 
 <style scoped>
-.notion-sidebar-panel {
-  margin: 2px 0 10px;
-  padding: 4px 0 8px;
-  border-bottom: 1px solid var(--sidebar-border);
+.notion-task-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 940;
+  background: rgba(0, 0, 0, 0.18);
 }
 
-.notion-panel-header {
-  min-height: 30px;
+.notion-task-drawer {
+  position: fixed;
+  z-index: 950;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: auto;
+  width: min(620px, calc(100vw - 48px));
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #2a2a2a;
+  border-radius: 0;
+  color: #e6e6e6;
+  background: #191919;
+  box-shadow: -16px 0 48px rgba(0, 0, 0, 0.36);
+}
+
+.notion-task-header {
+  min-height: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  padding: 0 4px 4px 7px;
+  gap: 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  background: #191919;
 }
 
-.notion-panel-title {
+.notion-task-title-content {
   min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-}
-
-.notion-panel-title strong {
-  color: var(--sidebar-text);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.notion-panel-title span,
-.notion-panel-footer {
-  color: var(--sidebar-faint);
-  font-size: 11px;
-}
-
-.notion-panel-action {
-  width: 24px;
-  height: 24px;
-  border: 0;
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--sidebar-faint);
-  background: transparent;
-}
-
-.notion-panel-action:hover:not(:disabled) {
-  color: var(--sidebar-text);
-  background: var(--sidebar-bg-hover);
-}
-
-.notion-panel-action i {
-  font-size: 13px;
-}
-
-.notion-panel-action i.spinning {
-  animation: sidebar-spin 0.8s linear infinite;
-}
-
-.notion-task-list,
-.notion-skeleton-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.notion-task-row {
-  width: 100%;
-  min-width: 0;
-  border: 0;
-  border-radius: 6px;
-  display: flex;
-  align-items: flex-start;
-  gap: 7px;
-  padding: 5px 7px;
-  color: var(--sidebar-muted);
-  background: transparent;
-  text-align: left;
-}
-
-.notion-task-row:hover {
-  color: var(--sidebar-text);
-  background: var(--sidebar-bg-hover);
-}
-
-.notion-task-check {
-  width: 18px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: var(--sidebar-faint);
-}
-
-.notion-task-check i {
-  font-size: 12px;
-}
-
-.notion-task-check.doing {
-  color: #d6b15d;
-}
-
-.notion-task-check.done {
-  color: #75b798;
-}
-
-.notion-task-content {
-  min-width: 0;
-  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
-.notion-task-title-line {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
+.notion-task-title-content span {
+  color: #8b8b8b;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.notion-task-title {
-  min-width: 0;
-  flex: 1;
+.notion-task-title-content h2 {
+  margin: 0;
   overflow: hidden;
-  color: var(--sidebar-text);
-  font-size: 13px;
-  line-height: 1.35;
+  color: #e6e6e6;
+  font-size: 17px;
+  font-weight: 650;
+  line-height: 1.2;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+.notion-task-icon-btn {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9b9b9b;
+  background: transparent;
+  cursor: pointer;
+}
+
+.notion-task-icon-btn:hover {
+  color: #eeeeee;
+  background: #252525;
+}
+
+.notion-task-icon-btn span {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.notion-task-body {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+.notion-task-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.notion-task-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.notion-task-body::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #3a3a3a;
+  background-clip: content-box;
+}
+
+.notion-task-command-box {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 12px;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.notion-task-command-box h3 {
+  margin: 0;
+  color: #e6e6e6;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.notion-task-command-box p {
+  max-width: 420px;
+  margin: 5px 0 0;
+  color: #9b9b9b;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.notion-task-primary {
+  min-height: 30px;
+  border: 1px solid #373737;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  color: #d8d8d8;
+  background: #222222;
+  font-size: 12.5px;
+  font-weight: 550;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.notion-task-primary:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #464646;
+}
+
+.notion-task-primary:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.notion-task-primary.small {
+  margin-top: 10px;
+}
+
+.notion-task-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.notion-task-stat-card {
+  padding: 10px;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  background: #1d1d1d;
+}
+
+.notion-task-stat-card span {
+  display: block;
+  color: #8b8b8b;
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.notion-task-stat-card strong {
+  display: block;
+  margin-top: 4px;
+  color: #e6e6e6;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.notion-task-list-head {
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #858585;
+  font-size: 12px;
+}
+
+.notion-task-list-head div {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.notion-task-list-head strong {
+  color: #d8d8d8;
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.notion-task-content {
+  min-height: 260px;
+}
+
+.notion-task-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notion-task-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 8px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  transition:
+    background-color 120ms ease,
+    border-color 120ms ease;
+}
+
+.notion-task-card:hover {
+  border-color: #2c2c2c;
+  background: #202020;
+}
+
+.notion-task-card.overdue .notion-task-due {
+  color: #d8d8d8;
+  border-color: #555555;
+  background: #2a2a2a;
+}
+
+.notion-task-check {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  border: 1px solid #5a5a5a;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #d8d8d8;
+  background: transparent;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.notion-task-card-main {
+  min-width: 0;
+  flex: 1;
+}
+
+.notion-task-card-header {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notion-task-card h3 {
+  margin: 0;
+  overflow: hidden;
+  color: #e6e6e6;
+  font-size: 14px;
+  font-weight: 560;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+}
+
+.notion-task-due {
+  min-height: 22px;
+  border: 1px solid #333333;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 0 8px;
+  color: #9b9b9b;
+  background: #202020;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
 }
 
 .notion-task-description {
   display: -webkit-box;
   overflow: hidden;
-  color: var(--sidebar-faint);
-  font-size: 11.5px;
-  line-height: 1.35;
+  margin: 5px 0 0;
+  color: #9b9b9b;
+  font-size: 12.5px;
+  line-height: 1.45;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 
-.notion-task-meta {
-  min-width: 0;
+.notion-task-meta-line {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 4px 8px;
-  color: var(--sidebar-faint);
-  font-size: 10.5px;
+  gap: 6px;
+  margin-top: 8px;
+  color: #858585;
+  font-size: 11.5px;
 }
 
-.notion-task-meta span + span::before {
+.notion-task-meta-line span {
+  display: inline-flex;
+  align-items: center;
+}
+
+.notion-task-meta-line span:not(:last-child)::after {
   content: '·';
-  margin-right: 8px;
-  color: var(--sidebar-border-strong);
+  margin-left: 6px;
+  color: #5f5f5f;
 }
 
-.notion-priority-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  flex-shrink: 0;
-  background: var(--sidebar-faint);
-}
-
-.notion-priority-dot.high,
-.notion-task-row.overdue .notion-task-title {
-  color: #f2a6a6;
-}
-
-.notion-priority-dot.high {
-  background: #d55f5f;
-}
-
-.notion-priority-dot.medium {
-  background: #d6b15d;
-}
-
-.notion-priority-dot.low {
-  background: #75b798;
-}
-
-.notion-task-row.today .notion-task-title,
-.notion-task-row.soon .notion-task-title {
-  color: #e4c978;
-}
-
-.notion-empty-state {
-  padding: 8px 7px 10px;
-  color: var(--sidebar-faint);
-  font-size: 12px;
-  line-height: 1.45;
-}
-
-.notion-empty-state strong {
-  display: block;
-  color: var(--sidebar-muted);
-  font-size: 12.5px;
-  font-weight: 650;
-}
-
-.notion-empty-state p {
-  margin: 3px 0 0;
-}
-
-.notion-empty-state.error strong {
-  color: var(--sidebar-danger);
-}
-
-.notion-empty-state button {
-  margin-top: 7px;
-  border: 0;
+.notion-task-empty {
+  min-height: 280px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  padding: 28px 18px;
+  border: 1px dashed #333333;
   border-radius: 6px;
-  padding: 4px 7px;
-  color: var(--sidebar-text);
-  background: var(--sidebar-bg-hover);
-  font-size: 12px;
+  color: #8b8b8b;
+  background: transparent;
+  text-align: center;
 }
 
-.notion-skeleton-row {
-  padding: 7px;
+.notion-task-empty h3 {
+  margin: 0;
+  color: #d8d8d8;
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.notion-skeleton-row span {
+.notion-task-empty p {
+  max-width: 340px;
+  margin: 6px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.notion-task-error {
+  border-color: #4a4a4a;
+}
+
+.notion-task-skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notion-task-skeleton-card {
+  padding: 12px 8px;
+  border-radius: 6px;
+  background: transparent;
+}
+
+.notion-task-skeleton-card span {
   display: block;
   height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #191919, #242424, #191919);
+  background: linear-gradient(90deg, #222222, #2b2b2b, #222222);
   background-size: 220% 100%;
-  animation: sidebar-skeleton 1.2s ease-in-out infinite;
+  animation: notion-task-skeleton 1.2s ease-in-out infinite;
 }
 
-.notion-skeleton-row span:first-child {
-  width: 76%;
+.notion-task-skeleton-card span:nth-child(1) {
+  width: 28%;
 }
 
-.notion-skeleton-row span:last-child {
+.notion-task-skeleton-card span:nth-child(2) {
+  width: 78%;
+  margin-top: 12px;
+}
+
+.notion-task-skeleton-card span:nth-child(3) {
   width: 52%;
-  margin-top: 7px;
+  margin-top: 8px;
 }
 
-.notion-panel-footer {
-  padding: 7px 7px 0;
+.notion-task-overlay-enter-active,
+.notion-task-overlay-leave-active,
+.notion-task-panel-enter-active,
+.notion-task-panel-leave-active {
+  transition:
+    opacity 150ms ease,
+    transform 160ms ease;
 }
 
-.notion-panel-action:focus-visible,
-.notion-task-row:focus-visible,
-.notion-empty-state button:focus-visible {
-  outline: 2px solid #525252;
+.notion-task-overlay-enter-from,
+.notion-task-overlay-leave-to {
+  opacity: 0;
+}
+
+.notion-task-panel-enter-from,
+.notion-task-panel-leave-to {
+  opacity: 0;
+  transform: translateX(18px);
+}
+
+.notion-task-icon-btn:focus-visible,
+.notion-task-primary:focus-visible {
+  outline: 2px solid #555555;
   outline-offset: 2px;
 }
 
-@keyframes sidebar-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-@keyframes sidebar-skeleton {
+@keyframes notion-task-skeleton {
   0% {
     background-position: 120% 0;
   }
@@ -526,9 +747,32 @@ function dueLabel(dueDate: string) {
   }
 }
 
+@media (max-width: 900px) {
+  .notion-task-drawer {
+    inset: 0;
+    width: auto;
+  }
+
+  .notion-task-command-box {
+    flex-direction: column;
+  }
+
+  .notion-task-primary {
+    width: 100%;
+  }
+
+  .notion-task-stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .notion-panel-action i.spinning,
-  .notion-skeleton-row span {
+  .notion-task-overlay-enter-active,
+  .notion-task-overlay-leave-active,
+  .notion-task-panel-enter-active,
+  .notion-task-panel-leave-active,
+  .notion-task-skeleton-card span {
+    transition: none;
     animation: none;
   }
 }

@@ -122,7 +122,7 @@ public sealed class AcceptWorkspaceInvitationHandler
             targetUser.Id,
             cancellationToken);
 
-        return Result.Success(ToDto(member));
+        return Result.Success(member.ToDto(targetUser, targetUser.Id));
     }
 
     private async Task InvalidateWorkspaceMemberCachesAsync(
@@ -144,12 +144,4 @@ public sealed class AcceptWorkspaceInvitationHandler
             cancellationToken: cancellationToken);
     }
 
-    private static WorkspaceMemberDto ToDto(WorkspaceMember member)
-        => new(
-            member.WorkspaceId,
-            member.UserId,
-            member.Role,
-            member.IsOwner(),
-            member.CreatedDate,
-            member.UpdatedDate);
 }

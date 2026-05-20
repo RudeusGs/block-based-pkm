@@ -10,21 +10,21 @@ namespace Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
 public sealed class ListWorkspaceMembersHandler
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
+    private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
 
     public ListWorkspaceMembersHandler(
         ICurrentUser currentUser,
-        IWorkspaceMemberRepository workspaceMemberRepository,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
+        IWorkspaceMemberRepository workspaceMemberRepository,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory)
     {
         _currentUser = currentUser;
-        _workspaceMemberRepository = workspaceMemberRepository;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
+        _workspaceMemberRepository = workspaceMemberRepository;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
     }
@@ -35,12 +35,14 @@ public sealed class ListWorkspaceMembersHandler
     {
         if (request.WorkspaceId == Guid.Empty)
         {
-            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(WorkspaceErrors.InvalidWorkspaceId(request.WorkspaceId));
+            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(
+                WorkspaceErrors.InvalidWorkspaceId(request.WorkspaceId));
         }
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
         {
-            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(WorkspaceErrors.MissingUserContext);
+            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(
+                WorkspaceErrors.MissingUserContext);
         }
 
         var access = await _workspaceAccessEvaluator.EvaluateAsync(
@@ -50,44 +52,84 @@ public sealed class ListWorkspaceMembersHandler
 
         if (!access.Exists)
         {
-            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(WorkspaceErrors.WorkspaceNotFound);
+            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(
+                WorkspaceErrors.WorkspaceNotFound);
         }
 
         if (!access.CanRead)
         {
-            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(WorkspaceErrors.WorkspaceForbidden);
+            return Result.Failure<IReadOnlyList<WorkspaceMemberDto>>(
+                WorkspaceErrors.WorkspaceForbidden);
         }
 
-        var cacheKey = WorkspaceCacheKeys.Members(_redisKeyFactory, request.WorkspaceId);
-        var cached = await _redisCache.GetAsync<IReadOnlyList<WorkspaceMemberReadModel>>(cacheKey, cancellationToken);
+        var cacheKey = WorkspaceCacheKeys.Members(
+            _redisKeyFactory,
+            request.WorkspaceId);
 
-        IReadOnlyList<WorkspaceMemberReadModel> members = cached ?? Array.Empty<WorkspaceMemberReadModel>();
+        var cached = await GetCacheBestEffortAsync<IReadOnlyList<WorkspaceMemberReadModel>>(
+            cacheKey,
+            cancellationToken);
 
-        if (cached is null)
+        IReadOnlyList<WorkspaceMemberReadModel> members;
+
+        if (cached is not null)
         {
-            members = await _workspaceMemberRepository.ListReadModelsByWorkspaceAsync(
+            members = cached;
+        }
+        else
+        {
+            members = await _workspaceMemberRepository.ListByWorkspaceAsync(
                 request.WorkspaceId,
                 cancellationToken);
 
-            await _redisCache.SetAsync(
+            await SetCacheBestEffortAsync(
                 cacheKey,
                 members,
-                TimeSpan.FromMinutes(2),
+                TimeSpan.FromMinutes(5),
                 cancellationToken);
         }
 
         var dto = members
-            .OrderBy(x => x.Role)
-            .ThenBy(x => x.CreatedDate)
-            .Select(x => new WorkspaceMemberDto(
-                x.WorkspaceId,
-                x.UserId,
-                x.Role,
-                x.Role == Pkm.Domain.Workspaces.WorkspaceRole.Owner,
-                x.CreatedDate,
-                x.UpdatedDate))
+            .Select(member => member.ToDto(currentUserId))
             .ToArray();
 
         return Result.Success<IReadOnlyList<WorkspaceMemberDto>>(dto);
+    }
+
+    private async Task<T?> GetCacheBestEffortAsync<T>(
+        string key,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _redisCache.GetAsync<T>(key, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+            return default;
+        }
+    }
+
+    private async Task SetCacheBestEffortAsync<T>(
+        string key,
+        T value,
+        TimeSpan ttl,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _redisCache.SetAsync(key, value, ttl, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch
+        {
+        }
     }
 }

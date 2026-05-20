@@ -5,6 +5,7 @@ import type {
   ChangeWorkspaceMemberRoleRequest,
   CreateWorkspaceRequest,
   UpdateWorkspaceRequest,
+  WorkspaceInvitationResponse,
   WorkspaceMemberResponse,
   WorkspaceResponse,
 } from '../models/workspace.model'
@@ -36,7 +37,7 @@ export const workspaceController = {
   },
 
   addMember(workspaceId: Guid, payload: AddWorkspaceMemberRequest) {
-    return api.post<ApiResult<WorkspaceMemberResponse>>(
+    return api.post<ApiResult<WorkspaceInvitationResponse>>(
       `workspaces/${workspaceId}/members`,
       payload
     )
@@ -54,8 +55,6 @@ export const workspaceController = {
   },
 
   removeMember(workspaceId: Guid, userId: Guid) {
-    return api.delete<ApiResult>(
-      `workspaces/${workspaceId}/members/${userId}`
-    )
+    return api.delete<ApiResult>(`workspaces/${workspaceId}/members/${userId}`)
   },
 }

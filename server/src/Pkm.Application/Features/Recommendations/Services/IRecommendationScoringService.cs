@@ -9,7 +9,8 @@ public interface IRecommendationScoringService
         IReadOnlyList<RecommendationCandidateReadModel> candidates,
         UserTaskPreference preference,
         UserTaskHistoryStatsDto historyStats,
-        DateTimeOffset now);
+        DateTimeOffset now,
+        bool isPersonalWorkspace);
 }
 
 public sealed record ScoredRecommendationCandidate(

@@ -165,9 +165,15 @@ public static class ResponseMappings
         => new(
             dto.WorkspaceId,
             dto.UserId,
+            dto.UserName,
+            dto.Email,
+            dto.FullName,
+            dto.AvatarUrl,
+            dto.UserStatus.ToString(),
             dto.Role.ToString(),
             dto.IsOwner,
-            dto.CreatedDate,
+            dto.IsCurrentUser,
+            dto.JoinedAt,
             dto.UpdatedDate);
 
     public static WorkspaceInvitationResponse ToResponse(this AppWorkspaces.WorkspaceInvitationDto dto)

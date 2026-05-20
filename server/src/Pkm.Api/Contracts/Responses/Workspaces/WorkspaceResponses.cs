@@ -25,16 +25,16 @@ public sealed record WorkspaceListItemResponse(
 public sealed record WorkspaceMemberResponse(
     Guid WorkspaceId,
     Guid UserId,
+    string UserName,
+    string Email,
+    string FullName,
+    string? AvatarUrl,
+    string UserStatus,
     string Role,
     bool IsOwner,
-    DateTimeOffset CreatedDate,
+    bool IsCurrentUser,
+    DateTimeOffset JoinedAt,
     DateTimeOffset? UpdatedDate);
-
-public sealed record WorkspacePagedResultResponse(
-    int PageNumber,
-    int PageSize,
-    int TotalCount,
-    IReadOnlyList<WorkspaceListItemResponse> Items);
 
 public sealed record WorkspaceInvitationResponse(
     Guid Id,
@@ -46,3 +46,9 @@ public sealed record WorkspaceInvitationResponse(
     DateTimeOffset? AcceptedAtUtc,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);
+
+public sealed record WorkspacePagedResultResponse(
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    IReadOnlyList<WorkspaceListItemResponse> Items);

@@ -1,6 +1,9 @@
 <template>
   <header class="app-top-nav sticky-top">
-    <nav class="app-breadcrumb" aria-label="Breadcrumb">
+    <nav
+      class="app-breadcrumb"
+      aria-label="Breadcrumb"
+    >
       <button
         class="app-breadcrumb-pill"
         type="button"
@@ -76,7 +79,7 @@
           ></span>
         </button>
 
-        <Transition name="app-notification-pop">
+        <Transition name="app-pop">
           <section
             v-if="isNotificationMenuOpen"
             class="app-notification-menu"
@@ -104,10 +107,7 @@
                   :disabled="notificationCenter.isLoading.value"
                   @click="refreshNotifications"
                 >
-                  <i
-                    class="bi bi-arrow-clockwise"
-                    :class="{ spinning: notificationCenter.isLoading.value }"
-                  ></i>
+                  <span class="material-symbols-outlined">refresh</span>
                 </button>
 
                 <button
@@ -119,7 +119,7 @@
                   "
                   @click="notificationCenter.markAllAsRead"
                 >
-                  <i class="bi bi-check2-all"></i>
+                  <span class="material-symbols-outlined">done_all</span>
                 </button>
               </div>
             </header>
@@ -208,46 +208,186 @@
         </Transition>
       </div>
 
-      <button class="app-icon-btn" type="button" title="Share">
+      <button
+        class="app-icon-btn"
+        type="button"
+        title="Share"
+      >
         <span class="material-symbols-outlined">share</span>
       </button>
 
-      <button class="app-icon-btn" type="button" title="Star">
+      <button
+        class="app-icon-btn"
+        type="button"
+        title="Star"
+      >
         <span class="material-symbols-outlined">star</span>
       </button>
 
-      <button class="app-icon-btn" type="button" title="History">
+      <button
+        class="app-icon-btn"
+        type="button"
+        title="History"
+      >
         <span class="material-symbols-outlined">history</span>
       </button>
 
-      <button class="app-icon-btn" type="button" title="More">
-        <span class="material-symbols-outlined">more_vert</span>
-      </button>
+      <div
+        ref="moreMenuRef"
+        class="app-more-wrap"
+      >
+        <button
+          class="app-icon-btn"
+          type="button"
+          title="More"
+          aria-label="More actions"
+          :aria-expanded="isMoreMenuOpen"
+          @click.stop="toggleMoreMenu"
+        >
+          <span class="material-symbols-outlined">more_vert</span>
+        </button>
+
+        <Transition name="app-pop">
+          <section
+            v-if="isMoreMenuOpen"
+            class="app-more-menu"
+            role="menu"
+            aria-label="More actions"
+            @click.stop
+          >
+            <div class="app-more-menu-head">
+              <strong>{{ workspaceNavigation.workspaceName.value }}</strong>
+              <span>Workspace actions</span>
+            </div>
+
+            <button
+              type="button"
+              class="app-more-item primary"
+              role="menuitem"
+              @click="openInviteModal"
+            >
+              <span class="material-symbols-outlined">person_add</span>
+
+              <span>
+                <strong>Mời thành viên</strong>
+                <small>Gửi lời mời qua Gmail</small>
+              </span>
+            </button>
+
+            <div class="app-more-separator"></div>
+
+            <button
+              type="button"
+              class="app-more-item"
+              role="menuitem"
+            >
+              <span class="material-symbols-outlined">settings</span>
+
+              <span>
+                <strong>Cài đặt workspace</strong>
+                <small>Quyền, tên và mô tả</small>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              class="app-more-item"
+              role="menuitem"
+            >
+              <span class="material-symbols-outlined">group</span>
+
+              <span>
+                <strong>Thành viên</strong>
+                <small>Xem danh sách người trong workspace</small>
+              </span>
+            </button>
+          </section>
+        </Transition>
+      </div>
     </div>
+
+    <InviteWorkspaceMemberModal
+      :open="isInviteModalOpen"
+      :workspace-name="workspaceNavigation.workspaceName.value"
+      :email="inviteMember.email.value"
+      :role="inviteMember.role.value"
+      :error="inviteMember.inviteError.value"
+      :can-submit="inviteMember.canSubmit.value"
+      :is-submitting="inviteMember.isInviting.value"
+      @close="closeInviteModal"
+      @submit="submitInvite"
+      @update:email="inviteMember.email.value = $event"
+      @update:role="inviteMember.role.value = $event"
+    />
   </header>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useToast } from '@/components/composables/useToast'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import { useNotificationCenter } from '@/modules/notifications/composables/useNotificationCenter'
+import { useInviteWorkspaceMember } from '@/modules/workspaces/composables/useInviteWorkspaceMember'
+import type { Guid } from '@/api/models/common.model'
+import InviteWorkspaceMemberModal from './InviteWorkspaceMemberModal.vue'
 
 const emit = defineEmits<{
   'jump-to-tasks': []
 }>()
 
+const toast = useToast()
 const workspaceNavigation = useWorkspaceNavigation()
 const notificationCenter = useNotificationCenter()
+const inviteMember = useInviteWorkspaceMember()
 
 const isNotificationMenuOpen = ref(false)
+const isMoreMenuOpen = ref(false)
+const isInviteModalOpen = ref(false)
+
 const notificationMenuRef = ref<HTMLElement | null>(null)
+const moreMenuRef = ref<HTMLElement | null>(null)
+
+const currentWorkspaceId = computed<Guid | null>(() => {
+  return workspaceNavigation.workspace.value?.id ?? null
+})
 
 function toggleNotifications() {
   isNotificationMenuOpen.value = !isNotificationMenuOpen.value
+  isMoreMenuOpen.value = false
 
   if (isNotificationMenuOpen.value) {
     void refreshNotifications()
   }
+}
+
+function toggleMoreMenu() {
+  isMoreMenuOpen.value = !isMoreMenuOpen.value
+  isNotificationMenuOpen.value = false
+}
+
+function openInviteModal() {
+  isMoreMenuOpen.value = false
+  inviteMember.resetInviteForm()
+  isInviteModalOpen.value = true
+}
+
+function closeInviteModal() {
+  isInviteModalOpen.value = false
+}
+
+async function submitInvite() {
+  const result = await inviteMember.inviteMember(currentWorkspaceId.value)
+
+  if (!result) {
+    return
+  }
+
+  toast.success(
+    'Đã gửi lời mời',
+    `Lời mời tham gia workspace đã được gửi đến ${result.email}.`
+  )
+
+  isInviteModalOpen.value = false
 }
 
 async function refreshNotifications() {
@@ -291,20 +431,31 @@ function formatNotificationTime(value: string) {
 }
 
 function handleDocumentClick(event: MouseEvent) {
-  if (!isNotificationMenuOpen.value) return
-
   const target = event.target as Node | null
 
-  if (target && notificationMenuRef.value?.contains(target)) {
+  if (
+    target &&
+    notificationMenuRef.value?.contains(target)
+  ) {
+    return
+  }
+
+  if (
+    target &&
+    moreMenuRef.value?.contains(target)
+  ) {
     return
   }
 
   isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
 }
 
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     isNotificationMenuOpen.value = false
+    isMoreMenuOpen.value = false
+    isInviteModalOpen.value = false
   }
 }
 
@@ -435,7 +586,8 @@ onBeforeUnmount(() => {
   height: 32px;
 }
 
-.app-notification-wrap {
+.app-notification-wrap,
+.app-more-wrap {
   position: relative;
 }
 
@@ -477,16 +629,106 @@ onBeforeUnmount(() => {
   background: #75b798;
 }
 
-.app-notification-menu {
+.app-notification-menu,
+.app-more-menu {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: min(380px, calc(100vw - 24px));
   overflow: hidden;
   border: 1px solid #2f2f2f;
-  border-radius: 12px;
+  border-radius: 10px;
   background: #191919;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+}
+
+.app-notification-menu {
+  width: min(380px, calc(100vw - 24px));
+}
+
+.app-more-menu {
+  width: min(292px, calc(100vw - 24px));
+  padding: 6px;
+}
+
+.app-more-menu-head {
+  padding: 9px 9px 8px;
+}
+
+.app-more-menu-head strong {
+  display: block;
+  overflow: hidden;
+  color: #f1f1f1;
+  font-size: 13px;
+  font-weight: 650;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.app-more-menu-head span {
+  display: block;
+  margin-top: 2px;
+  color: #858585;
+  font-size: 11.5px;
+}
+
+.app-more-item {
+  width: 100%;
+  border: 0;
+  border-radius: 7px;
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 9px;
+  color: #cfcfcf;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.app-more-item:hover {
+  color: #f1f1f1;
+  background: #242424;
+}
+
+.app-more-item.primary {
+  background: #202020;
+}
+
+.app-more-item.primary:hover {
+  background: #282828;
+}
+
+.app-more-item > .material-symbols-outlined {
+  width: 22px;
+  margin-top: 1px;
+  color: #9b9b9b;
+  font-size: 18px;
+}
+
+.app-more-item span:last-child {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.app-more-item strong {
+  color: inherit;
+  font-size: 13px;
+  font-weight: 620;
+  line-height: 1.25;
+}
+
+.app-more-item small {
+  color: #858585;
+  font-size: 11.5px;
+  line-height: 1.35;
+}
+
+.app-more-separator {
+  height: 1px;
+  margin: 6px 4px;
+  background: #2b2b2b;
 }
 
 .app-notification-head {
@@ -545,12 +787,8 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
-.app-notification-head-actions i {
-  font-size: 14px;
-}
-
-.app-notification-head-actions i.spinning {
-  animation: app-top-spin 0.8s linear infinite;
+.app-notification-head-actions .material-symbols-outlined {
+  font-size: 17px;
 }
 
 .app-notification-warning {
@@ -707,15 +945,15 @@ onBeforeUnmount(() => {
   margin-top: 8px;
 }
 
-.app-notification-pop-enter-active,
-.app-notification-pop-leave-active {
+.app-pop-enter-active,
+.app-pop-leave-active {
   transition:
-    opacity 0.14s ease,
-    transform 0.14s ease;
+    opacity 140ms ease,
+    transform 140ms ease;
 }
 
-.app-notification-pop-enter-from,
-.app-notification-pop-leave-to {
+.app-pop-enter-from,
+.app-pop-leave-to {
   opacity: 0;
   transform: translateY(-4px) scale(0.98);
 }
@@ -725,15 +963,10 @@ onBeforeUnmount(() => {
 .app-breadcrumb-pill:focus-visible,
 .app-notification-content:focus-visible,
 .app-notification-head-actions button:focus-visible,
-.app-notification-state button:focus-visible {
+.app-notification-state button:focus-visible,
+.app-more-item:focus-visible {
   outline: 2px solid #525252;
   outline-offset: 2px;
-}
-
-@keyframes app-top-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 @keyframes app-top-skeleton {
@@ -755,10 +988,7 @@ onBeforeUnmount(() => {
     max-width: 120px;
   }
 
-  .app-breadcrumb button:nth-of-type(1) {
-    display: none;
-  }
-
+  .app-breadcrumb button:nth-of-type(1),
   .app-breadcrumb span:nth-of-type(1) {
     display: none;
   }
@@ -782,9 +1012,8 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .app-notification-pop-enter-active,
-  .app-notification-pop-leave-active,
-  .app-notification-head-actions i.spinning,
+  .app-pop-enter-active,
+  .app-pop-leave-active,
   .app-notification-skeleton span {
     transition: none;
     animation: none;

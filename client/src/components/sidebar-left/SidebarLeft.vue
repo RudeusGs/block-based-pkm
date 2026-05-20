@@ -78,17 +78,6 @@
             </button>
           </div>
 
-          <Transition name="lunar-expand">
-            <SidebarMyTasksPanel
-              v-if="shell.activePanel.value === 'myTasks'"
-              :tasks="myTasks.myTasks.value"
-              :total-count="myTasks.myTaskTotalCount.value"
-              :is-loading="myTasks.isLoadingMyTasks.value"
-              :error="myTasks.myTaskError.value"
-              @refresh="refreshMyTasks"
-            />
-          </Transition>
-
           <SidebarWorkspaceSection
             :is-open="workspaceTree.isWorkspacesOpen.value"
             :workspaces="workspaceTree.workspaces.value"
@@ -131,6 +120,16 @@
         </footer>
       </div>
     </template>
+
+    <SidebarMyTasksPanel
+      :open="shell.activePanel.value === 'myTasks'"
+      :tasks="myTasks.myTasks.value"
+      :total-count="myTasks.myTaskTotalCount.value"
+      :is-loading="myTasks.isLoadingMyTasks.value"
+      :error="myTasks.myTaskError.value"
+      @close="shell.closePanel"
+      @refresh="refreshMyTasks"
+    />
 
     <SidebarRecommendationsDrawer
       :open="shell.activePanel.value === 'recommendations'"
@@ -227,7 +226,6 @@ const isSettingsModalOpen = ref(false)
 watch(
   workspaceTree.selectedWorkspaceId,
   (workspaceId) => {
-    void myTasks.fetchMyTasks(workspaceId)
     void recommendations.fetchPendingRecommendations()
 
     if (isSettingsModalOpen.value) {
@@ -248,7 +246,7 @@ function expandSidebar() {
 
 function loadPanelData(panel: SidebarPanel) {
   if (panel === 'myTasks') {
-    void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
+    void myTasks.fetchMyTasks()
   }
 
   if (panel === 'recommendations') {
@@ -316,7 +314,7 @@ async function acceptRecommendation(recommendationId: Guid) {
   const accepted = await recommendations.acceptRecommendation(recommendationId)
 
   if (accepted) {
-    void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
+    void myTasks.fetchMyTasks()
     void recommendations.fetchPendingRecommendations()
   }
 }
@@ -330,7 +328,7 @@ async function rejectRecommendation(recommendationId: Guid) {
 }
 
 function refreshMyTasks() {
-  void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
+  void myTasks.fetchMyTasks()
 }
 
 async function saveProfileSettings() {
@@ -354,6 +352,7 @@ async function saveTaskPreference() {
 onMounted(() => {
   void account.fetchMyProfile()
   void workspaceTree.fetchMyWorkspaces()
+  void myTasks.fetchMyTasks()
   void recommendations.fetchPendingRecommendations()
   void recommendations.startRecommendationRealtime()
 })

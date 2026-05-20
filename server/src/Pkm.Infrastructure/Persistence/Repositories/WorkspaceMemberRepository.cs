@@ -7,11 +7,11 @@ namespace Pkm.Infrastructure.Persistence.Repositories;
 
 internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
 {
-    private readonly DataContext _dataContext;
+    private readonly DataContext _context;
 
-    public WorkspaceMemberRepository(DataContext dataContext)
+    public WorkspaceMemberRepository(DataContext context)
     {
-        _dataContext = dataContext;
+        _context = context;
     }
 
     public async Task<WorkspaceMember?> GetByWorkspaceAndUserAsync(
@@ -19,48 +19,71 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.WorkspaceMembers
+        return await _context.WorkspaceMembers
             .FirstOrDefaultAsync(
-                x => x.WorkspaceId == workspaceId && x.UserId == userId,
+                member =>
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == userId,
                 cancellationToken);
     }
 
-    public async Task<IReadOnlyList<WorkspaceMember>> ListByWorkspaceAsync(
+    public async Task<WorkspaceMemberReadModel?> GetDetailByWorkspaceAndUserAsync(
         Guid workspaceId,
+        Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.WorkspaceMembers
-            .Where(x => x.WorkspaceId == workspaceId)
-            .OrderBy(x => x.Role)
-            .ThenBy(x => x.CreatedDate)
-            .ToListAsync(cancellationToken);
+        return await _context.WorkspaceMembers
+            .AsNoTracking()
+            .Where(member =>
+                member.WorkspaceId == workspaceId &&
+                member.UserId == userId)
+            .Join(
+                _context.Users.AsNoTracking(),
+                member => member.UserId,
+                user => user.Id,
+                (member, user) => new WorkspaceMemberReadModel(
+                    member.WorkspaceId,
+                    member.UserId,
+                    user.UserName,
+                    user.Email,
+                    user.FullName,
+                    user.AvatarUrl,
+                    user.Status,
+                    member.Role,
+                    member.IsOwner(),
+                    member.CreatedDate,
+                    member.UpdatedDate))
+            .FirstOrDefaultAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<WorkspaceMemberReadModel>> ListReadModelsByWorkspaceAsync(
+    public async Task<IReadOnlyList<WorkspaceMemberReadModel>> ListByWorkspaceAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.WorkspaceMembers
+        return await _context.WorkspaceMembers
             .AsNoTracking()
-            .Where(x => x.WorkspaceId == workspaceId)
-            .OrderBy(x => x.Role)
-            .ThenBy(x => x.CreatedDate)
-            .Select(x => new WorkspaceMemberReadModel(
-                x.WorkspaceId,
-                x.UserId,
-                x.Role,
-                x.CreatedDate,
-                x.UpdatedDate))
+            .Where(member => member.WorkspaceId == workspaceId)
+            .Join(
+                _context.Users.AsNoTracking(),
+                member => member.UserId,
+                user => user.Id,
+                (member, user) => new WorkspaceMemberReadModel(
+                    member.WorkspaceId,
+                    member.UserId,
+                    user.UserName,
+                    user.Email,
+                    user.FullName,
+                    user.AvatarUrl,
+                    user.Status,
+                    member.Role,
+                    member.IsOwner(),
+                    member.CreatedDate,
+                    member.UpdatedDate))
+            .OrderByDescending(member => member.IsOwner)
+            .ThenBy(member => member.Role)
+            .ThenBy(member => member.FullName)
+            .ThenBy(member => member.Email)
             .ToListAsync(cancellationToken);
-    }
-
-    public async Task<int> CountByWorkspaceAsync(
-        Guid workspaceId,
-        CancellationToken cancellationToken = default)
-    {
-        return await _dataContext.WorkspaceMembers
-            .AsNoTracking()
-            .CountAsync(x => x.WorkspaceId == workspaceId, cancellationToken);
     }
 
     public async Task<bool> ExistsAsync(
@@ -68,43 +91,27 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
         Guid userId,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.WorkspaceMembers
-            .AnyAsync(x => x.WorkspaceId == workspaceId && x.UserId == userId, cancellationToken);
-    }
-
-    public async Task<IReadOnlySet<Guid>> ListExistingUserIdsAsync(
-        Guid workspaceId,
-        IReadOnlyCollection<Guid> userIds,
-        CancellationToken cancellationToken = default)
-    {
-        if (userIds.Count == 0)
-            return new HashSet<Guid>();
-
-        var normalizedUserIds = userIds
-            .Where(x => x != Guid.Empty)
-            .Distinct()
-            .ToArray();
-
-        if (normalizedUserIds.Length == 0)
-            return new HashSet<Guid>();
-
-        var existingUserIds = await _dataContext.WorkspaceMembers
+        return await _context.WorkspaceMembers
             .AsNoTracking()
-            .Where(x =>
-                x.WorkspaceId == workspaceId &&
-                normalizedUserIds.Contains(x.UserId))
-            .Select(x => x.UserId)
-            .ToListAsync(cancellationToken);
-
-        return existingUserIds.ToHashSet();
+            .AnyAsync(
+                member =>
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == userId,
+                cancellationToken);
     }
+
     public void Add(WorkspaceMember member)
     {
-        _dataContext.WorkspaceMembers.Add(member);
+        _context.WorkspaceMembers.Add(member);
     }
 
     public void Update(WorkspaceMember member)
     {
-        _dataContext.WorkspaceMembers.Update(member);
+        _context.WorkspaceMembers.Update(member);
+    }
+
+    public void Remove(WorkspaceMember member)
+    {
+        _context.WorkspaceMembers.Remove(member);
     }
 }

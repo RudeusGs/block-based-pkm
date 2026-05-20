@@ -43,7 +43,10 @@ internal sealed class UserTaskHistoryRepository : IUserTaskHistoryRepository
                 (history, task) => new
                 {
                     History = history,
-                    Task = task
+                    Task = task,
+                    IsAssignedToUser = _context.TaskAssignees.Any(a =>
+                        a.TaskId == task.Id &&
+                        a.UserId == userId)
                 })
             .Where(x =>
                 x.History.UserId == userId &&
@@ -72,9 +75,29 @@ internal sealed class UserTaskHistoryRepository : IUserTaskHistoryRepository
         var abandonedCount = rows.Count(x => x.History.Status == StatusUserTaskHistory.Abandoned);
         var skippedCount = rows.Count(x => x.History.Status == StatusUserTaskHistory.Skipped);
 
-        var avgDuration = completed.Length == 0
+        var averageDuration = completed.Length == 0
             ? 0
             : completed.Average(x => x.History.DurationMinutes);
+
+        var completedCreatedByUserCount = completed.Count(x => x.Task.CreatedById == userId);
+
+        var completedAssignedToUserCount = completed.Count(x => x.IsAssignedToUser);
+
+        var mostProductiveHour = completed
+            .Where(x => x.History.CompletedAt.HasValue)
+            .GroupBy(x => x.History.CompletedAt!.Value.Hour)
+            .OrderByDescending(x => x.Count())
+            .ThenBy(x => x.Key)
+            .Select(x => (int?)x.Key)
+            .FirstOrDefault();
+
+        var mostProductiveDayOfWeek = completed
+            .Where(x => x.History.CompletedAt.HasValue)
+            .GroupBy(x => (int)x.History.CompletedAt!.Value.DayOfWeek)
+            .OrderByDescending(x => x.Count())
+            .ThenBy(x => x.Key)
+            .Select(x => (int?)x.Key)
+            .FirstOrDefault();
 
         return new UserTaskHistoryStatsDto(
             userId,
@@ -82,7 +105,11 @@ internal sealed class UserTaskHistoryRepository : IUserTaskHistoryRepository
             completedCount,
             abandonedCount,
             skippedCount,
-            avgDuration,
+            averageDuration,
+            completedCreatedByUserCount,
+            completedAssignedToUserCount,
+            mostProductiveHour,
+            mostProductiveDayOfWeek,
             completedByTaskId,
             skippedOrAbandonedByTaskId);
     }

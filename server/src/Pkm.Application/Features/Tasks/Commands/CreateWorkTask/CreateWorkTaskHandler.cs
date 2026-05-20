@@ -104,10 +104,15 @@ public sealed class CreateWorkTaskHandler
         }
         if (assigneeIds.Length > 0)
         {
-            var existingAssigneeIds = await _workspaceMemberRepository.ListExistingUserIdsAsync(
+            var membersList = await _workspaceMemberRepository.ListByWorkspaceAsync(
                 page.WorkspaceId,
-                assigneeIds,
                 cancellationToken);
+
+            var existingAssigneeIds = membersList
+                .Where(m => assigneeIds.Contains(m.UserId))
+                .Select(m => m.UserId)
+                .Distinct()
+                .ToList();
 
             if (existingAssigneeIds.Count != assigneeIds.Length)
             {

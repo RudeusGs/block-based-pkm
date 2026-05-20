@@ -32,6 +32,10 @@ internal sealed class TaskRecommendationConfiguration : IEntityTypeConfiguration
         builder.HasIndex(x => x.TaskId)
             .HasFilter("\"IsDeleted\" = false");
 
+        builder.HasIndex(x => new { x.UserId, x.TaskId })
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false");
+
         builder.HasOne<Workspace>()
             .WithMany()
             .HasForeignKey(x => x.WorkspaceId)

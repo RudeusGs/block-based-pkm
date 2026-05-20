@@ -6,9 +6,22 @@ namespace Pkm.Application.Abstractions.Persistence;
 public interface IWorkspaceRepository
 {
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<Workspace?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
-    Task<WorkspaceMember?> GetMemberAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
-    Task<bool> IsOwnerAsync(Guid workspaceId, Guid userId, CancellationToken cancellationToken = default);
+
+    Task<WorkspaceMember?> GetMemberAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> IsOwnerAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountMembersAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
 
     Task<WorkspaceAccessReadModel?> GetAccessContextAsync(
         Guid workspaceId,
@@ -30,5 +43,6 @@ public interface IWorkspaceRepository
         CancellationToken cancellationToken = default);
 
     void Add(Workspace workspace);
+
     void Update(Workspace workspace);
 }

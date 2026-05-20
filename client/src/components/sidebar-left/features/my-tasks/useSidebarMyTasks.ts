@@ -19,7 +19,7 @@ export function useSidebarMyTasks() {
     ).length
   })
 
-  async function fetchMyTasks(workspaceId: Guid | null) {
+  async function fetchMyTasks(workspaceId?: Guid | null) {
     if (isLoadingMyTasks.value) return
 
     isLoadingMyTasks.value = true
@@ -30,7 +30,7 @@ export function useSidebarMyTasks() {
         workspaceId: workspaceId ?? null,
         includeCompleted: false,
         pageNumber: 1,
-        pageSize: 8,
+        pageSize: 20,
       })
 
       if (!result.isSuccess || !result.data) {

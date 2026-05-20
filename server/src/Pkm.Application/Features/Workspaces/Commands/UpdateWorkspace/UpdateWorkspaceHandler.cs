@@ -130,7 +130,7 @@ public sealed class UpdateWorkspaceHandler
         Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var members = await _workspaceMemberRepository.ListReadModelsByWorkspaceAsync(
+        var members = await _workspaceMemberRepository.ListByWorkspaceAsync(
             workspaceId,
             cancellationToken);
 

@@ -10,15 +10,12 @@ public interface IWorkspaceMemberRepository
         Guid userId,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<WorkspaceMember>> ListByWorkspaceAsync(
+    Task<WorkspaceMemberReadModel?> GetDetailByWorkspaceAndUserAsync(
         Guid workspaceId,
+        Guid userId,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<WorkspaceMemberReadModel>> ListReadModelsByWorkspaceAsync(
-        Guid workspaceId,
-        CancellationToken cancellationToken = default);
-
-    Task<int> CountByWorkspaceAsync(
+    Task<IReadOnlyList<WorkspaceMemberReadModel>> ListByWorkspaceAsync(
         Guid workspaceId,
         CancellationToken cancellationToken = default);
 
@@ -27,11 +24,9 @@ public interface IWorkspaceMemberRepository
         Guid userId,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlySet<Guid>> ListExistingUserIdsAsync(
-        Guid workspaceId,
-        IReadOnlyCollection<Guid> userIds,
-        CancellationToken cancellationToken = default);
-
     void Add(WorkspaceMember member);
+
     void Update(WorkspaceMember member);
+
+    void Remove(WorkspaceMember member);
 }

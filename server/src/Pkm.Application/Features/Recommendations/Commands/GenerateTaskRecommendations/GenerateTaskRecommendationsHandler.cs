@@ -13,6 +13,7 @@ using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
 using Pkm.Domain.Notifications;
 using Pkm.Domain.Recommendations;
+using Pkm.Domain.Workspaces;
 
 namespace Pkm.Application.Features.Recommendations.Commands.GenerateTaskRecommendations;
 
@@ -23,6 +24,7 @@ public sealed class GenerateTaskRecommendationsHandler
 
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
+    private readonly IWorkspaceRepository _workspaceRepository;
     private readonly IWorkTaskRepository _workTaskRepository;
     private readonly ITaskRecommendationRepository _taskRecommendationRepository;
     private readonly IUserTaskPreferenceRepository _preferenceRepository;
@@ -39,6 +41,7 @@ public sealed class GenerateTaskRecommendationsHandler
     public GenerateTaskRecommendationsHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
+        IWorkspaceRepository workspaceRepository,
         IWorkTaskRepository workTaskRepository,
         ITaskRecommendationRepository taskRecommendationRepository,
         IUserTaskPreferenceRepository preferenceRepository,
@@ -54,6 +57,7 @@ public sealed class GenerateTaskRecommendationsHandler
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
+        _workspaceRepository = workspaceRepository;
         _workTaskRepository = workTaskRepository;
         _taskRecommendationRepository = taskRecommendationRepository;
         _preferenceRepository = preferenceRepository;
@@ -104,6 +108,12 @@ public sealed class GenerateTaskRecommendationsHandler
 
         var now = _clock.UtcNow;
 
+        var isPersonalWorkspace = await IsPersonalWorkspaceAsync(
+            request.WorkspaceId,
+            currentUserId,
+            access.Role,
+            cancellationToken);
+
         var preference = await GetOrCreatePreferenceAsync(
             currentUserId,
             request.WorkspaceId,
@@ -139,15 +149,18 @@ public sealed class GenerateTaskRecommendationsHandler
                     RecommendationErrors.Throttled);
             }
 
-            var hasActiveAssignedTask = await _workTaskRepository.HasActiveAssignedTaskAsync(
-                currentUserId,
-                request.WorkspaceId,
-                cancellationToken);
-
-            if (hasActiveAssignedTask)
+            if (isPersonalWorkspace)
             {
-                return Result.Failure<IReadOnlyList<TaskRecommendationDto>>(
-                    RecommendationErrors.AlreadyHasActiveTasks);
+                var hasActiveAssignedTask = await _workTaskRepository.HasActiveAssignedTaskAsync(
+                    currentUserId,
+                    request.WorkspaceId,
+                    cancellationToken);
+
+                if (hasActiveAssignedTask)
+                {
+                    return Result.Failure<IReadOnlyList<TaskRecommendationDto>>(
+                        RecommendationErrors.AlreadyHasActiveTasks);
+                }
             }
         }
 
@@ -183,7 +196,8 @@ public sealed class GenerateTaskRecommendationsHandler
             candidates,
             preference,
             historyStats,
-            now);
+            now,
+            isPersonalWorkspace);
 
         if (scored.Count == 0)
         {
@@ -228,12 +242,14 @@ public sealed class GenerateTaskRecommendationsHandler
                 request.PageId,
                 now,
                 dto,
+                isPersonalWorkspace,
                 cancellationToken);
 
             await NotifyGeneratedBestEffortAsync(
                 currentUserId,
                 request.WorkspaceId,
                 dto,
+                isPersonalWorkspace,
                 cancellationToken);
 
             return Result.Success<IReadOnlyList<TaskRecommendationDto>>(dto);
@@ -243,6 +259,22 @@ public sealed class GenerateTaskRecommendationsHandler
             return Result.Failure<IReadOnlyList<TaskRecommendationDto>>(
                 RecommendationErrors.OperationFailed(ex.Message));
         }
+    }
+
+    private async Task<bool> IsPersonalWorkspaceAsync(
+        Guid workspaceId,
+        Guid currentUserId,
+        WorkspaceRole? currentUserRole,
+        CancellationToken cancellationToken)
+    {
+        if (currentUserRole != WorkspaceRole.Owner)
+            return false;
+
+        var memberCount = await _workspaceRepository.CountMembersAsync(
+            workspaceId,
+            cancellationToken);
+
+        return memberCount <= 1;
     }
 
     private async Task<UserTaskPreference> GetOrCreatePreferenceAsync(
@@ -255,6 +287,10 @@ public sealed class GenerateTaskRecommendationsHandler
             _redisKeyFactory,
             workspaceId,
             userId);
+
+        var cached = await CacheGetBestEffortAsync<UserTaskPreferenceDto>(
+            cacheKey,
+            cancellationToken);
 
         var preference = await _preferenceRepository.GetByUserAndWorkspaceAsync(
             userId,
@@ -407,6 +443,7 @@ public sealed class GenerateTaskRecommendationsHandler
         Guid? pageId,
         DateTimeOffset now,
         IReadOnlyList<TaskRecommendationDto> recommendations,
+        bool isPersonalWorkspace,
         CancellationToken cancellationToken)
     {
         try
@@ -423,6 +460,7 @@ public sealed class GenerateTaskRecommendationsHandler
                     {
                         workspaceId,
                         pageId,
+                        mode = isPersonalWorkspace ? "personal_habit" : "team_operational",
                         recommendations
                     }),
                 cancellationToken);
@@ -440,16 +478,21 @@ public sealed class GenerateTaskRecommendationsHandler
         Guid currentUserId,
         Guid workspaceId,
         IReadOnlyList<TaskRecommendationDto> recommendations,
+        bool isPersonalWorkspace,
         CancellationToken cancellationToken)
     {
         try
         {
+            var message = isPersonalWorkspace
+                ? $"Hệ thống vừa gợi ý {recommendations.Count} task dựa trên thói quen làm việc cá nhân của bạn."
+                : $"Hệ thống vừa gợi ý {recommendations.Count} task theo tình trạng hiện tại của workspace.";
+
             await _notificationService.NotifyAsync(
                 currentUserId,
                 new NotificationDispatchRequest(
                     Type: NotificationType.RecommendationGenerated,
                     Title: "Có task được gợi ý cho bạn",
-                    Message: $"Hệ thống vừa gợi ý {recommendations.Count} task phù hợp với lịch sử làm việc của bạn.",
+                    Message: message,
                     ActorUserId: currentUserId,
                     WorkspaceId: workspaceId,
                     ReferenceId: recommendations.FirstOrDefault()?.Id,

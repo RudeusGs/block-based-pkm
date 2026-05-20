@@ -1,46 +1,6 @@
-import type { DateTimeString, Guid } from './common.model'
+import type { Guid } from './common.model'
 
-export type WorkspaceRoleRequest = 'owner' | 'manager' | 'member' | 'viewer'
-
-export interface WorkspaceResponse {
-  id: Guid
-  name: string
-  description: string | null
-  ownerId: Guid
-  lastModifiedBy: Guid | null
-  createdDate: DateTimeString
-  updatedDate: DateTimeString | null
-  currentUserRole: string | null
-  canRead: boolean
-  canWrite: boolean
-  canManageMembers: boolean
-}
-
-export interface WorkspaceListItemResponse {
-  id: Guid
-  name: string
-  description: string | null
-  ownerId: Guid
-  createdDate: DateTimeString
-  updatedDate: DateTimeString | null
-  currentUserRole: string
-}
-
-export interface WorkspaceMemberResponse {
-  workspaceId: Guid
-  userId: Guid
-  role: string
-  isOwner: boolean
-  createdDate: DateTimeString
-  updatedDate: DateTimeString | null
-}
-
-export interface WorkspacePagedResultResponse {
-  pageNumber: number
-  pageSize: number
-  totalCount: number
-  items: WorkspaceListItemResponse[]
-}
+export type WorkspaceRoleValue = 'manager' | 'member' | 'viewer'
 
 export interface CreateWorkspaceRequest {
   name: string
@@ -53,10 +13,45 @@ export interface UpdateWorkspaceRequest {
 }
 
 export interface AddWorkspaceMemberRequest {
-  userId: Guid
-  role: WorkspaceRoleRequest
+  email: string
+  role: WorkspaceRoleValue
 }
 
 export interface ChangeWorkspaceMemberRoleRequest {
-  role: WorkspaceRoleRequest
+  role: WorkspaceRoleValue | 'owner'
+}
+
+export interface WorkspaceResponse {
+  id: Guid
+  name: string
+  description?: string | null
+  ownerId: Guid
+  lastModifiedBy?: Guid | null
+  createdDate: string
+  updatedDate?: string | null
+  currentUserRole?: string | null
+  canRead: boolean
+  canWrite: boolean
+  canManageMembers: boolean
+}
+
+export interface WorkspaceMemberResponse {
+  workspaceId: Guid
+  userId: Guid
+  role: string
+  isOwner: boolean
+  createdDate: string
+  updatedDate?: string | null
+}
+
+export interface WorkspaceInvitationResponse {
+  id: Guid
+  workspaceId: Guid
+  email: string
+  role: string
+  invitedByUserId: Guid
+  expiresAtUtc: string
+  acceptedAtUtc?: string | null
+  createdDate: string
+  updatedDate?: string | null
 }

@@ -20,6 +20,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly INotificationService _notificationService;
+    private readonly IUserRepository _userRepository;
     public ChangeWorkspaceMemberRoleHandler(
         ICurrentUser currentUser,
         IWorkspaceMemberRepository workspaceMemberRepository,
@@ -28,7 +29,8 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         IClock clock,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IUserRepository userRepository)
     {
         _currentUser = currentUser;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -38,6 +40,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _notificationService = notificationService;
+        _userRepository = userRepository;
     }
 
     public async Task<Result<WorkspaceMemberDto>> HandleAsync(
@@ -109,7 +112,14 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         _workspaceMemberRepository.Update(member);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var targetUser = await _userRepository.GetByIdAsync(
+        request.UserId,
+        cancellationToken);
 
+            if (targetUser is null)
+            {
+                return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.WorkspaceMemberNotFound);
+            }
         await _redisCache.RemoveAsync(
             WorkspaceCacheKeys.Members(_redisKeyFactory, request.WorkspaceId),
             cancellationToken);
@@ -124,14 +134,6 @@ public sealed class ChangeWorkspaceMemberRoleHandler
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);
 
-        var dto = new WorkspaceMemberDto(
-            member.WorkspaceId,
-            member.UserId,
-            member.Role,
-            member.IsOwner(),
-            member.CreatedDate,
-            member.UpdatedDate);
-
         await _notificationService.NotifyAsync(
             request.UserId,
             NotificationTemplates.WorkspaceRoleChanged(
@@ -141,6 +143,6 @@ public sealed class ChangeWorkspaceMemberRoleHandler
                 request.Role),
             cancellationToken);
 
-        return Result.Success(dto);
+        return Result.Success(member.ToDto(targetUser, currentUserId));
     }
 }

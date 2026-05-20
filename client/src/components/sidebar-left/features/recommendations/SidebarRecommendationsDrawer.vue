@@ -308,22 +308,25 @@ function scoreLabel(score: number) {
 .notion-ai-panel {
   position: fixed;
   z-index: 90;
-  top: 18px;
-  right: 18px;
-  bottom: 18px;
+  top: 0;
+  right: 0;
+  bottom: 0;
   left: auto;
-  width: min(560px, calc(100vw - 36px));
+  width: min(560px, calc(100vw - 54px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #2a2a2a;
-  border-radius: 18px;
+  border-left: 1px solid #2a2a2a;
+  border-top: 0;
+  border-right: 0;
+  border-bottom: 0;
+  border-radius: 0;
   color: #e6e6e6;
   background:
     linear-gradient(180deg, rgba(32, 32, 32, 0.98), rgba(20, 20, 20, 0.98));
   box-shadow:
-    0 28px 90px rgba(0, 0, 0, 0.58),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    -24px 0 80px rgba(0, 0, 0, 0.5),
+    inset 1px 0 0 rgba(255, 255, 255, 0.04);
 }
 
 .notion-ai-header {
@@ -900,9 +903,9 @@ function scoreLabel(score: number) {
 
 @media (max-width: 720px) {
   .notion-ai-panel {
-    inset: 8px;
+    inset: 0;
     width: auto;
-    border-radius: 16px;
+    border-radius: 0;
   }
 
   .notion-ai-meta {

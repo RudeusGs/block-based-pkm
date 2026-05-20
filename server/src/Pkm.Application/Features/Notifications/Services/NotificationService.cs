@@ -141,7 +141,7 @@ public sealed class NotificationService : INotificationService
         if (workspaceId == Guid.Empty)
             return Array.Empty<NotificationDto>();
 
-        var members = await _workspaceMemberRepository.ListReadModelsByWorkspaceAsync(
+        var members = await _workspaceMemberRepository.ListByWorkspaceAsync(
             workspaceId,
             cancellationToken);
 

@@ -47,6 +47,15 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
             .AnyAsync(x => x.Id == workspaceId && x.OwnerId == userId, cancellationToken);
     }
 
+    public async Task<int> CountMembersAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dataContext.WorkspaceMembers
+            .AsNoTracking()
+            .CountAsync(x => x.WorkspaceId == workspaceId, cancellationToken);
+    }
+
     public async Task<WorkspaceAccessReadModel?> GetAccessContextAsync(
         Guid workspaceId,
         Guid userId,

@@ -67,7 +67,7 @@ public sealed class DeleteWorkspaceHandler
             return Result.Failure(WorkspaceErrors.WorkspaceNotFound);
         }
 
-        var affectedMembers = await _workspaceMemberRepository.ListReadModelsByWorkspaceAsync(
+        var affectedMembers = await _workspaceMemberRepository.ListByWorkspaceAsync(
             request.WorkspaceId,
             cancellationToken);
 
