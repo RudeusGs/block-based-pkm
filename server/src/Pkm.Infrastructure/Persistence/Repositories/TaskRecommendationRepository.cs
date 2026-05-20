@@ -83,6 +83,23 @@ internal sealed class TaskRecommendationRepository : ITaskRecommendationReposito
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<IReadOnlySet<Guid>> ListPreviouslyRecommendedTaskIdsByUserAndWorkspaceAsync(
+        Guid userId,
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        var taskIds = await _context.TaskRecommendations
+            .AsNoTracking()
+            .Where(x =>
+                x.UserId == userId &&
+                x.WorkspaceId == workspaceId)
+            .Select(x => x.TaskId)
+            .Distinct()
+            .ToListAsync(cancellationToken);
+
+        return taskIds.ToHashSet();
+    }
+
     public Task<bool> HasPendingForTaskAsync(
         Guid userId,
         Guid taskId,

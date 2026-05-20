@@ -158,15 +158,14 @@ public sealed class GenerateTaskRecommendationsHandler
             CandidateTake,
             cancellationToken);
 
-        var pending = await _taskRecommendationRepository.ListPendingByUserAndWorkspaceAsync(
-            currentUserId,
-            request.WorkspaceId,
-            cancellationToken);
-
-        var pendingTaskIds = pending.Select(x => x.TaskId).ToHashSet();
+        var previouslyRecommendedTaskIds =
+            await _taskRecommendationRepository.ListPreviouslyRecommendedTaskIdsByUserAndWorkspaceAsync(
+                currentUserId,
+                request.WorkspaceId,
+                cancellationToken);
 
         candidates = candidates
-            .Where(x => !pendingTaskIds.Contains(x.TaskId))
+            .Where(x => !previouslyRecommendedTaskIds.Contains(x.TaskId))
             .ToArray();
 
         if (candidates.Count == 0)

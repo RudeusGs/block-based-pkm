@@ -5,7 +5,9 @@ using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Recommendations.Models;
+using Pkm.Application.Features.Tasks.Models;
 using Pkm.Domain.Common;
+using Pkm.Domain.Recommendations;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Recommendations.Commands.AcceptTaskRecommendation;
@@ -19,6 +21,7 @@ public sealed class AcceptTaskRecommendationHandler
     private readonly IUserTaskHistoryRepository _historyRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRecommendationRealtimePublisher _realtimePublisher;
+    private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
@@ -31,6 +34,7 @@ public sealed class AcceptTaskRecommendationHandler
         IUserTaskHistoryRepository historyRepository,
         IUnitOfWork unitOfWork,
         IRecommendationRealtimePublisher realtimePublisher,
+        ITaskRealtimePublisher taskRealtimePublisher,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         IClock clock)
@@ -42,6 +46,7 @@ public sealed class AcceptTaskRecommendationHandler
         _historyRepository = historyRepository;
         _unitOfWork = unitOfWork;
         _realtimePublisher = realtimePublisher;
+        _taskRealtimePublisher = taskRealtimePublisher;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
@@ -102,16 +107,27 @@ public sealed class AcceptTaskRecommendationHandler
             }
 
             _historyRepository.Add(
-                new Pkm.Domain.Recommendations.UserTaskHistory(
+                new UserTaskHistory(
                     Guid.NewGuid(),
                     recommendation.TaskId,
                     currentUserId,
                     now));
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await InvalidateUserRecommendationCacheAsync(currentUserId, cancellationToken);
 
-            var dto = recommendation.ToDto();
+            await InvalidateUserRecommendationCacheAsync(
+                currentUserId,
+                cancellationToken);
+
+            var taskDetail = await _workTaskRepository.GetDetailAsync(
+                task.Id,
+                cancellationToken);
+
+            var taskDto = taskDetail is null
+                ? task.ToDto()
+                : taskDetail.ToDto();
+
+            var recommendationDto = recommendation.ToDto();
 
             await _realtimePublisher.PublishToUserAsync(
                 new RecommendationRealtimeEnvelope(
@@ -121,10 +137,32 @@ public sealed class AcceptTaskRecommendationHandler
                     PageId: task.PageId,
                     ActorId: currentUserId,
                     OccurredAtUtc: now,
-                    Payload: dto),
+                    Payload: new
+                    {
+                        recommendation = recommendationDto,
+                        task = taskDto
+                    }),
                 cancellationToken);
 
-            return Result.Success(dto);
+            await _taskRealtimePublisher.PublishToPageAsync(
+                new TaskRealtimeEnvelope(
+                    EventName: "TaskAssignedFromRecommendation",
+                    WorkspaceId: task.WorkspaceId,
+                    PageId: task.PageId,
+                    TaskId: task.Id,
+                    ActorId: currentUserId,
+                    OccurredAtUtc: now,
+                    Payload: new
+                    {
+                        task = taskDto,
+                        recommendation = recommendationDto,
+                        taskId = task.Id,
+                        recommendationId = recommendation.Id,
+                        assigneeUserId = currentUserId
+                    }),
+                cancellationToken);
+
+            return Result.Success(recommendationDto);
         }
         catch (DomainException ex)
         {

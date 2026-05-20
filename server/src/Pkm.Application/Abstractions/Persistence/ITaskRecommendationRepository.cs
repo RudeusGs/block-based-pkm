@@ -1,5 +1,4 @@
-﻿using Pkm.Application.Features.Recommendations.Models;
-using Pkm.Domain.Recommendations;
+﻿using Pkm.Domain.Recommendations;
 
 namespace Pkm.Application.Abstractions.Persistence;
 
@@ -28,6 +27,11 @@ public interface ITaskRecommendationRepository
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<TaskRecommendation>> ListPendingByUserAndWorkspaceAsync(
+        Guid userId,
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlySet<Guid>> ListPreviouslyRecommendedTaskIdsByUserAndWorkspaceAsync(
         Guid userId,
         Guid workspaceId,
         CancellationToken cancellationToken = default);
