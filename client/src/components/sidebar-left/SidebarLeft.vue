@@ -13,8 +13,10 @@
       :avatar-url="account.profileAvatarUrl.value"
       :initial="account.profileInitial.value"
       :open-task-count="myTasks.openTaskCount.value"
+      :recommendation-count="recommendations.pendingRecommendationCount.value"
       @expand="expandSidebar"
       @open-my-tasks="openCollapsedPanel('myTasks')"
+      @open-recommendations="openCollapsedPanel('recommendations')"
       @open-settings="openSettingsModal"
     />
 
@@ -54,6 +56,26 @@
                 {{ myTasks.openTaskCount.value }}
               </span>
             </button>
+
+            <button
+              type="button"
+              class="lunar-nav-row"
+              :class="{ active: shell.activePanel.value === 'recommendations' }"
+              @click.stop="openPanel('recommendations')"
+            >
+              <span class="lunar-nav-icon">
+                <i class="bi bi-stars"></i>
+              </span>
+
+              <span class="lunar-nav-label">AI Suggestions</span>
+
+              <span
+                v-if="recommendations.pendingRecommendationCount.value > 0"
+                class="lunar-count-badge"
+              >
+                {{ recommendations.pendingRecommendationCount.value }}
+              </span>
+            </button>
           </div>
 
           <Transition name="lunar-expand">
@@ -89,19 +111,6 @@
             @select-page="workspaceTree.selectPage"
             @toggle-page="workspaceTree.togglePageBranch"
           />
-
-          <SidebarRecommendationsCard
-            class="lunar-recommendations-section"
-            :workspace-id="workspaceTree.selectedWorkspaceId.value"
-            :recommendations="recommendations.taskRecommendations.value"
-            :is-loading="recommendations.isLoadingTaskRecommendations.value"
-            :is-generating="recommendations.isGeneratingTaskRecommendations.value"
-            :error="recommendations.taskRecommendationError.value"
-            @generate="generateRecommendations"
-            @retry="refreshRecommendations"
-            @accept="acceptRecommendation"
-            @reject="recommendations.rejectRecommendation"
-          />
         </nav>
 
         <footer class="lunar-footer">
@@ -122,6 +131,22 @@
         </footer>
       </div>
     </template>
+
+    <SidebarRecommendationsDrawer
+      :open="shell.activePanel.value === 'recommendations'"
+      :workspace-id="workspaceTree.selectedWorkspaceId.value"
+      :workspace-name="workspaceTree.selectedWorkspaceName.value"
+      :page-name="workspaceNavigation.pageName.value"
+      :recommendations="recommendations.taskRecommendations.value"
+      :is-loading="recommendations.isLoadingTaskRecommendations.value"
+      :is-generating="recommendations.isGeneratingTaskRecommendations.value"
+      :error="recommendations.taskRecommendationError.value"
+      @close="shell.closePanel"
+      @generate="generateRecommendations"
+      @retry="refreshRecommendations"
+      @accept="acceptRecommendation"
+      @reject="rejectRecommendation"
+    />
 
     <SidebarSettingsPanel
       v-if="isSettingsModalOpen"
@@ -167,11 +192,12 @@
 import { onMounted, ref, watch } from 'vue'
 import CreateWorkspaceModal from '@/components/workspace/CreateWorkspaceModal.vue'
 import CreatePageModal from '@/components/page/CreatePageModal.vue'
+import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import type { Guid } from '@/api/models/common.model'
 
 import SidebarRail from './features/rail/SidebarRail.vue'
 import SidebarAccountHeader from './features/account/SidebarAccountHeader.vue'
-import SidebarRecommendationsCard from './features/recommendations/SidebarRecommendationsCard.vue'
+import SidebarRecommendationsDrawer from './features/recommendations/SidebarRecommendationsDrawer.vue'
 import SidebarMyTasksPanel from './features/my-tasks/SidebarMyTasksPanel.vue'
 import SidebarSettingsPanel from './features/settings/SidebarSettingsPanel.vue'
 import SidebarWorkspaceSection from './features/workspaces/SidebarWorkspaceSection.vue'
@@ -190,6 +216,7 @@ type NonNullSidebarPanel = Exclude<SidebarPanel, null>
 const shell = useSidebarShell()
 const account = useSidebarAccount()
 const workspaceTree = useSidebarWorkspaceTree()
+const workspaceNavigation = useWorkspaceNavigation()
 const recommendations = useSidebarRecommendations()
 const myTasks = useSidebarMyTasks()
 const settings = useSidebarSettings()
@@ -221,6 +248,12 @@ function expandSidebar() {
 function loadPanelData(panel: SidebarPanel) {
   if (panel === 'myTasks') {
     void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
+  }
+
+  if (panel === 'recommendations') {
+    void recommendations.fetchPendingRecommendations(
+      workspaceTree.selectedWorkspaceId.value
+    )
   }
 }
 
@@ -271,11 +304,17 @@ function refreshRecommendations() {
   )
 }
 
-function generateRecommendations() {
-  void recommendations.generateRecommendations(
+async function generateRecommendations() {
+  const generated = await recommendations.generateRecommendations(
     workspaceTree.selectedWorkspaceId.value,
     workspaceTree.selectedPageId.value
   )
+
+  if (generated) {
+    void recommendations.fetchPendingRecommendations(
+      workspaceTree.selectedWorkspaceId.value
+    )
+  }
 }
 
 async function acceptRecommendation(recommendationId: Guid) {
@@ -284,6 +323,10 @@ async function acceptRecommendation(recommendationId: Guid) {
   if (accepted) {
     void myTasks.fetchMyTasks(workspaceTree.selectedWorkspaceId.value)
   }
+}
+
+async function rejectRecommendation(recommendationId: Guid) {
+  await recommendations.rejectRecommendation(recommendationId)
 }
 
 function refreshMyTasks() {
@@ -412,49 +455,6 @@ onMounted(() => {
 :deep(.lunar-pages-branch) {
   margin-left: 10px;
   padding-left: 8px;
-}
-
-:deep(.lunar-ai-card) {
-  margin: 8px 0 0;
-  padding: 4px 0 8px;
-  border: 0;
-  border-top: 1px solid #2b2b2b;
-  border-radius: 0;
-  background: transparent;
-}
-
-:deep(.lunar-ai-icon),
-:deep(.lunar-ai-item),
-:deep(.lunar-ai-item-meta span) {
-  border: 0;
-  background: transparent;
-}
-
-:deep(.lunar-ai-icon) {
-  width: 20px;
-  color: #777;
-}
-
-:deep(.lunar-ai-head) {
-  padding: 0 4px 4px 7px;
-}
-
-:deep(.lunar-ai-list) {
-  gap: 1px;
-}
-
-:deep(.lunar-ai-item) {
-  border-radius: 6px;
-  padding: 6px 7px 6px 34px;
-}
-
-:deep(.lunar-ai-item:hover) {
-  background: #242424;
-}
-
-:deep(.lunar-ai-empty),
-:deep(.lunar-ai-error) {
-  padding-left: 34px;
 }
 
 :deep(.lunar-footer) {

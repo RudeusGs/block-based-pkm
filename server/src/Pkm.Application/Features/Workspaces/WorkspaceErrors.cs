@@ -140,4 +140,9 @@ public static class WorkspaceErrors
             "Workspace.InvalidUserId",
             $"UserId '{userId}' không hợp lệ.",
             ResultStatus.Validation);
+    public static Error TargetUserAccountNotActive(string email)
+        => new(
+            "Workspace.TargetUserAccountNotActive",
+            $"Tài khoản với email {email} hiện đang bị khóa hoặc đã bị vô hiệu hóa.",
+            ResultStatus.Forbidden);
 }

@@ -17,6 +17,10 @@ export function useSidebarRecommendations() {
     return taskRecommendations.value.length > 0
   })
 
+  const pendingRecommendationCount = computed(() => {
+    return taskRecommendations.value.length
+  })
+
   async function fetchPendingRecommendations(workspaceId: Guid | null) {
     if (!workspaceId) {
       taskRecommendations.value = []
@@ -34,7 +38,7 @@ export function useSidebarRecommendations() {
         workspaceId,
         status: 'pending',
         pageNumber: 1,
-        pageSize: 3,
+        pageSize: 20,
       })
 
       if (!result.isSuccess || !result.data) {
@@ -60,7 +64,7 @@ export function useSidebarRecommendations() {
     workspaceId: Guid | null,
     pageId: Guid | null
   ) {
-    if (!workspaceId || isGeneratingTaskRecommendations.value) return
+    if (!workspaceId || isGeneratingTaskRecommendations.value) return false
 
     isGeneratingTaskRecommendations.value = true
     taskRecommendationError.value = null
@@ -76,17 +80,21 @@ export function useSidebarRecommendations() {
           result,
           'Không thể tạo gợi ý task.'
         )
-        return
+        return false
       }
 
-      taskRecommendations.value = result.data
-        .filter((item) => item.status.toLowerCase() === 'pending')
-        .slice(0, 3)
+      taskRecommendations.value = result.data.filter((item) => {
+        return item.status.toLowerCase() === 'pending'
+      })
+
+      return true
     } catch (error) {
       taskRecommendationError.value = getApiErrorMessage(
         error,
         'Không thể tạo gợi ý task.'
       )
+
+      return false
     } finally {
       isGeneratingTaskRecommendations.value = false
     }
@@ -128,23 +136,28 @@ export function useSidebarRecommendations() {
           result,
           'Không thể từ chối gợi ý task.'
         )
-        return
+        return false
       }
 
       taskRecommendations.value = taskRecommendations.value.filter(
         (item) => item.id !== recommendationId
       )
+
+      return true
     } catch (error) {
       taskRecommendationError.value = getApiErrorMessage(
         error,
         'Không thể từ chối gợi ý task.'
       )
+
+      return false
     }
   }
 
   return {
     taskRecommendations,
     hasTaskRecommendations,
+    pendingRecommendationCount,
     isLoadingTaskRecommendations,
     isGeneratingTaskRecommendations,
     taskRecommendationError,

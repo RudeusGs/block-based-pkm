@@ -26,8 +26,6 @@ internal sealed class SmtpEmailSender : IEmailSender
         using var mailMessage = CreateMailMessage(message);
 
         cancellationToken.ThrowIfCancellationRequested();
-
-        // SmtpClient không hỗ trợ CancellationToken trực tiếp.
         await smtpClient.SendMailAsync(mailMessage);
     }
 

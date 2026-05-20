@@ -1,6 +1,6 @@
 import { ref } from 'vue'
 
-export type SidebarPanel = 'myTasks' | 'settings' | null
+export type SidebarPanel = 'myTasks' | 'recommendations' | 'settings' | null
 
 export function useSidebarShell() {
   const isCollapsed = ref(false)
@@ -23,11 +23,16 @@ export function useSidebarShell() {
     activePanel.value = activePanel.value === panel ? null : panel
   }
 
+  function closePanel() {
+    activePanel.value = null
+  }
+
   return {
     isCollapsed,
     activePanel,
     expandSidebar,
     collapseSidebar,
     openPanel,
+    closePanel,
   }
 }

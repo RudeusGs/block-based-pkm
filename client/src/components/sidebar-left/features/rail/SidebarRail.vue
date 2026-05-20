@@ -53,6 +53,21 @@
 
     <button
       type="button"
+      class="lunar-rail-btn"
+      title="AI Suggestions"
+      aria-label="Mở AI Suggestions"
+      @click.stop="emit('open-recommendations')"
+    >
+      <i class="bi bi-stars"></i>
+
+      <span
+        v-if="recommendationCount > 0"
+        class="lunar-rail-dot"
+      ></span>
+    </button>
+
+    <button
+      type="button"
       class="lunar-rail-btn mt-auto"
       title="Settings"
       aria-label="Mở Settings"
@@ -71,11 +86,13 @@ const props = defineProps<{
   avatarUrl: string | null
   initial: string
   openTaskCount: number
+  recommendationCount: number
 }>()
 
 const emit = defineEmits<{
   expand: []
   'open-my-tasks': []
+  'open-recommendations': []
   'open-settings': []
 }>()
 

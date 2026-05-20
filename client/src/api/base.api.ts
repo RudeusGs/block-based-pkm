@@ -3,7 +3,7 @@ import axios, {
   type AxiosRequestConfig,
   type AxiosResponse,
 } from 'axios'
-import Cookies from 'js-cookie'
+import { clearAuthToken, getAuthToken } from '@/modules/auth/utils/auth-token.util'
 
 const apiClient: AxiosInstance = axios.create({
   baseURL:
@@ -14,13 +14,9 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
-const getToken = (): string | undefined => {
-  return Cookies.get('token')
-}
-
 apiClient.interceptors.request.use(
   (config) => {
-    const token = getToken()
+    const token = getAuthToken()
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
@@ -37,6 +33,17 @@ apiClient.interceptors.response.use(
   },
   (error) => {
     const responseData = error?.response?.data
+    const status = error?.response?.status
+
+    if (status === 401) {
+      clearAuthToken()
+
+      const currentPath = window.location.pathname
+
+      if (currentPath.startsWith('/app')) {
+        window.location.replace('/login')
+      }
+    }
 
     const message =
       responseData?.message ||
@@ -49,7 +56,7 @@ apiClient.interceptors.response.use(
 
     return Promise.reject({
       message,
-      status: error?.response?.status,
+      status,
       data: responseData,
     })
   }

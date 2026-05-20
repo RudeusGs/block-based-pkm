@@ -4,6 +4,8 @@ using Pkm.Application.Abstractions.Email;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Notifications;
+using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Application.Features.Workspaces.Services;
@@ -27,6 +29,7 @@ public sealed class AddWorkspaceMemberHandler
     private readonly AddWorkspaceMemberCommandValidator _validator;
     private readonly IEmailSender _emailSender;
     private readonly IWorkspaceInvitationLinkFactory _workspaceInvitationLinkFactory;
+    private readonly INotificationService _notificationService;
 
     public AddWorkspaceMemberHandler(
         ICurrentUser currentUser,
@@ -39,7 +42,8 @@ public sealed class AddWorkspaceMemberHandler
         IClock clock,
         AddWorkspaceMemberCommandValidator validator,
         IEmailSender emailSender,
-        IWorkspaceInvitationLinkFactory workspaceInvitationLinkFactory)
+        IWorkspaceInvitationLinkFactory workspaceInvitationLinkFactory,
+        INotificationService notificationService)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
@@ -52,6 +56,7 @@ public sealed class AddWorkspaceMemberHandler
         _validator = validator;
         _emailSender = emailSender;
         _workspaceInvitationLinkFactory = workspaceInvitationLinkFactory;
+        _notificationService = notificationService;
     }
 
     public async Task<Result<WorkspaceInvitationDto>> HandleAsync(
@@ -97,27 +102,36 @@ public sealed class AddWorkspaceMemberHandler
         var normalizedEmail = WorkspaceInvitation.NormalizeEmail(request.Email);
 
         var targetUser = await _userRepository.GetByEmailAsync(
-            request.Email,
+            normalizedEmail,
             cancellationToken);
 
-        if (targetUser?.Id == currentUserId)
+        if (targetUser is null)
+        {
+            return Result.Failure<WorkspaceInvitationDto>(
+                WorkspaceErrors.TargetUserNotFoundByEmail(normalizedEmail));
+        }
+
+        if (!targetUser.IsActive())
+        {
+            return Result.Failure<WorkspaceInvitationDto>(
+                WorkspaceErrors.TargetUserAccountNotActive(normalizedEmail));
+        }
+
+        if (targetUser.Id == currentUserId)
         {
             return Result.Failure<WorkspaceInvitationDto>(
                 WorkspaceErrors.CannotManageYourself);
         }
 
-        if (targetUser is not null)
-        {
-            var isAlreadyMember = await _workspaceMemberRepository.ExistsAsync(
-                request.WorkspaceId,
-                targetUser.Id,
-                cancellationToken);
+        var isAlreadyMember = await _workspaceMemberRepository.ExistsAsync(
+            request.WorkspaceId,
+            targetUser.Id,
+            cancellationToken);
 
-            if (isAlreadyMember)
-            {
-                return Result.Failure<WorkspaceInvitationDto>(
-                    WorkspaceErrors.WorkspaceMemberAlreadyExists);
-            }
+        if (isAlreadyMember)
+        {
+            return Result.Failure<WorkspaceInvitationDto>(
+                WorkspaceErrors.WorkspaceMemberAlreadyExists);
         }
 
         var now = _clock.UtcNow;
@@ -150,7 +164,7 @@ public sealed class AddWorkspaceMemberHandler
 
         var invitation = WorkspaceInvitation.Create(
             request.WorkspaceId,
-            request.Email,
+            normalizedEmail,
             request.Role,
             currentUserId,
             tokenHash,
@@ -185,6 +199,23 @@ public sealed class AddWorkspaceMemberHandler
 
             return Result.Failure<WorkspaceInvitationDto>(
                 WorkspaceErrors.WorkspaceInvitationEmailFailed);
+        }
+
+        try
+        {
+            await _notificationService.NotifyAsync(
+                targetUser.Id,
+                NotificationTemplates.WorkspaceInvited(
+                    actorUserId: currentUserId,
+                    actorDisplayName: inviterDisplayName,
+                    workspaceId: workspace.Id,
+                    workspaceName: workspace.Name,
+                    role: request.Role),
+                cancellationToken);
+        }
+        catch
+        {
+
         }
 
         return Result.Success(ToDto(invitation));
@@ -249,7 +280,7 @@ public sealed class AddWorkspaceMemberHandler
         {acceptLink}
 
         Lưu ý:
-        Nếu bạn chưa có tài khoản, hãy đăng ký bằng đúng email {toEmail}, sau đó bấm lại link xác nhận.
+        Vui lòng đăng nhập bằng đúng email {toEmail} để xác nhận lời mời.
         Nếu bạn không mong đợi lời mời này, bạn có thể bỏ qua email này.
 
         Trân trọng,
@@ -357,8 +388,8 @@ public sealed class AddWorkspaceMemberHandler
 
                                     <div style="padding:16px 18px;background-color:#fffbeb;border:1px solid #fde68a;border-radius:12px;margin:0 0 24px;">
                                         <p style="margin:0;font-size:14px;line-height:1.6;color:#92400e;">
-                                            Nếu bạn chưa có tài khoản, hãy đăng ký bằng đúng email
-                                            <strong>{safeToEmail}</strong>, sau đó bấm lại link xác nhận.
+                                            Vui lòng đăng nhập bằng đúng email
+                                            <strong>{safeToEmail}</strong> để xác nhận lời mời.
                                         </p>
                                     </div>
 

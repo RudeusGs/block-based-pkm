@@ -11,11 +11,12 @@ public static class NotificationTemplates
         Guid actorUserId,
         string actorDisplayName,
         Guid workspaceId,
+        string workspaceName,
         WorkspaceRole role)
         => new(
             Type: NotificationType.WorkspaceInvited,
-            Title: "Bạn đã được thêm vào workspace",
-            Message: $"{actorDisplayName} đã thêm bạn vào workspace với vai trò {role}.",
+            Title: "Bạn đã được mời vào workspace",
+            Message: $"{actorDisplayName} đã mời bạn vào workspace \"{workspaceName}\" với vai trò {role}. Vui lòng kiểm tra Gmail để xác nhận lời mời.",
             ActorUserId: actorUserId,
             WorkspaceId: workspaceId,
             ReferenceId: workspaceId,

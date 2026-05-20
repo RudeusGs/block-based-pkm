@@ -122,19 +122,6 @@ public sealed class AcceptWorkspaceInvitationHandler
             targetUser.Id,
             cancellationToken);
 
-        var inviter = await _userRepository.GetByIdAsync(
-            invitation.InvitedByUserId,
-            cancellationToken);
-
-        await _notificationService.NotifyAsync(
-            targetUser.Id,
-            NotificationTemplates.WorkspaceInvited(
-                invitation.InvitedByUserId,
-                inviter?.FullName ?? inviter?.UserName ?? "Có người",
-                invitation.WorkspaceId,
-                invitation.Role),
-            cancellationToken);
-
         return Result.Success(ToDto(member));
     }
 
