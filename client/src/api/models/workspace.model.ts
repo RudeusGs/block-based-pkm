@@ -1,4 +1,4 @@
-import type { Guid } from './common.model'
+import type { DateTimeString, Guid } from './common.model'
 
 export type WorkspaceRoleValue = 'manager' | 'member' | 'viewer'
 
@@ -24,24 +24,40 @@ export interface ChangeWorkspaceMemberRoleRequest {
 export interface WorkspaceResponse {
   id: Guid
   name: string
-  description?: string | null
+  description: string | null
   ownerId: Guid
-  lastModifiedBy?: Guid | null
-  createdDate: string
-  updatedDate?: string | null
-  currentUserRole?: string | null
+  lastModifiedBy: Guid | null
+  createdDate: DateTimeString
+  updatedDate: DateTimeString | null
+  currentUserRole: string | null
   canRead: boolean
   canWrite: boolean
   canManageMembers: boolean
 }
 
+export interface WorkspaceListItemResponse {
+  id: Guid
+  name: string
+  description: string | null
+  ownerId: Guid
+  createdDate: DateTimeString
+  updatedDate: DateTimeString | null
+  currentUserRole: string
+}
+
 export interface WorkspaceMemberResponse {
   workspaceId: Guid
   userId: Guid
+  userName: string
+  email: string
+  fullName: string
+  avatarUrl: string | null
+  userStatus: string
   role: string
   isOwner: boolean
-  createdDate: string
-  updatedDate?: string | null
+  isCurrentUser: boolean
+  joinedAt: DateTimeString
+  updatedDate: DateTimeString | null
 }
 
 export interface WorkspaceInvitationResponse {
@@ -50,8 +66,15 @@ export interface WorkspaceInvitationResponse {
   email: string
   role: string
   invitedByUserId: Guid
-  expiresAtUtc: string
-  acceptedAtUtc?: string | null
-  createdDate: string
-  updatedDate?: string | null
+  expiresAtUtc: DateTimeString
+  acceptedAtUtc: DateTimeString | null
+  createdDate: DateTimeString
+  updatedDate: DateTimeString | null
+}
+
+export interface WorkspacePagedResultResponse {
+  pageNumber: number
+  pageSize: number
+  totalCount: number
+  items: WorkspaceListItemResponse[]
 }

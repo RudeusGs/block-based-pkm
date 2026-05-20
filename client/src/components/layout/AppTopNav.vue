@@ -293,6 +293,7 @@
               type="button"
               class="app-more-item"
               role="menuitem"
+              @click="openWorkspaceMembers"
             >
               <span class="material-symbols-outlined">group</span>
 
@@ -333,6 +334,7 @@ import InviteWorkspaceMemberModal from './InviteWorkspaceMemberModal.vue'
 
 const emit = defineEmits<{
   'jump-to-tasks': []
+  'open-members': []
 }>()
 
 const toast = useToast()
@@ -373,6 +375,11 @@ function openInviteModal() {
 
 function closeInviteModal() {
   isInviteModalOpen.value = false
+}
+
+function openWorkspaceMembers() {
+  isMoreMenuOpen.value = false
+  emit('open-members')
 }
 
 async function submitInvite() {

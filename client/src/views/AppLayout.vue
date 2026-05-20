@@ -3,7 +3,10 @@
     <SidebarLeft />
 
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
-      <AppTopNav @jump-to-tasks="scrollToTasks" />
+      <AppTopNav
+        @jump-to-tasks="scrollToTasks"
+        @open-members="workspaceMembers.open"
+      />
 
       <main class="page-scroll pb-5">
         <div class="page-container container position-relative px-4 pt-5 pb-5">
@@ -374,6 +377,19 @@
       </main>
     </section>
 
+    <WorkspaceMembersSidebar
+      :open="workspaceMembers.isOpen.value"
+      :workspace-name="workspaceNavigation.workspaceName.value"
+      :members="workspaceMembers.members.value"
+      :online-members="workspaceMembers.onlineMembers.value"
+      :offline-members="workspaceMembers.offlineMembers.value"
+      :member-count-label="workspaceMembers.memberCountLabel.value"
+      :is-loading="workspaceMembers.isLoading.value"
+      :error="workspaceMembers.error.value"
+      @close="workspaceMembers.close"
+      @refresh="workspaceMembers.refresh"
+    />
+
     <TaskDetailDrawer
       :open="isTaskDetailOpen"
       :task="selectedTask"
@@ -388,13 +404,19 @@
 import { computed, defineComponent, h, ref } from 'vue'
 import SidebarLeft from '@/components/sidebar-left/SidebarLeft.vue'
 import AppTopNav from '@/components/layout/AppTopNav.vue'
+import WorkspaceMembersSidebar from '@/components/layout/WorkspaceMembersSidebar.vue'
 import TaskDetailDrawer from '@/components/task/TaskDetailDrawer.vue'
+import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
+import { useWorkspaceMembersSidebar } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 
 const emptyBlockRef = ref(null)
 const taskSectionRef = ref(null)
 
 const selectedTask = ref(null)
 const isTaskDetailOpen = ref(false)
+const workspaceNavigation = useWorkspaceNavigation()
+const currentWorkspaceId = computed(() => workspaceNavigation.workspace.value?.id ?? null)
+const workspaceMembers = useWorkspaceMembersSidebar(currentWorkspaceId)
 
 const page = ref({
   id: 'page-q4-roadmap',
