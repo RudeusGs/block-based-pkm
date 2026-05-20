@@ -50,7 +50,7 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
                     user.AvatarUrl,
                     user.Status,
                     member.Role,
-                    member.IsOwner(),
+                    member.Role == WorkspaceRole.Owner,
                     member.CreatedDate,
                     member.UpdatedDate))
             .FirstOrDefaultAsync(cancellationToken);
@@ -67,22 +67,27 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
                 _context.Users.AsNoTracking(),
                 member => member.UserId,
                 user => user.Id,
-                (member, user) => new WorkspaceMemberReadModel(
-                    member.WorkspaceId,
-                    member.UserId,
-                    user.UserName,
-                    user.Email,
-                    user.FullName,
-                    user.AvatarUrl,
-                    user.Status,
-                    member.Role,
-                    member.IsOwner(),
-                    member.CreatedDate,
-                    member.UpdatedDate))
-            .OrderByDescending(member => member.IsOwner)
-            .ThenBy(member => member.Role)
-            .ThenBy(member => member.FullName)
-            .ThenBy(member => member.Email)
+                (member, user) => new
+                {
+                    Member = member,
+                    User = user
+                })
+            .OrderByDescending(x => x.Member.Role == WorkspaceRole.Owner)
+            .ThenBy(x => x.Member.Role)
+            .ThenBy(x => x.User.FullName)
+            .ThenBy(x => x.User.Email)
+            .Select(x => new WorkspaceMemberReadModel(
+                x.Member.WorkspaceId,
+                x.Member.UserId,
+                x.User.UserName,
+                x.User.Email,
+                x.User.FullName,
+                x.User.AvatarUrl,
+                x.User.Status,
+                x.Member.Role,
+                x.Member.Role == WorkspaceRole.Owner,
+                x.Member.CreatedDate,
+                x.Member.UpdatedDate))
             .ToListAsync(cancellationToken);
     }
 
