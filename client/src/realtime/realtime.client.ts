@@ -112,16 +112,33 @@ function dispatch(eventName: string, rawEnvelope: unknown) {
 function registerHubEvent(eventName: string) {
   if (!connection) return
 
-  connection.off(eventName)
-  connection.on(eventName, (rawEnvelope: unknown) => {
-    dispatch(eventName, rawEnvelope)
+  const normalizedEventName = eventName.trim()
+  const lowerEventName = normalizedEventName.toLowerCase()
+
+  connection.off(normalizedEventName)
+  connection.on(normalizedEventName, (rawEnvelope: unknown) => {
+    dispatch(normalizedEventName, rawEnvelope)
   })
+
+  if (lowerEventName !== normalizedEventName) {
+    connection.off(lowerEventName)
+    connection.on(lowerEventName, (rawEnvelope: unknown) => {
+      dispatch(normalizedEventName, rawEnvelope)
+    })
+  }
 }
 
 function unregisterHubEvent(eventName: string) {
   if (!connection) return
 
-  connection.off(eventName)
+  const normalizedEventName = eventName.trim()
+  const lowerEventName = normalizedEventName.toLowerCase()
+
+  connection.off(normalizedEventName)
+
+  if (lowerEventName !== normalizedEventName) {
+    connection.off(lowerEventName)
+  }
 }
 
 function createConnection() {
@@ -160,9 +177,18 @@ function createConnection() {
   })
 
   for (const eventName of handlersByEventName.keys()) {
-    nextConnection.on(eventName, (rawEnvelope: unknown) => {
-      dispatch(eventName, rawEnvelope)
+    const normalizedEventName = eventName.trim()
+    const lowerEventName = normalizedEventName.toLowerCase()
+
+    nextConnection.on(normalizedEventName, (rawEnvelope: unknown) => {
+      dispatch(normalizedEventName, rawEnvelope)
     })
+
+    if (lowerEventName !== normalizedEventName) {
+      nextConnection.on(lowerEventName, (rawEnvelope: unknown) => {
+        dispatch(normalizedEventName, rawEnvelope)
+      })
+    }
   }
 
   return nextConnection
