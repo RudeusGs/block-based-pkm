@@ -1,5 +1,22 @@
 namespace Pkm.Application.Abstractions.Realtime;
 
+public sealed record WorkspacePresenceEntry(
+    Guid WorkspaceId,
+    Guid UserId,
+    string? UserName,
+    string ConnectionId,
+    DateTimeOffset LastSeenUtc);
+
+public sealed record WorkspacePresenceUserDto(
+    Guid UserId,
+    string? UserName,
+    int ConnectionCount,
+    DateTimeOffset LastSeenUtc);
+
+public sealed record WorkspacePresenceDto(
+    Guid WorkspaceId,
+    IReadOnlyList<WorkspacePresenceUserDto> ActiveUsers);
+
 public sealed record PagePresenceEntry(
     Guid PageId,
     Guid WorkspaceId,

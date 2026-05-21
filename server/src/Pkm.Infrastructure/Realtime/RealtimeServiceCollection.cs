@@ -50,20 +50,26 @@ public static class RealtimeServiceCollection
         }
 
         services.AddSingleton<InMemoryPagePresenceService>();
+        services.AddSingleton<InMemoryWorkspacePresenceService>();
         services.AddSingleton<InMemoryBlockEditLeaseService>();
 
         if (hasRedisMultiplexer)
         {
             services.AddSingleton<RedisPagePresenceService>();
+            services.AddSingleton<RedisWorkspacePresenceService>();
             services.AddSingleton<RedisBlockEditLeaseService>();
 
             services.AddSingleton<IPagePresenceService, FallbackPagePresenceService>();
+            services.AddSingleton<IWorkspacePresenceService, FallbackWorkspacePresenceService>();
             services.AddSingleton<IBlockEditLeaseService, FallbackBlockEditLeaseService>();
         }
         else
         {
             services.AddSingleton<IPagePresenceService>(
                 sp => sp.GetRequiredService<InMemoryPagePresenceService>());
+
+            services.AddSingleton<IWorkspacePresenceService>(
+                sp => sp.GetRequiredService<InMemoryWorkspacePresenceService>());
 
             services.AddSingleton<IBlockEditLeaseService>(
                 sp => sp.GetRequiredService<InMemoryBlockEditLeaseService>());

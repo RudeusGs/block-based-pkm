@@ -300,14 +300,14 @@ function scoreLabel(score: number) {
 .notion-ai-overlay {
   position: fixed;
   inset: 0;
-  z-index: 80;
+  z-index: 940;
   background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(2px);
 }
 
 .notion-ai-panel {
   position: fixed;
-  z-index: 90;
+  z-index: 950;
   top: 0;
   right: 0;
   bottom: 0;

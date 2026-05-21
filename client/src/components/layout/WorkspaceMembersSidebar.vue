@@ -1,107 +1,305 @@
 <template>
-  <Transition name="workspace-members-sidebar">
-    <aside
-      v-if="open"
-      class="workspace-members-sidebar"
-      role="dialog"
-      aria-label="Thành viên workspace"
-    >
-      <header class="workspace-members-header">
-        <div class="workspace-members-heading">
-          <span>{{ workspaceName }}</span>
-          <h2>Thành viên</h2>
-        </div>
+  <Teleport to="body">
+    <Transition name="workspace-members-layer">
+      <div
+        v-if="props.open"
+        class="workspace-members-layer"
+      >
+        <button
+          class="workspace-members-scrim"
+          type="button"
+          aria-label="Đóng danh sách thành viên"
+          @click="emit('close')"
+        ></button>
 
-        <div class="workspace-members-actions">
-          <button
-            type="button"
-            class="icon-btn"
-            title="Tải lại"
-            :disabled="isLoading"
-            @click="emit('refresh')"
-          >
-            <span class="material-symbols-outlined">refresh</span>
-          </button>
-
-          <button
-            type="button"
-            class="icon-btn"
-            title="Đóng"
-            @click="emit('close')"
-          >
-            <span class="material-symbols-outlined">close</span>
-          </button>
-        </div>
-      </header>
-
-      <div class="workspace-members-summary">
-        <span>{{ memberCountLabel }}</span>
-
-        <span class="online-count">
-          <span></span>
-          {{ onlineMembers.length }} online
-        </span>
-      </div>
-
-      <div v-if="isLoading" class="workspace-members-list">
-        <div
-          v-for="index in 5"
-          :key="index"
-          class="member-skeleton"
+        <aside
+          class="workspace-members-sidebar"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Thành viên workspace"
+          tabindex="-1"
+          @click.stop
+          @keydown.esc="emit('close')"
         >
-          <div class="avatar-skeleton"></div>
-          <div class="info-skeleton">
-            <div class="line1"></div>
-            <div class="line2"></div>
+          <header class="workspace-members-header">
+            <div class="workspace-members-title-wrap">
+              <div class="workspace-members-icon">
+                <span class="material-symbols-outlined">groups</span>
+              </div>
+
+              <div class="workspace-members-heading">
+                <span :title="props.workspaceName">
+                  {{ props.workspaceName }}
+                </span>
+
+                <h2>Thành viên</h2>
+              </div>
+            </div>
+
+            <div class="workspace-members-actions">
+              <button
+                type="button"
+                class="members-icon-btn"
+                title="Tải lại"
+                :disabled="props.isLoading"
+                @click="emit('refresh')"
+              >
+                <span class="material-symbols-outlined">refresh</span>
+              </button>
+
+              <button
+                type="button"
+                class="members-icon-btn"
+                title="Đóng"
+                @click="emit('close')"
+              >
+                <span class="material-symbols-outlined">close</span>
+              </button>
+            </div>
+          </header>
+
+          <section class="workspace-members-overview">
+            <article class="overview-card main">
+              <strong>{{ props.members.length }}</strong>
+              <span>Tổng thành viên</span>
+            </article>
+
+            <article class="overview-card">
+              <strong>{{ props.onlineMembers.length }}</strong>
+              <span>Online</span>
+            </article>
+
+            <article class="overview-card">
+              <strong>{{ adminCount }}</strong>
+              <span>Quản trị</span>
+            </article>
+          </section>
+
+          <div class="workspace-members-search">
+            <span class="material-symbols-outlined">search</span>
+
+            <input
+              v-model="searchTerm"
+              type="search"
+              placeholder="Tìm theo tên, username, role..."
+              autocomplete="off"
+            />
+
+            <button
+              v-if="searchTerm"
+              type="button"
+              title="Xóa tìm kiếm"
+              @click="searchTerm = ''"
+            >
+              <span class="material-symbols-outlined">close</span>
+            </button>
           </div>
-        </div>
+
+          <div class="workspace-members-meta">
+            <span>{{ props.memberCountLabel }}</span>
+
+            <span class="online-count">
+              <span></span>
+              {{ props.onlineMembers.length }} đang hoạt động
+            </span>
+          </div>
+
+          <main
+            v-if="props.isLoading"
+            class="workspace-members-list"
+          >
+            <div
+              v-for="index in 6"
+              :key="index"
+              class="member-skeleton"
+            >
+              <div class="avatar-skeleton"></div>
+
+              <div class="info-skeleton">
+                <div class="line1"></div>
+                <div class="line2"></div>
+              </div>
+
+              <div class="role-skeleton"></div>
+            </div>
+          </main>
+
+          <main
+            v-else-if="props.error"
+            class="workspace-members-state"
+          >
+            <span class="material-symbols-outlined">group_off</span>
+            <strong>Không thể tải thành viên</strong>
+            <p>{{ props.error }}</p>
+
+            <button
+              type="button"
+              @click="emit('refresh')"
+            >
+              <span class="material-symbols-outlined">refresh</span>
+              Thử lại
+            </button>
+          </main>
+
+          <main
+            v-else-if="!props.members.length"
+            class="workspace-members-state"
+          >
+            <span class="material-symbols-outlined">person_add</span>
+            <strong>Workspace này chưa có thành viên</strong>
+            <p>Danh sách thành viên sẽ xuất hiện ở đây sau khi có người tham gia.</p>
+          </main>
+
+          <main
+            v-else-if="!visibleMembers.length"
+            class="workspace-members-state compact"
+          >
+            <span class="material-symbols-outlined">manage_search</span>
+            <strong>Không tìm thấy ai</strong>
+            <p>Thử tìm bằng tên, username hoặc quyền khác nhé.</p>
+          </main>
+
+          <main
+            v-else
+            class="workspace-members-list"
+          >
+            <section
+              v-if="visibleOnlineMembers.length"
+              class="members-group"
+            >
+              <div class="members-group-head">
+                <h3>Online</h3>
+                <span>{{ visibleOnlineMembers.length }}</span>
+              </div>
+
+              <article
+                v-for="member in visibleOnlineMembers"
+                :key="member.userId"
+                class="member-row"
+                :class="{
+                  current: member.isCurrentUser,
+                  owner: member.isOwner,
+                }"
+              >
+                <div class="member-avatar-wrap">
+                  <img
+                    v-if="member.avatarUrl"
+                    class="member-avatar"
+                    :src="member.avatarUrl"
+                    :alt="memberName(member)"
+                  />
+
+                  <div
+                    v-else
+                    class="member-avatar member-avatar-fallback"
+                  >
+                    {{ member.isCurrentUser ? 'B' : member.initials }}
+                  </div>
+
+                  <span
+                    class="presence-dot online"
+                    title="Đang hoạt động"
+                  ></span>
+                </div>
+
+                <div class="member-copy">
+                  <strong :title="memberName(member)">
+                    {{ memberName(member) }}
+                  </strong>
+
+                  <span
+                    v-if="!member.isCurrentUser"
+                    class="member-subline"
+                  >
+                    {{ memberSubline(member) }}
+                  </span>
+                </div>
+
+                <span
+                  v-if="!member.isCurrentUser"
+                  class="member-role"
+                  :class="roleClass(member)"
+                  :title="roleLabel(member)"
+                >
+                  {{ roleLabel(member) }}
+                </span>
+              </article>
+            </section>
+
+            <section
+              v-if="visibleOfflineMembers.length"
+              class="members-group"
+            >
+              <div class="members-group-head">
+                <h3>Offline</h3>
+                <span>{{ visibleOfflineMembers.length }}</span>
+              </div>
+
+              <article
+                v-for="member in visibleOfflineMembers"
+                :key="member.userId"
+                class="member-row"
+                :class="{
+                  current: member.isCurrentUser,
+                  owner: member.isOwner,
+                }"
+              >
+                <div class="member-avatar-wrap">
+                  <img
+                    v-if="member.avatarUrl"
+                    class="member-avatar"
+                    :src="member.avatarUrl"
+                    :alt="memberName(member)"
+                  />
+
+                  <div
+                    v-else
+                    class="member-avatar member-avatar-fallback"
+                  >
+                    {{ member.isCurrentUser ? 'B' : member.initials }}
+                  </div>
+
+                  <span
+                    class="presence-dot offline"
+                    title="Vắng mặt"
+                  ></span>
+                </div>
+
+                <div class="member-copy">
+                  <strong :title="memberName(member)">
+                    {{ memberName(member) }}
+                  </strong>
+
+                  <span
+                    v-if="!member.isCurrentUser"
+                    class="member-subline"
+                  >
+                    {{ memberSubline(member) }}
+                  </span>
+                </div>
+
+                <span
+                  v-if="!member.isCurrentUser"
+                  class="member-role"
+                  :class="roleClass(member)"
+                  :title="roleLabel(member)"
+                >
+                  {{ roleLabel(member) }}
+                </span>
+              </article>
+            </section>
+          </main>
+        </aside>
       </div>
-
-      <div v-else-if="error" class="empty-state">
-        <span class="material-symbols-outlined">group_off</span>
-        <strong>Không thể tải thành viên</strong>
-        <p>{{ error }}</p>
-        <button type="button" @click="emit('refresh')">
-          Thử lại
-        </button>
-      </div>
-
-      <div v-else-if="!members.length" class="empty-state">
-        <span class="material-symbols-outlined">groups</span>
-        <strong>Chưa có thành viên</strong>
-        <p>Danh sách thành viên workspace sẽ xuất hiện ở đây.</p>
-      </div>
-
-      <div v-else class="workspace-members-list">
-        <section v-if="onlineMembers.length" class="members-group">
-          <h3>Online</h3>
-
-          <WorkspaceMemberRow
-            v-for="member in onlineMembers"
-            :key="member.userId"
-            :member="member"
-          />
-        </section>
-
-        <section v-if="offlineMembers.length" class="members-group">
-          <h3>Offline</h3>
-
-          <WorkspaceMemberRow
-            v-for="member in offlineMembers"
-            :key="member.userId"
-            :member="member"
-          />
-        </section>
-      </div>
-    </aside>
-  </Transition>
+    </Transition>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
-import { defineComponent, h } from 'vue'
+import { computed, ref } from 'vue'
 import type { WorkspaceMemberListItem } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 
-defineProps<{
+const props = defineProps<{
   open: boolean
   workspaceName: string
   members: WorkspaceMemberListItem[]
@@ -117,95 +315,185 @@ const emit = defineEmits<{
   refresh: []
 }>()
 
+const searchTerm = ref('')
+
+const normalizedSearchTerm = computed(() => {
+  return searchTerm.value.trim().toLowerCase()
+})
+
+const adminCount = computed(() => {
+  return props.members.filter((member) => {
+    const role = member.role?.trim().toLowerCase()
+
+    return member.isOwner || role === 'owner' || role === 'manager'
+  }).length
+})
+
+const visibleMembers = computed(() => {
+  const keyword = normalizedSearchTerm.value
+
+  if (!keyword) {
+    return props.members
+  }
+
+  return props.members.filter((member) => memberMatchesSearch(member, keyword))
+})
+
+const visibleOnlineMembers = computed(() => {
+  return visibleMembers.value.filter((member) => member.availability === 'online')
+})
+
+const visibleOfflineMembers = computed(() => {
+  return visibleMembers.value.filter((member) => member.availability === 'offline')
+})
+
+function memberName(member: WorkspaceMemberListItem) {
+  return member.isCurrentUser ? 'Bạn' : member.displayName
+}
+
+function memberSubline(member: WorkspaceMemberListItem) {
+  const userName = member.userName?.trim()
+  const status = availabilityLabel(member)
+
+  if (!userName) {
+    return status
+  }
+
+  const displayName = member.displayName.trim().toLowerCase()
+  const normalizedUserName = userName.toLowerCase()
+
+  if (displayName === normalizedUserName) {
+    return status
+  }
+
+  return `@${userName} · ${status}`
+}
+
+function availabilityLabel(member: WorkspaceMemberListItem) {
+  return member.availability === 'online' ? 'đang hoạt động' : 'vắng mặt'
+}
+
 function roleLabel(member: WorkspaceMemberListItem) {
   if (member.isOwner) return 'Owner'
 
   const role = member.role?.trim()
+
   return role
     ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
     : 'Member'
 }
 
-const WorkspaceMemberRow = defineComponent({
-  name: 'WorkspaceMemberRow',
-  props: {
-    member: {
-      type: Object as () => WorkspaceMemberListItem,
-      required: true,
-    },
-  },
-  setup(props) {
-    return () =>
-      h('article', { class: 'member-row' }, [
-        h('div', { class: 'avatar-wrapper' }, [
-          props.member.avatarUrl
-            ? h('img', {
-                class: 'avatar',
-                src: props.member.avatarUrl,
-                alt: props.member.isCurrentUser
-                  ? 'You'
-                  : props.member.displayName,
-              })
-            : h(
-                'div',
-                { class: 'avatar avatar-fallback' },
-                props.member.isCurrentUser ? 'Y' : props.member.initials
-              ),
+function roleClass(member: WorkspaceMemberListItem) {
+  if (member.isOwner) return 'owner'
 
-          h('span', {
-            class: [
-              'presence-dot',
-              props.member.availability === 'online' ? 'online' : 'offline',
-            ],
-          }),
-        ]),
+  const role = member.role?.trim().toLowerCase()
 
-        h('div', { class: 'member-info' }, [
-          h('div', { class: 'member-name-row' }, [
-            h(
-              'strong',
-              props.member.isCurrentUser ? 'You' : props.member.displayName
-            ),
-          ]),
-        ]),
+  if (role === 'manager') return 'manager'
+  if (role === 'viewer') return 'viewer'
 
-        h('span', { class: 'member-role' }, roleLabel(props.member)),
-      ])
-  },
-})
+  return 'member'
+}
+
+function memberMatchesSearch(member: WorkspaceMemberListItem, keyword: string) {
+  return [
+    memberName(member),
+    member.userName,
+    roleLabel(member),
+    availabilityLabel(member),
+  ]
+    .filter(Boolean)
+    .some((value) => value.toLowerCase().includes(keyword))
+}
 </script>
 
 <style scoped>
-.workspace-members-sidebar {
-  position: fixed;
-  top: 48px;
-  right: 0;
-  z-index: 80;
+.workspace-members-layer {
+  --members-bg: #0f0f0f;
+  --members-panel: #191919;
+  --members-panel-soft: #202020;
+  --members-panel-hover: #242424;
+  --members-border: #2f2f2f;
+  --members-border-soft: #262626;
+  --members-text: #f1f1f1;
+  --members-muted: #a3a3a3;
+  --members-faint: #737373;
+  --members-success: #75b798;
 
-  width: min(380px, 100vw);
-  height: calc(100vh - 48px);
+  position: fixed;
+  inset: 48px 0 0;
+  z-index: 900;
+  pointer-events: none;
+}
+
+.workspace-members-layer,
+.workspace-members-layer * {
+  box-sizing: border-box;
+}
+
+.workspace-members-scrim {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0, 0, 0, 0.2);
+  pointer-events: auto;
+}
+
+.workspace-members-sidebar {
+  position: absolute;
+  inset: 0 0 0 auto;
+  width: min(408px, 100vw);
+  height: 100%;
 
   display: flex;
   flex-direction: column;
 
-  color: rgba(255, 255, 255, 0.88);
-  background: #191919;
-  border-left: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow:
-    -1px 0 0 rgba(255, 255, 255, 0.03),
-    -18px 0 44px rgba(0, 0, 0, 0.32);
+  color: var(--members-text);
+  background:
+    radial-gradient(circle at top right, rgba(255, 255, 255, 0.055), transparent 32%),
+    var(--members-panel);
+  border-left: 1px solid var(--members-border);
+  box-shadow: -24px 0 70px rgba(0, 0, 0, 0.42);
+
+  pointer-events: auto;
+  outline: 0;
 }
 
 .workspace-members-header {
   min-height: 68px;
-  padding: 14px 16px 12px;
+  padding: 14px 14px 12px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
 
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--members-border-soft);
+}
+
+.workspace-members-title-wrap {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.workspace-members-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+
+  color: #d8d8d8;
+  background: #242424;
+  border: 1px solid #303030;
+}
+
+.workspace-members-icon .material-symbols-outlined {
+  font-size: 19px;
 }
 
 .workspace-members-heading {
@@ -216,9 +504,9 @@ const WorkspaceMemberRow = defineComponent({
   display: block;
   overflow: hidden;
 
-  color: rgba(255, 255, 255, 0.42);
+  color: var(--members-faint);
   font-size: 12px;
-  font-weight: 500;
+  font-weight: 520;
   line-height: 1.3;
 
   white-space: nowrap;
@@ -226,25 +514,158 @@ const WorkspaceMemberRow = defineComponent({
 }
 
 .workspace-members-heading h2 {
-  margin: 4px 0 0;
+  margin: 3px 0 0;
 
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--members-text);
   font-size: 18px;
-  font-weight: 650;
-  line-height: 1.25;
-  letter-spacing: -0.015em;
+  font-weight: 680;
+  line-height: 1.22;
+  letter-spacing: -0.018em;
 }
 
 .workspace-members-actions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
+  flex-shrink: 0;
 }
 
-.icon-btn {
-  width: 32px;
-  height: 32px;
+.members-icon-btn {
+  width: 31px;
+  height: 31px;
 
+  border: 0;
+  border-radius: 7px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--members-muted);
+  background: transparent;
+
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.members-icon-btn:hover:not(:disabled) {
+  color: var(--members-text);
+  background: var(--members-panel-hover);
+}
+
+.members-icon-btn:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.members-icon-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.members-icon-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.workspace-members-overview {
+  padding: 12px 14px 10px;
+
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  gap: 8px;
+
+  border-bottom: 1px solid var(--members-border-soft);
+}
+
+.overview-card {
+  min-width: 0;
+  padding: 10px 10px 9px;
+
+  border: 1px solid #292929;
+  border-radius: 10px;
+
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.overview-card.main {
+  background: #202020;
+  border-color: #333333;
+}
+
+.overview-card strong {
+  display: block;
+  color: var(--members-text);
+  font-size: 18px;
+  font-weight: 720;
+  line-height: 1;
+}
+
+.overview-card span {
+  display: block;
+  margin-top: 6px;
+
+  overflow: hidden;
+  color: var(--members-faint);
+  font-size: 11.5px;
+  font-weight: 540;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.workspace-members-search {
+  margin: 12px 14px 10px;
+  min-height: 36px;
+  padding: 0 8px 0 10px;
+
+  display: flex;
+  align-items: center;
+  gap: 7px;
+
+  border: 1px solid #2a2a2a;
+  border-radius: 9px;
+  background: #121212;
+
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.workspace-members-search:focus-within {
+  border-color: #3f3f3f;
+  background: #151515;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.035);
+}
+
+.workspace-members-search > .material-symbols-outlined {
+  color: var(--members-faint);
+  font-size: 17px;
+}
+
+.workspace-members-search input {
+  min-width: 0;
+  flex: 1;
+  height: 34px;
+
+  border: 0;
+  outline: 0;
+
+  color: var(--members-text);
+  background: transparent;
+
+  font: inherit;
+  font-size: 13px;
+}
+
+.workspace-members-search input::placeholder {
+  color: #666666;
+}
+
+.workspace-members-search button {
+  width: 23px;
+  height: 23px;
   border: 0;
   border-radius: 6px;
 
@@ -252,69 +673,53 @@ const WorkspaceMemberRow = defineComponent({
   align-items: center;
   justify-content: center;
 
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--members-faint);
   background: transparent;
-
   cursor: pointer;
-  transition:
-    background 120ms ease,
-    color 120ms ease,
-    transform 120ms ease;
 }
 
-.icon-btn:hover:not(:disabled) {
-  color: rgba(255, 255, 255, 0.86);
-  background: rgba(255, 255, 255, 0.08);
+.workspace-members-search button:hover {
+  color: var(--members-text);
+  background: #252525;
 }
 
-.icon-btn:active:not(:disabled) {
-  transform: scale(0.96);
+.workspace-members-search button .material-symbols-outlined {
+  font-size: 15px;
 }
 
-.icon-btn:disabled {
-  cursor: default;
-  opacity: 0.38;
-}
-
-.icon-btn .material-symbols-outlined {
-  font-size: 19px;
-}
-
-.workspace-members-summary {
-  padding: 10px 16px;
+.workspace-members-meta {
+  padding: 0 14px 10px;
 
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: 10px;
 
-  color: rgba(255, 255, 255, 0.45);
+  color: var(--members-faint);
   font-size: 12px;
-  font-weight: 500;
-
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-  background: #202020;
+  font-weight: 540;
 }
 
 .online-count {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-
-  color: rgba(255, 255, 255, 0.58);
+  flex-shrink: 0;
+  color: var(--members-muted);
 }
 
-.online-count span {
+.online-count > span {
   width: 7px;
   height: 7px;
   border-radius: 999px;
-  background: #37a169;
+  background: var(--members-success);
+  box-shadow: 0 0 0 3px rgba(117, 183, 152, 0.13);
 }
 
 .workspace-members-list {
   flex: 1;
   overflow-y: auto;
-  padding: 10px 8px 14px;
+  padding: 3px 8px 16px;
 }
 
 .workspace-members-list::-webkit-scrollbar {
@@ -328,7 +733,12 @@ const WorkspaceMemberRow = defineComponent({
 .workspace-members-list::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.18);
+  background: #3a3a3a;
+  background-clip: content-box;
+}
+
+.workspace-members-list::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
   background-clip: content-box;
 }
 
@@ -336,63 +746,101 @@ const WorkspaceMemberRow = defineComponent({
   margin-top: 14px;
 }
 
-.members-group h3 {
-  margin: 0 0 4px;
+.members-group-head {
+  min-height: 30px;
   padding: 7px 8px 5px;
 
-  color: rgba(255, 255, 255, 0.34);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.members-group-head h3 {
+  margin: 0;
+
+  color: #858585;
+  font-size: 11px;
+  font-weight: 690;
+  line-height: 1;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.members-group-head span {
+  min-width: 22px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #8f8f8f;
+  background: #202020;
+
   font-size: 11px;
   font-weight: 650;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
 }
 
 .member-row {
   min-width: 0;
-  padding: 7px 8px;
+  min-height: 54px;
+  padding: 8px;
 
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-columns: 36px minmax(0, 1fr) max-content;
   align-items: center;
   gap: 10px;
 
-  border-radius: 7px;
-  cursor: default;
+  border: 1px solid transparent;
+  border-radius: 9px;
 
+  cursor: default;
   transition:
-    background 120ms ease,
-    box-shadow 120ms ease;
+    background 140ms ease,
+    border-color 140ms ease;
 }
 
 .member-row:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--members-panel-hover);
+  border-color: #303030;
 }
 
-.avatar-wrapper {
+.member-row.current {
+  grid-template-columns: 36px minmax(0, 1fr);
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.member-avatar-wrap {
   position: relative;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
 }
 
-.avatar {
-  width: 32px;
-  height: 32px;
+.member-avatar {
+  width: 34px;
+  height: 34px;
 
-  border-radius: 7px;
+  border-radius: 8px;
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
   object-fit: cover;
-  color: rgba(255, 255, 255, 0.88);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--members-text);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.045)),
+    #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.055);
 
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 720;
 }
 
-.avatar-fallback {
+.member-avatar-fallback {
   text-transform: uppercase;
 }
 
@@ -401,40 +849,50 @@ const WorkspaceMemberRow = defineComponent({
   right: -2px;
   bottom: -2px;
 
-  width: 10px;
-  height: 10px;
+  width: 11px;
+  height: 11px;
 
-  border: 2px solid #191919;
+  border: 2px solid var(--members-panel);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.22);
+  background: #565656;
 }
 
 .presence-dot.online {
-  background: #37a169;
+  background: var(--members-success);
 }
 
 .presence-dot.offline {
-  background: rgba(255, 255, 255, 0.24);
+  background: #5f5f5f;
 }
 
-.member-info {
+.member-copy {
   min-width: 0;
-}
-
-.member-name-row {
-  min-width: 0;
-
   display: flex;
-  align-items: center;
-  gap: 6px;
+  flex-direction: column;
+  gap: 4px;
 }
 
-.member-name-row strong {
+.member-copy strong {
   overflow: hidden;
 
-  color: rgba(255, 255, 255, 0.86);
+  color: #e8e8e8;
   font-size: 13.5px;
-  font-weight: 560;
+  font-weight: 650;
+  line-height: 1.25;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.member-row.current .member-copy strong {
+  font-size: 14px;
+}
+
+.member-subline {
+  overflow: hidden;
+
+  color: var(--members-faint);
+  font-size: 12px;
   line-height: 1.25;
 
   white-space: nowrap;
@@ -442,88 +900,142 @@ const WorkspaceMemberRow = defineComponent({
 }
 
 .member-role {
-  flex-shrink: 0;
+  max-width: 86px;
+  min-height: 26px;
+  padding: 0 8px;
 
-  padding: 4px 7px;
-  border-radius: 999px;
+  border-radius: 7px;
 
-  color: rgba(255, 255, 255, 0.48);
-  background: rgba(255, 255, 255, 0.07);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
-  font-size: 11px;
-  font-weight: 560;
+  overflow: hidden;
+  color: #bdbdbd;
+  background: #222222;
+  border: 1px solid #2d2d2d;
+
+  font-size: 11.5px;
+  font-weight: 620;
   line-height: 1;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
-.empty-state {
-  margin: 16px;
-  padding: 28px 18px;
+.member-role.owner {
+  color: #ffdca8;
+  background: rgba(255, 209, 102, 0.095);
+  border-color: rgba(255, 209, 102, 0.16);
+}
 
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.member-role.manager {
+  color: #c7d2fe;
+  background: rgba(129, 140, 248, 0.11);
+  border-color: rgba(129, 140, 248, 0.18);
+}
+
+.member-role.viewer {
+  color: #b5b5b5;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.workspace-members-state {
+  margin: 16px 14px;
+  padding: 30px 18px;
+
+  border: 1px solid #2b2b2b;
+  border-radius: 12px;
 
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
 
-  color: rgba(255, 255, 255, 0.48);
-  background: rgba(255, 255, 255, 0.035);
+  color: var(--members-faint);
+  background:
+    radial-gradient(circle at top, rgba(255, 255, 255, 0.055), transparent 55%),
+    rgba(255, 255, 255, 0.025);
 }
 
-.empty-state > .material-symbols-outlined {
-  margin-bottom: 10px;
-
-  color: rgba(255, 255, 255, 0.36);
-  font-size: 28px;
+.workspace-members-state.compact {
+  margin-top: 22px;
 }
 
-.empty-state strong {
-  color: rgba(255, 255, 255, 0.82);
+.workspace-members-state > .material-symbols-outlined {
+  width: 42px;
+  height: 42px;
+  margin-bottom: 12px;
+  border-radius: 12px;
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #bdbdbd;
+  background: #222222;
+
+  font-size: 23px;
+}
+
+.workspace-members-state strong {
+  color: #e8e8e8;
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 690;
 }
 
-.empty-state p {
-  max-width: 260px;
-  margin: 6px 0 0;
+.workspace-members-state p {
+  max-width: 270px;
+  margin: 7px 0 0;
 
   font-size: 13px;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
-.empty-state button {
-  margin-top: 14px;
-  padding: 7px 11px;
+.workspace-members-state button {
+  margin-top: 15px;
+  min-height: 32px;
+  padding: 0 11px;
 
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid #353535;
   border-radius: 7px;
 
-  color: rgba(255, 255, 255, 0.82);
-  background: rgba(255, 255, 255, 0.07);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 
+  color: var(--members-text);
+  background: #232323;
+
+  font: inherit;
   font-size: 13px;
-  font-weight: 550;
+  font-weight: 590;
 
   cursor: pointer;
 }
 
-.empty-state button:hover {
-  background: rgba(255, 255, 255, 0.1);
+.workspace-members-state button:hover {
+  background: #2b2b2b;
+}
+
+.workspace-members-state button .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .member-skeleton {
-  padding: 7px 8px;
+  min-height: 56px;
+  padding: 8px;
 
   display: grid;
-  grid-template-columns: 34px 1fr;
+  grid-template-columns: 36px 1fr 74px;
   gap: 10px;
   align-items: center;
 }
 
 .avatar-skeleton,
 .info-skeleton .line1,
-.info-skeleton .line2 {
+.info-skeleton .line2,
+.role-skeleton {
   border-radius: 999px;
   background: linear-gradient(
     90deg,
@@ -536,31 +1048,47 @@ const WorkspaceMemberRow = defineComponent({
 }
 
 .avatar-skeleton {
-  width: 32px;
-  height: 32px;
-  border-radius: 7px;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
 }
 
 .info-skeleton .line1 {
-  width: 68%;
+  width: 72%;
   height: 10px;
 }
 
 .info-skeleton .line2 {
-  width: 46%;
+  width: 52%;
   height: 9px;
   margin-top: 8px;
 }
 
-.workspace-members-sidebar-enter-active,
-.workspace-members-sidebar-leave-active {
-  transition:
-    transform 180ms ease,
-    opacity 140ms ease;
+.role-skeleton {
+  width: 70px;
+  height: 24px;
+  border-radius: 7px;
 }
 
-.workspace-members-sidebar-enter-from,
-.workspace-members-sidebar-leave-to {
+.workspace-members-layer-enter-active,
+.workspace-members-layer-leave-active {
+  transition: opacity 160ms ease;
+}
+
+.workspace-members-layer-enter-active .workspace-members-sidebar,
+.workspace-members-layer-leave-active .workspace-members-sidebar {
+  transition:
+    transform 190ms ease,
+    opacity 160ms ease;
+}
+
+.workspace-members-layer-enter-from,
+.workspace-members-layer-leave-to {
+  opacity: 0;
+}
+
+.workspace-members-layer-enter-from .workspace-members-sidebar,
+.workspace-members-layer-leave-to .workspace-members-sidebar {
   opacity: 0;
   transform: translateX(100%);
 }
@@ -576,20 +1104,51 @@ const WorkspaceMemberRow = defineComponent({
 }
 
 @media (max-width: 575.98px) {
+  .workspace-members-layer {
+    inset: 0;
+    z-index: 900;
+  }
+
   .workspace-members-sidebar {
-    top: 0;
-    z-index: 950;
     width: 100vw;
-    height: 100vh;
+    border-left: 0;
+  }
+
+  .workspace-members-overview {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .member-row {
+    grid-template-columns: 36px minmax(0, 1fr);
+  }
+
+  .member-row:not(.current) .member-role {
+    grid-column: 2;
+    width: fit-content;
+    max-width: 100%;
+    margin-top: -2px;
+  }
+}
+
+@media (max-width: 390px) {
+  .workspace-members-overview {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .overview-card.main {
+    grid-column: 1 / -1;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .workspace-members-sidebar-enter-active,
-  .workspace-members-sidebar-leave-active,
+  .workspace-members-layer-enter-active,
+  .workspace-members-layer-leave-active,
+  .workspace-members-layer-enter-active .workspace-members-sidebar,
+  .workspace-members-layer-leave-active .workspace-members-sidebar,
   .avatar-skeleton,
   .info-skeleton .line1,
-  .info-skeleton .line2 {
+  .info-skeleton .line2,
+  .role-skeleton {
     transition: none;
     animation: none;
   }

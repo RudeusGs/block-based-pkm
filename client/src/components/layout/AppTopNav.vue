@@ -485,7 +485,7 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .app-top-nav {
-  z-index: 50;
+  z-index: 920;
   min-height: 48px;
   display: flex;
   align-items: center;
@@ -639,6 +639,7 @@ onBeforeUnmount(() => {
 .app-notification-menu,
 .app-more-menu {
   position: absolute;
+  z-index: 930;
   top: calc(100% + 10px);
   right: 0;
   overflow: hidden;

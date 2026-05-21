@@ -1,8 +1,12 @@
+using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Features.Documents.Models;
 
 namespace Pkm.Infrastructure.Realtime.Hubs;
 
-public sealed record WorkspaceJoinAck(Guid WorkspaceId, string GroupName);
+public sealed record WorkspaceJoinAck(
+    Guid WorkspaceId,
+    string GroupName,
+    WorkspacePresenceDto Presence);
 
 public sealed record PageJoinAck(
     Guid WorkspaceId,

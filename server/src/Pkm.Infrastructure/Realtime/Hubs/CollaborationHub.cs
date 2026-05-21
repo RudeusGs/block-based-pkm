@@ -16,6 +16,7 @@ public sealed class CollaborationHub : Hub
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
+    private readonly IWorkspacePresenceService _workspacePresenceService;
     private readonly IPagePresenceService _pagePresenceService;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
@@ -25,6 +26,7 @@ public sealed class CollaborationHub : Hub
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IPageAccessEvaluator pageAccessEvaluator,
         IDocumentAccessEvaluator documentAccessEvaluator,
+        IWorkspacePresenceService workspacePresenceService,
         IPagePresenceService pagePresenceService,
         IBlockEditLeaseService blockEditLeaseService,
         IDocumentRealtimePublisher realtimePublisher,
@@ -33,6 +35,7 @@ public sealed class CollaborationHub : Hub
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _pageAccessEvaluator = pageAccessEvaluator;
         _documentAccessEvaluator = documentAccessEvaluator;
+        _workspacePresenceService = workspacePresenceService;
         _pagePresenceService = pagePresenceService;
         _blockEditLeaseService = blockEditLeaseService;
         _realtimePublisher = realtimePublisher;
@@ -55,9 +58,33 @@ public sealed class CollaborationHub : Hub
         EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền tham gia workspace này.");
 
         var groupName = RealtimeGroupNames.Workspace(workspaceId);
-        await Groups.AddToGroupAsync(Context.ConnectionId, groupName, Context.ConnectionAborted);
 
-        return new WorkspaceJoinAck(workspaceId, groupName);
+        await Groups.AddToGroupAsync(
+            Context.ConnectionId,
+            groupName,
+            Context.ConnectionAborted);
+
+        await _workspacePresenceService.UpsertAsync(
+            workspaceId,
+            userId,
+            GetCurrentUserDisplayName(),
+            Context.ConnectionId,
+            Context.ConnectionAborted);
+
+        var snapshot = await BuildWorkspacePresenceDtoAsync(
+            workspaceId,
+            Context.ConnectionAborted);
+
+        await PublishWorkspacePresenceChangedAsync(
+            workspaceId,
+            userId,
+            snapshot,
+            Context.ConnectionAborted);
+
+        return new WorkspaceJoinAck(
+            workspaceId,
+            groupName,
+            snapshot);
     }
 
     public async Task LeaveWorkspace(Guid workspaceId)
@@ -65,9 +92,29 @@ public sealed class CollaborationHub : Hub
         if (workspaceId == Guid.Empty)
             return;
 
+        var removed = await _workspacePresenceService.RemoveConnectionFromWorkspaceAsync(
+            workspaceId,
+            Context.ConnectionId,
+            Context.ConnectionAborted);
+
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
             RealtimeGroupNames.Workspace(workspaceId),
+            Context.ConnectionAborted);
+
+        if (removed is null)
+            return;
+
+        var userId = GetOptionalUserId() ?? removed.UserId;
+
+        var snapshot = await BuildWorkspacePresenceDtoAsync(
+            workspaceId,
+            Context.ConnectionAborted);
+
+        await PublishWorkspacePresenceChangedAsync(
+            workspaceId,
+            userId,
+            snapshot,
             Context.ConnectionAborted);
     }
 
@@ -96,12 +143,29 @@ public sealed class CollaborationHub : Hub
             RealtimeGroupNames.Page(pageId),
             Context.ConnectionAborted);
 
+        await _workspacePresenceService.UpsertAsync(
+            access.WorkspaceId,
+            userId,
+            GetCurrentUserDisplayName(),
+            Context.ConnectionId,
+            Context.ConnectionAborted);
+
         await _pagePresenceService.UpsertAsync(
             pageId,
             access.WorkspaceId,
             userId,
             GetCurrentUserDisplayName(),
             Context.ConnectionId,
+            Context.ConnectionAborted);
+
+        var workspaceSnapshot = await BuildWorkspacePresenceDtoAsync(
+            access.WorkspaceId,
+            Context.ConnectionAborted);
+
+        await PublishWorkspacePresenceChangedAsync(
+            access.WorkspaceId,
+            userId,
+            workspaceSnapshot,
             Context.ConnectionAborted);
 
         var snapshot = await BuildPagePresenceDtoAsync(
@@ -136,6 +200,13 @@ public sealed class CollaborationHub : Hub
 
         EnsureExists(access.Exists, "Page không tồn tại.");
         EnsureAllowed(access.CanReadDocument, "Bạn không có quyền truy cập page này.");
+
+        await _workspacePresenceService.UpsertAsync(
+            access.WorkspaceId,
+            userId,
+            GetCurrentUserDisplayName(),
+            Context.ConnectionId,
+            Context.ConnectionAborted);
 
         await _pagePresenceService.UpsertAsync(
             pageId,
@@ -410,7 +481,11 @@ public sealed class CollaborationHub : Hub
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var removed = await _pagePresenceService.RemoveConnectionAsync(
+        var removedWorkspaceEntries = await _workspacePresenceService.RemoveConnectionAsync(
+            Context.ConnectionId,
+            CancellationToken.None);
+
+        var removedPageEntry = await _pagePresenceService.RemoveConnectionAsync(
             Context.ConnectionId,
             CancellationToken.None);
 
@@ -418,24 +493,69 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionId,
             CancellationToken.None);
 
-        if (removed is not null)
+        foreach (var removedWorkspaceEntry in removedWorkspaceEntries
+                     .GroupBy(x => x.WorkspaceId)
+                     .Select(x => x.First()))
         {
-            var userId = GetOptionalUserId() ?? removed.UserId;
+            var userId = GetOptionalUserId() ?? removedWorkspaceEntry.UserId;
+
+            var snapshot = await BuildWorkspacePresenceDtoAsync(
+                removedWorkspaceEntry.WorkspaceId,
+                CancellationToken.None);
+
+            await PublishWorkspacePresenceChangedAsync(
+                removedWorkspaceEntry.WorkspaceId,
+                userId,
+                snapshot,
+                CancellationToken.None);
+        }
+
+        if (removedPageEntry is not null)
+        {
+            var userId = GetOptionalUserId() ?? removedPageEntry.UserId;
 
             var snapshot = await BuildPagePresenceDtoAsync(
-                removed.WorkspaceId,
-                removed.PageId,
+                removedPageEntry.WorkspaceId,
+                removedPageEntry.PageId,
                 CancellationToken.None);
 
             await PublishPagePresenceChangedAsync(
-                removed.WorkspaceId,
-                removed.PageId,
+                removedPageEntry.WorkspaceId,
+                removedPageEntry.PageId,
                 userId,
                 snapshot,
                 CancellationToken.None);
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task<WorkspacePresenceDto> BuildWorkspacePresenceDtoAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var entries = await _workspacePresenceService.GetActiveOnWorkspaceAsync(
+            workspaceId,
+            cancellationToken);
+
+        var users = entries
+            .GroupBy(x => new { x.UserId, x.UserName })
+            .Select(group =>
+            {
+                var lastSeenUtc = group.Max(x => x.LastSeenUtc);
+
+                return new WorkspacePresenceUserDto(
+                    group.Key.UserId,
+                    group.Key.UserName,
+                    group.Count(),
+                    lastSeenUtc);
+            })
+            .OrderByDescending(x => x.LastSeenUtc)
+            .ToArray();
+
+        return new WorkspacePresenceDto(
+            workspaceId,
+            users);
     }
 
     private async Task<PagePresenceDto> BuildPagePresenceDtoAsync(
@@ -465,6 +585,25 @@ public sealed class CollaborationHub : Hub
             workspaceId,
             pageId,
             users);
+    }
+
+    private async Task PublishWorkspacePresenceChangedAsync(
+        Guid workspaceId,
+        Guid actorId,
+        WorkspacePresenceDto snapshot,
+        CancellationToken cancellationToken)
+    {
+        await _realtimePublisher.PublishToWorkspaceAsync(
+            new DocumentRealtimeEnvelope(
+                EventName: "WorkspacePresenceChanged",
+                WorkspaceId: workspaceId,
+                PageId: null,
+                BlockId: null,
+                ActorId: actorId,
+                OccurredAtUtc: _clock.UtcNow,
+                Revision: null,
+                Payload: snapshot),
+            cancellationToken);
     }
 
     private async Task PublishPagePresenceChangedAsync(
