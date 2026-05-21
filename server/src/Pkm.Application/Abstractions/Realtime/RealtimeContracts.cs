@@ -61,6 +61,18 @@ public sealed record PageCursorDto(
     string? Color,
     DateTimeOffset OccurredAtUtc);
 
+public sealed record PageMousePointerDto(
+    Guid WorkspaceId,
+    Guid PageId,
+    Guid? BlockId,
+    Guid UserId,
+    string? UserName,
+    string ConnectionId,
+    double X,
+    double Y,
+    string? Color,
+    bool IsLeaving,
+    DateTimeOffset OccurredAtUtc);
 public sealed record BlockDraftDto(
     Guid WorkspaceId,
     Guid PageId,

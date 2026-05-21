@@ -10,6 +10,7 @@ import type {
   BlockDraftRequest,
   BlockEditingStateRequest,
   PageCursorRequest,
+  PageMousePointerRequest,
   RealtimeEnvelope,
   RealtimeEventHandler,
   RealtimeState,
@@ -339,6 +340,10 @@ function sendCursor(payload: PageCursorRequest) {
   return invoke<void>('SendCursor', payload)
 }
 
+function sendMousePointer(payload: PageMousePointerRequest) {
+  return invoke<void>('SendMousePointer', payload)
+}
+
 function sendBlockDraft(payload: BlockDraftRequest) {
   return invoke<void>('SendBlockDraft', payload)
 }
@@ -372,6 +377,7 @@ export const realtimeClient = {
   heartbeatPage,
 
   sendCursor,
+  sendMousePointer,
   sendBlockDraft,
   sendBlockEditingState,
 }

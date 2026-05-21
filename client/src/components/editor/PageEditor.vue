@@ -145,15 +145,53 @@
 
         <div
           v-show="!isLoading"
-          :id="holderId"
-          ref="holderRef"
-          class="page-editor-holder"
-          :class="{ 'page-editor-holder--readonly': !canEditDocument }"
-          @focusin="handleEditorFocusIn"
-          @input="handleEditorInput"
-          @mouseup="rememberTextSelection"
-          @keyup="rememberTextSelection"
-        ></div>
+          class="page-editor-live-layer"
+        >
+          <div
+            :id="holderId"
+            ref="holderRef"
+            class="page-editor-holder"
+            :class="{ 'page-editor-holder--readonly': !canEditDocument }"
+            @focusin="handleEditorFocusIn"
+            @beforeinput.capture="handleEditorBeforeInput"
+            @keydown.capture="handleEditorKeydown"
+            @input="handleEditorInput"
+            @focusout="handleEditorFocusOut"
+            @pointermove.passive="handleEditorPointerMove"
+            @pointerleave.passive="handleEditorPointerLeave"
+            @mouseup="rememberTextSelection"
+            @keyup="rememberTextSelection"
+          ></div>
+
+          <div
+            class="page-editor-remote-cursor-layer"
+            aria-hidden="true"
+          >
+            <div
+              v-for="pointer in remotePointers"
+              :key="pointer.key"
+              class="page-editor-remote-cursor"
+              :style="{
+                left: `${pointer.x}%`,
+                top: `${pointer.y}%`,
+                '--remote-cursor-color': pointer.color,
+              }"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                width="22"
+                height="22"
+              >
+                <path
+                  d="M4 2.8L20.6 14.2L13.1 15.1L9.6 21.7L4 2.8Z"
+                  fill="currentColor"
+                />
+              </svg>
+
+              <span>{{ pointer.userName }}</span>
+            </div>
+          </div>
+        </div>
       </section>
     </template>
   </section>
@@ -179,6 +217,8 @@ const {
   error,
   canEditDocument,
 
+  remotePointers,
+
   isTextToolbarVisible,
   textToolbarStyle,
 
@@ -200,6 +240,11 @@ const {
   clearInlineStyle,
 
   handleEditorFocusIn,
+  handleEditorBeforeInput,
+  handleEditorKeydown,
   handleEditorInput,
+  handleEditorFocusOut,
+  handleEditorPointerMove,
+  handleEditorPointerLeave,
 } = usePageEditor(props)
 </script>

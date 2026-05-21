@@ -133,14 +133,19 @@ internal sealed class FallbackBlockEditLeaseService : IBlockEditLeaseService
         }
     }
 
-    public async Task ReleaseAllForConnectionAsync(
+    public async Task<IReadOnlyList<BlockLeaseInfo>> ReleaseAllForConnectionAsync(
         string connectionId,
         CancellationToken cancellationToken = default)
     {
         try
         {
-            await _primary.ReleaseAllForConnectionAsync(connectionId, cancellationToken);
+            var released = await _primary.ReleaseAllForConnectionAsync(
+                connectionId,
+                cancellationToken);
+
             await _fallback.ReleaseAllForConnectionAsync(connectionId, cancellationToken);
+
+            return released;
         }
         catch (Exception ex) when (IsRedisFailure(ex))
         {
@@ -149,7 +154,9 @@ internal sealed class FallbackBlockEditLeaseService : IBlockEditLeaseService
                 "Redis unavailable during block lease RELEASE-ALL for connection {ConnectionId}. Falling back to in-memory lease service.",
                 connectionId);
 
-            await _fallback.ReleaseAllForConnectionAsync(connectionId, cancellationToken);
+            return await _fallback.ReleaseAllForConnectionAsync(
+                connectionId,
+                cancellationToken);
         }
     }
 
@@ -179,3 +186,4 @@ internal sealed class FallbackBlockEditLeaseService : IBlockEditLeaseService
            or TimeoutException
            or ObjectDisposedException;
 }
+

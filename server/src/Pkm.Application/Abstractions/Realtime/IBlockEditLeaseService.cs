@@ -22,7 +22,7 @@ public interface IBlockEditLeaseService
         string connectionId,
         CancellationToken cancellationToken = default);
 
-    Task ReleaseAllForConnectionAsync(
+    Task<IReadOnlyList<BlockLeaseInfo>> ReleaseAllForConnectionAsync(
         string connectionId,
         CancellationToken cancellationToken = default);
 

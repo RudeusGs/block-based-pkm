@@ -21,6 +21,14 @@ public sealed record PageCursorRequest(
     int? Offset,
     string? Color);
 
+public sealed record PageMousePointerRequest(
+    Guid PageId,
+    Guid? BlockId,
+    double X,
+    double Y,
+    string? Color,
+    bool IsLeaving = false);
+
 public sealed record BlockDraftRequest(
     Guid PageId,
     Guid BlockId,

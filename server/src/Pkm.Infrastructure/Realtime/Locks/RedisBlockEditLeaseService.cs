@@ -149,24 +149,28 @@ public sealed class RedisBlockEditLeaseService : IBlockEditLeaseService
         await Database.KeyDeleteAsync(ConnectionLeaseKey(connectionId));
     }
 
-    public async Task ReleaseAllForConnectionAsync(
+    public async Task<IReadOnlyList<BlockLeaseInfo>> ReleaseAllForConnectionAsync(
         string connectionId,
         CancellationToken cancellationToken = default)
     {
+        var released = new List<BlockLeaseInfo>();
         var raw = await Database.StringGetAsync(ConnectionLeaseKey(connectionId));
+
         if (!raw.HasValue)
-            return;
+            return released;
 
         if (Guid.TryParse(raw.ToString(), out var blockId))
         {
             var current = await GetCurrentAsync(blockId, cancellationToken);
             if (current is not null && current.ConnectionId == connectionId)
             {
+                released.Add(current);
                 await Database.KeyDeleteAsync(BlockLeaseKey(blockId));
             }
         }
 
         await Database.KeyDeleteAsync(ConnectionLeaseKey(connectionId));
+        return released;
     }
 
     public async Task<BlockLeaseInfo?> GetCurrentAsync(
@@ -186,3 +190,4 @@ public sealed class RedisBlockEditLeaseService : IBlockEditLeaseService
     private static string ConnectionLeaseKey(string connectionId)
         => $"pkm:realtime:lease:conn:{connectionId}";
 }
+

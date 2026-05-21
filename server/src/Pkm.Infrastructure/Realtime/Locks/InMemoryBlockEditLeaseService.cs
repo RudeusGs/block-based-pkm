@@ -124,21 +124,24 @@ public sealed class InMemoryBlockEditLeaseService : IBlockEditLeaseService
         }
     }
 
-    public Task ReleaseAllForConnectionAsync(
+    public Task<IReadOnlyList<BlockLeaseInfo>> ReleaseAllForConnectionAsync(
         string connectionId,
         CancellationToken cancellationToken = default)
     {
         lock (_sync)
         {
+            var released = new List<BlockLeaseInfo>();
+
             if (_blockByConnection.TryGetValue(connectionId, out var blockId) &&
                 _leasesByBlock.TryGetValue(blockId, out var currentLease) &&
                 currentLease.ConnectionId == connectionId)
             {
+                released.Add(currentLease);
                 _leasesByBlock.TryRemove(blockId, out _);
             }
 
             _blockByConnection.TryRemove(connectionId, out _);
-            return Task.CompletedTask;
+            return Task.FromResult<IReadOnlyList<BlockLeaseInfo>>(released);
         }
     }
 
@@ -180,3 +183,4 @@ public sealed class InMemoryBlockEditLeaseService : IBlockEditLeaseService
         }
     }
 }
+

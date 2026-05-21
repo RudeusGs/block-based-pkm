@@ -210,7 +210,7 @@ public sealed class CollaborationHub : Hub
             RealtimeGroupNames.Page(pageId),
             Context.ConnectionAborted);
 
-        await _blockEditLeaseService.ReleaseAllForConnectionAsync(
+        var releasedLeases = await _blockEditLeaseService.ReleaseAllForConnectionAsync(
             Context.ConnectionId,
             Context.ConnectionAborted);
 
@@ -218,6 +218,12 @@ public sealed class CollaborationHub : Hub
             return;
 
         var userId = GetOptionalUserId() ?? removed.UserId;
+
+        await PublishReleasedLeasesAsync(
+            releasedLeases,
+            removed.WorkspaceId,
+            userId,
+            Context.ConnectionAborted);
 
         var snapshot = await BuildPagePresenceDtoAsync(
             removed.WorkspaceId,
@@ -293,6 +299,41 @@ public sealed class CollaborationHub : Hub
             .SendAsync("PageCursorChanged", dto, Context.ConnectionAborted);
     }
 
+    public async Task SendMousePointer(PageMousePointerRequest request)
+    {
+        if (request.PageId == Guid.Empty)
+            throw new HubException("PageId không hợp lệ.");
+
+        var userId = GetRequiredUserId();
+
+        var access = await _pageAccessEvaluator.EvaluateAsync(
+            request.PageId,
+            userId,
+            Context.ConnectionAborted);
+
+        EnsureExists(access.Exists, "Page không tồn tại.");
+        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền đọc page này.");
+
+        var safeX = Math.Clamp(request.X, 0, 100);
+        var safeY = Math.Clamp(request.Y, 0, 100);
+
+        var dto = new PageMousePointerDto(
+            WorkspaceId: access.WorkspaceId,
+            PageId: request.PageId,
+            BlockId: request.BlockId,
+            UserId: userId,
+            UserName: GetCurrentUserDisplayName(),
+            ConnectionId: Context.ConnectionId,
+            X: safeX,
+            Y: safeY,
+            Color: NormalizeSmallText(request.Color, 30),
+            IsLeaving: request.IsLeaving,
+            OccurredAtUtc: _clock.UtcNow);
+
+        await Clients
+            .OthersInGroup(RealtimeGroupNames.Page(request.PageId))
+            .SendAsync("PageMousePointerChanged", dto, Context.ConnectionAborted);
+    }
     public async Task SendBlockDraft(BlockDraftRequest request)
     {
         if (request.PageId == Guid.Empty)
@@ -377,7 +418,20 @@ public sealed class CollaborationHub : Hub
             request.BlockId,
             Context.ConnectionAborted);
 
-        EnsureCurrentLeaseHolder(lease, userId, request.EditorSessionId);
+        if (request.IsEditing)
+        {
+            EnsureCurrentLeaseHolder(lease, userId, request.EditorSessionId);
+        }
+        else if (lease is not null &&
+                 lease.UserId == userId &&
+                 string.Equals(lease.ConnectionId, request.EditorSessionId, StringComparison.Ordinal))
+        {
+            await _blockEditLeaseService.ReleaseAsync(
+                request.BlockId,
+                userId,
+                request.EditorSessionId,
+                Context.ConnectionAborted);
+        }
 
         var dto = new BlockEditingStateDto(
             WorkspaceId: access.WorkspaceId,
@@ -393,6 +447,31 @@ public sealed class CollaborationHub : Hub
         await Clients
             .OthersInGroup(RealtimeGroupNames.Page(request.PageId))
             .SendAsync("BlockEditingStateChanged", dto, Context.ConnectionAborted);
+
+        if (!request.IsEditing && lease is not null)
+        {
+            var leaseDto = new BlockLeaseDto(
+                BlockId: request.BlockId,
+                PageId: request.PageId,
+                Granted: true,
+                Status: "released",
+                HolderUserId: null,
+                HolderDisplayName: null,
+                ExpiresAtUtc: null,
+                IsHeldByCurrentUser: false);
+
+            await _realtimePublisher.PublishToPageAsync(
+                new DocumentRealtimeEnvelope(
+                    EventName: "BlockLeaseChanged",
+                    WorkspaceId: access.WorkspaceId,
+                    PageId: request.PageId,
+                    BlockId: request.BlockId,
+                    ActorId: userId,
+                    OccurredAtUtc: _clock.UtcNow,
+                    Revision: null,
+                    Payload: leaseDto),
+                Context.ConnectionAborted);
+        }
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -405,7 +484,7 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionId,
             CancellationToken.None);
 
-        await _blockEditLeaseService.ReleaseAllForConnectionAsync(
+        var releasedLeases = await _blockEditLeaseService.ReleaseAllForConnectionAsync(
             Context.ConnectionId,
             CancellationToken.None);
 
@@ -441,9 +520,62 @@ public sealed class CollaborationHub : Hub
                 userId,
                 snapshot,
                 CancellationToken.None);
+
+            await PublishReleasedLeasesAsync(
+                releasedLeases,
+                removedPageEntry.WorkspaceId,
+                userId,
+                CancellationToken.None);
         }
 
         await base.OnDisconnectedAsync(exception);
+    }
+
+    private async Task PublishReleasedLeasesAsync(
+        IReadOnlyList<BlockLeaseInfo> releasedLeases,
+        Guid workspaceId,
+        Guid actorId,
+        CancellationToken cancellationToken)
+    {
+        foreach (var lease in releasedLeases)
+        {
+            var leaseDto = new BlockLeaseDto(
+                BlockId: lease.BlockId,
+                PageId: lease.PageId,
+                Granted: true,
+                Status: "released",
+                HolderUserId: null,
+                HolderDisplayName: null,
+                ExpiresAtUtc: null,
+                IsHeldByCurrentUser: false);
+
+            await _realtimePublisher.PublishToPageAsync(
+                new DocumentRealtimeEnvelope(
+                    EventName: "BlockLeaseChanged",
+                    WorkspaceId: workspaceId,
+                    PageId: lease.PageId,
+                    BlockId: lease.BlockId,
+                    ActorId: actorId,
+                    OccurredAtUtc: _clock.UtcNow,
+                    Revision: null,
+                    Payload: leaseDto),
+                cancellationToken);
+
+            var editingDto = new BlockEditingStateDto(
+                WorkspaceId: workspaceId,
+                PageId: lease.PageId,
+                BlockId: lease.BlockId,
+                UserId: lease.UserId,
+                UserName: lease.HolderDisplayName,
+                ConnectionId: lease.ConnectionId,
+                EditorSessionId: lease.ConnectionId,
+                IsEditing: false,
+                OccurredAtUtc: _clock.UtcNow);
+
+            await Clients
+                .Group(RealtimeGroupNames.Page(lease.PageId))
+                .SendAsync("BlockEditingStateChanged", editingDto, cancellationToken);
+        }
     }
 
     private async Task<WorkspacePresenceDto> BuildWorkspacePresenceDtoAsync(
@@ -613,3 +745,4 @@ public sealed class CollaborationHub : Hub
             : normalized[..maxLength];
     }
 }
+

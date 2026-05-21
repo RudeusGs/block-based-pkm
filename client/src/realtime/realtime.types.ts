@@ -42,6 +42,23 @@ export interface PageCursorRequest {
   color?: string | null
 }
 
+export interface PageMousePointerRequest {
+  pageId: Guid
+  blockId?: Guid | null
+  x: number
+  y: number
+  color?: string | null
+  isLeaving?: boolean
+}
+
+export interface PageMousePointerPayload extends PageMousePointerRequest {
+  workspaceId: Guid
+  userId: Guid
+  userName?: string | null
+  connectionId: string
+  occurredAtUtc: string
+}
+
 export interface BlockDraftRequest {
   pageId: Guid
   blockId: Guid
