@@ -5,7 +5,7 @@
 ---
 ## Demo
 
-![App Screenshot](./docs/images/app-overview.png)
+<img width="1900" height="908" alt="z7847592045895_80259f106ac2ce5c809cdf3428e0e4f6" src="https://github.com/user-attachments/assets/27d4c028-5fb5-4ab3-9a2b-d40b003ffa55" />
 
 ---
 
