@@ -7,6 +7,9 @@ import {
   type HubConnection,
 } from '@microsoft/signalr'
 import type {
+  BlockDraftRequest,
+  BlockEditingStateRequest,
+  PageCursorRequest,
   RealtimeEnvelope,
   RealtimeEventHandler,
   RealtimeState,
@@ -48,15 +51,27 @@ function getAccessToken() {
 }
 
 function toErrorMessage(error: unknown, fallback: string) {
-  if (error instanceof Error && error.message) {
-    return error.message
-  }
-
-  if (typeof error === 'string' && error.trim()) {
-    return error
-  }
-
+  if (error instanceof Error && error.message) return error.message
+  if (typeof error === 'string' && error.trim()) return error
   return fallback
+}
+
+function normalizeNullableString(value: unknown) {
+  if (typeof value !== 'string') return null
+
+  const trimmed = value.trim()
+  return trimmed ? trimmed : null
+}
+
+function normalizeNullableNumber(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  return null
 }
 
 function normalizeEnvelope<TPayload>(
@@ -68,6 +83,7 @@ function normalizeEnvelope<TPayload>(
       eventName,
       payload: raw as TPayload,
       occurredAtUtc: new Date().toISOString(),
+      revision: null,
     }
   }
 
@@ -84,20 +100,13 @@ function normalizeEnvelope<TPayload>(
     occurredAtUtc:
       normalizeNullableString(value.occurredAtUtc ?? value.OccurredAtUtc) ??
       new Date().toISOString(),
+    revision: normalizeNullableNumber(value.revision ?? value.Revision),
     payload: (value.payload ?? value.Payload ?? raw) as TPayload,
   }
 }
 
-function normalizeNullableString(value: unknown) {
-  if (typeof value !== 'string') return null
-
-  const trimmed = value.trim()
-  return trimmed ? trimmed : null
-}
-
 function dispatch(eventName: string, rawEnvelope: unknown) {
   const handlers = handlersByEventName.get(eventName)
-
   if (!handlers || handlers.size === 0) return
 
   const envelope = normalizeEnvelope(eventName, rawEnvelope)
@@ -142,10 +151,8 @@ function unregisterHubEvent(eventName: string) {
 }
 
 function createConnection() {
-  const hubUrl = getHubUrl()
-
   const nextConnection = new HubConnectionBuilder()
-    .withUrl(hubUrl, {
+    .withUrl(getHubUrl(), {
       accessTokenFactory: getAccessToken,
     })
     .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
@@ -198,15 +205,14 @@ async function start() {
   if (connection?.state === HubConnectionState.Connected) return
 
   const token = getAccessToken()
+
   if (!token) {
     state.status = 'disconnected'
     state.error = 'Không tìm thấy token đăng nhập để kết nối realtime.'
     return
   }
 
-  if (startPromise) {
-    return startPromise
-  }
+  if (startPromise) return startPromise
 
   if (!connection) {
     connection = createConnection()
@@ -228,10 +234,7 @@ async function start() {
     })
     .catch((error) => {
       state.status = 'error'
-      state.error = toErrorMessage(
-        error,
-        'Không kết nối được realtime server.'
-      )
+      state.error = toErrorMessage(error, 'Không kết nối được realtime server.')
       throw error
     })
     .finally(() => {
@@ -283,7 +286,6 @@ function off<TPayload = unknown>(
   handler: RealtimeEventHandler<TPayload>
 ) {
   const handlers = handlersByEventName.get(eventName)
-
   if (!handlers) return
 
   handlers.delete(handler as RealtimeEventHandler<any>)
@@ -317,12 +319,32 @@ function leaveWorkspace(workspaceId: string) {
   return invoke('LeaveWorkspace', workspaceId)
 }
 
+function heartbeatWorkspace(workspaceId: string) {
+  return invoke('HeartbeatWorkspace', workspaceId)
+}
+
 function joinPage(pageId: string) {
   return invoke('JoinPage', pageId)
 }
 
 function leavePage(pageId: string) {
   return invoke('LeavePage', pageId)
+}
+
+function heartbeatPage(pageId: string) {
+  return invoke('HeartbeatPage', pageId)
+}
+
+function sendCursor(payload: PageCursorRequest) {
+  return invoke<void>('SendCursor', payload)
+}
+
+function sendBlockDraft(payload: BlockDraftRequest) {
+  return invoke<void>('SendBlockDraft', payload)
+}
+
+function sendBlockEditingState(payload: BlockEditingStateRequest) {
+  return invoke<void>('SendBlockEditingState', payload)
 }
 
 export const realtimeClient = {
@@ -343,6 +365,13 @@ export const realtimeClient = {
 
   joinWorkspace,
   leaveWorkspace,
+  heartbeatWorkspace,
+
   joinPage,
   leavePage,
+  heartbeatPage,
+
+  sendCursor,
+  sendBlockDraft,
+  sendBlockEditingState,
 }

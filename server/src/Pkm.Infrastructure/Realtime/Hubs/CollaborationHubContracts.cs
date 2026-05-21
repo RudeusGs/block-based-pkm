@@ -11,13 +11,28 @@ public sealed record WorkspaceJoinAck(
 public sealed record PageJoinAck(
     Guid WorkspaceId,
     Guid PageId,
+    string GroupName,
     PagePresenceDto Presence);
 
-public sealed record BlockLeaseHubResponse(
-    Guid BlockId,
+public sealed record PageCursorRequest(
     Guid PageId,
-    bool Granted,
-    string Status,
-    Guid? HolderUserId,
-    string? HolderDisplayName,
-    DateTimeOffset? ExpiresAtUtc);
+    Guid? BlockId,
+    string? AnchorKey,
+    int? Offset,
+    string? Color);
+
+public sealed record BlockDraftRequest(
+    Guid PageId,
+    Guid BlockId,
+    string EditorSessionId,
+    long BaseRevision,
+    long ClientSequence,
+    string? Type,
+    string? TextContent,
+    string? PropsJson);
+
+public sealed record BlockEditingStateRequest(
+    Guid PageId,
+    Guid BlockId,
+    string EditorSessionId,
+    bool IsEditing);

@@ -17,6 +17,7 @@ export interface RealtimeEnvelope<TPayload = unknown> {
   userId?: Guid | null
   actorId?: Guid | null
   occurredAtUtc?: string
+  revision?: number | null
   payload?: TPayload
 }
 
@@ -31,4 +32,46 @@ export interface RealtimeState {
   startedAtUtc: string | null
   lastConnectedAtUtc: string | null
   lastDisconnectedAtUtc: string | null
+}
+
+export interface PageCursorRequest {
+  pageId: Guid
+  blockId?: Guid | null
+  anchorKey?: string | null
+  offset?: number | null
+  color?: string | null
+}
+
+export interface BlockDraftRequest {
+  pageId: Guid
+  blockId: Guid
+  editorSessionId: string
+  baseRevision: number
+  clientSequence: number
+  type?: string | null
+  textContent?: string | null
+  propsJson?: string | null
+}
+
+export interface BlockDraftPayload extends BlockDraftRequest {
+  workspaceId: Guid
+  userId: Guid
+  userName?: string | null
+  connectionId: string
+  occurredAtUtc: string
+}
+
+export interface BlockEditingStateRequest {
+  pageId: Guid
+  blockId: Guid
+  editorSessionId: string
+  isEditing: boolean
+}
+
+export interface BlockEditingStatePayload extends BlockEditingStateRequest {
+  workspaceId: Guid
+  userId: Guid
+  userName?: string | null
+  connectionId: string
+  occurredAtUtc: string
 }

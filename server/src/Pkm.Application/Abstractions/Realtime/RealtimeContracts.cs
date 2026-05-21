@@ -48,3 +48,41 @@ public sealed record DocumentRealtimeEnvelope(
     DateTimeOffset OccurredAtUtc,
     long? Revision,
     object? Payload);
+
+public sealed record PageCursorDto(
+    Guid WorkspaceId,
+    Guid PageId,
+    Guid? BlockId,
+    Guid UserId,
+    string? UserName,
+    string ConnectionId,
+    string? AnchorKey,
+    int? Offset,
+    string? Color,
+    DateTimeOffset OccurredAtUtc);
+
+public sealed record BlockDraftDto(
+    Guid WorkspaceId,
+    Guid PageId,
+    Guid BlockId,
+    Guid UserId,
+    string? UserName,
+    string ConnectionId,
+    string EditorSessionId,
+    long BaseRevision,
+    long ClientSequence,
+    string? Type,
+    string? TextContent,
+    string? PropsJson,
+    DateTimeOffset OccurredAtUtc);
+
+public sealed record BlockEditingStateDto(
+    Guid WorkspaceId,
+    Guid PageId,
+    Guid BlockId,
+    Guid UserId,
+    string? UserName,
+    string ConnectionId,
+    string EditorSessionId,
+    bool IsEditing,
+    DateTimeOffset OccurredAtUtc);

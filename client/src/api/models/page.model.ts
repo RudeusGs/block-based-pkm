@@ -32,6 +32,7 @@ export interface CreatePageRequest {
 }
 
 export interface UpdatePageMetadataRequest {
+  expectedRevision: number
   title: string
   icon?: string | null
   coverImage?: string | null

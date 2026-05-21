@@ -118,6 +118,33 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionAborted);
     }
 
+    public async Task<WorkspacePresenceDto> HeartbeatWorkspace(Guid workspaceId)
+    {
+        if (workspaceId == Guid.Empty)
+            throw new HubException("WorkspaceId không hợp lệ.");
+
+        var userId = GetRequiredUserId();
+
+        var access = await _workspaceAccessEvaluator.EvaluateAsync(
+            workspaceId,
+            userId,
+            Context.ConnectionAborted);
+
+        EnsureExists(access.Exists, "Workspace không tồn tại.");
+        EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền truy cập workspace này.");
+
+        await _workspacePresenceService.UpsertAsync(
+            workspaceId,
+            userId,
+            GetCurrentUserDisplayName(),
+            Context.ConnectionId,
+            Context.ConnectionAborted);
+
+        return await BuildWorkspacePresenceDtoAsync(
+            workspaceId,
+            Context.ConnectionAborted);
+    }
+
     public async Task<PageJoinAck> JoinPage(Guid pageId)
     {
         if (pageId == Guid.Empty)
@@ -131,41 +158,23 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Page không tồn tại.");
-        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền tham gia page này.");
+        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền đọc page này.");
+
+        await JoinWorkspace(access.WorkspaceId);
+
+        var groupName = RealtimeGroupNames.Page(pageId);
 
         await Groups.AddToGroupAsync(
             Context.ConnectionId,
-            RealtimeGroupNames.Workspace(access.WorkspaceId),
-            Context.ConnectionAborted);
-
-        await Groups.AddToGroupAsync(
-            Context.ConnectionId,
-            RealtimeGroupNames.Page(pageId),
-            Context.ConnectionAborted);
-
-        await _workspacePresenceService.UpsertAsync(
-            access.WorkspaceId,
-            userId,
-            GetCurrentUserDisplayName(),
-            Context.ConnectionId,
+            groupName,
             Context.ConnectionAborted);
 
         await _pagePresenceService.UpsertAsync(
-            pageId,
             access.WorkspaceId,
+            pageId,
             userId,
             GetCurrentUserDisplayName(),
             Context.ConnectionId,
-            Context.ConnectionAborted);
-
-        var workspaceSnapshot = await BuildWorkspacePresenceDtoAsync(
-            access.WorkspaceId,
-            Context.ConnectionAborted);
-
-        await PublishWorkspacePresenceChangedAsync(
-            access.WorkspaceId,
-            userId,
-            workspaceSnapshot,
             Context.ConnectionAborted);
 
         var snapshot = await BuildPagePresenceDtoAsync(
@@ -183,43 +192,8 @@ public sealed class CollaborationHub : Hub
         return new PageJoinAck(
             access.WorkspaceId,
             pageId,
+            groupName,
             snapshot);
-    }
-
-    public async Task<PagePresenceDto> HeartbeatPage(Guid pageId)
-    {
-        if (pageId == Guid.Empty)
-            throw new HubException("PageId không hợp lệ.");
-
-        var userId = GetRequiredUserId();
-
-        var access = await _pageAccessEvaluator.EvaluateAsync(
-            pageId,
-            userId,
-            Context.ConnectionAborted);
-
-        EnsureExists(access.Exists, "Page không tồn tại.");
-        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền truy cập page này.");
-
-        await _workspacePresenceService.UpsertAsync(
-            access.WorkspaceId,
-            userId,
-            GetCurrentUserDisplayName(),
-            Context.ConnectionId,
-            Context.ConnectionAborted);
-
-        await _pagePresenceService.UpsertAsync(
-            pageId,
-            access.WorkspaceId,
-            userId,
-            GetCurrentUserDisplayName(),
-            Context.ConnectionId,
-            Context.ConnectionAborted);
-
-        return await BuildPagePresenceDtoAsync(
-            access.WorkspaceId,
-            pageId,
-            Context.ConnectionAborted);
     }
 
     public async Task LeavePage(Guid pageId)
@@ -227,20 +201,20 @@ public sealed class CollaborationHub : Hub
         if (pageId == Guid.Empty)
             return;
 
+        var removed = await _pagePresenceService.RemoveConnectionAsync(
+            Context.ConnectionId,
+            Context.ConnectionAborted);
+
         await Groups.RemoveFromGroupAsync(
             Context.ConnectionId,
             RealtimeGroupNames.Page(pageId),
-            Context.ConnectionAborted);
-
-        var removed = await _pagePresenceService.RemoveConnectionAsync(
-            Context.ConnectionId,
             Context.ConnectionAborted);
 
         await _blockEditLeaseService.ReleaseAllForConnectionAsync(
             Context.ConnectionId,
             Context.ConnectionAborted);
 
-        if (removed is null || removed.PageId != pageId)
+        if (removed is null)
             return;
 
         var userId = GetOptionalUserId() ?? removed.UserId;
@@ -258,7 +232,7 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionAborted);
     }
 
-    public async Task<PagePresenceDto> GetPagePresence(Guid pageId)
+    public async Task<PagePresenceDto> HeartbeatPage(Guid pageId)
     {
         if (pageId == Guid.Empty)
             throw new HubException("PageId không hợp lệ.");
@@ -271,7 +245,15 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Page không tồn tại.");
-        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền xem presence của page này.");
+        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền đọc page này.");
+
+        await _pagePresenceService.UpsertAsync(
+            access.WorkspaceId,
+            pageId,
+            userId,
+            GetCurrentUserDisplayName(),
+            Context.ConnectionId,
+            Context.ConnectionAborted);
 
         return await BuildPagePresenceDtoAsync(
             access.WorkspaceId,
@@ -279,204 +261,138 @@ public sealed class CollaborationHub : Hub
             Context.ConnectionAborted);
     }
 
-    public async Task<BlockLeaseHubResponse> AcquireBlockLease(
-        Guid blockId,
-        string? holderDisplayName = null)
+    public async Task SendCursor(PageCursorRequest request)
     {
-        if (blockId == Guid.Empty)
-            throw new HubException("BlockId không hợp lệ.");
+        if (request.PageId == Guid.Empty)
+            throw new HubException("PageId không hợp lệ.");
 
         var userId = GetRequiredUserId();
 
-        var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
-            blockId,
+        var access = await _pageAccessEvaluator.EvaluateAsync(
+            request.PageId,
             userId,
             Context.ConnectionAborted);
 
-        EnsureExists(access.Exists, "Block không tồn tại.");
-        EnsureAllowed(access.CanAcquireLease, "Bạn không có quyền acquire lease của block này.");
+        EnsureExists(access.Exists, "Page không tồn tại.");
+        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền đọc page này.");
 
-        var result = await _blockEditLeaseService.AcquireAsync(
-            blockId,
-            access.PageId,
-            userId,
-            Context.ConnectionId,
-            string.IsNullOrWhiteSpace(holderDisplayName)
-                ? GetCurrentUserDisplayName()
-                : holderDisplayName,
-            Context.ConnectionAborted);
+        var dto = new PageCursorDto(
+            WorkspaceId: access.WorkspaceId,
+            PageId: request.PageId,
+            BlockId: request.BlockId,
+            UserId: userId,
+            UserName: GetCurrentUserDisplayName(),
+            ConnectionId: Context.ConnectionId,
+            AnchorKey: NormalizeSmallText(request.AnchorKey, 200),
+            Offset: request.Offset,
+            Color: NormalizeSmallText(request.Color, 30),
+            OccurredAtUtc: _clock.UtcNow);
 
-        var lease = result.Granted ? result.Lease : result.CurrentHolder;
-
-        if (result.Granted)
-        {
-            var payload = new BlockLeaseDto(
-                BlockId: blockId,
-                PageId: access.PageId,
-                Granted: true,
-                Status: "acquired",
-                HolderUserId: lease?.UserId,
-                HolderDisplayName: lease?.HolderDisplayName,
-                ExpiresAtUtc: lease?.ExpiresAtUtc,
-                IsHeldByCurrentUser: true);
-
-            await _realtimePublisher.PublishToPageAsync(
-                new DocumentRealtimeEnvelope(
-                    EventName: "BlockLeaseChanged",
-                    WorkspaceId: access.WorkspaceId,
-                    PageId: access.PageId,
-                    BlockId: blockId,
-                    ActorId: userId,
-                    OccurredAtUtc: _clock.UtcNow,
-                    Revision: null,
-                    Payload: payload),
-                Context.ConnectionAborted);
-
-            return new BlockLeaseHubResponse(
-                BlockId: blockId,
-                PageId: access.PageId,
-                Granted: true,
-                Status: "acquired",
-                HolderUserId: lease?.UserId,
-                HolderDisplayName: lease?.HolderDisplayName,
-                ExpiresAtUtc: lease?.ExpiresAtUtc);
-        }
-
-        return new BlockLeaseHubResponse(
-            BlockId: blockId,
-            PageId: access.PageId,
-            Granted: false,
-            Status: "conflict",
-            HolderUserId: lease?.UserId,
-            HolderDisplayName: lease?.HolderDisplayName,
-            ExpiresAtUtc: lease?.ExpiresAtUtc);
+        await Clients
+            .OthersInGroup(RealtimeGroupNames.Page(request.PageId))
+            .SendAsync("PageCursorChanged", dto, Context.ConnectionAborted);
     }
 
-    public async Task<BlockLeaseHubResponse> RenewBlockLease(Guid blockId)
+    public async Task SendBlockDraft(BlockDraftRequest request)
     {
-        if (blockId == Guid.Empty)
+        if (request.PageId == Guid.Empty)
+            throw new HubException("PageId không hợp lệ.");
+
+        if (request.BlockId == Guid.Empty)
             throw new HubException("BlockId không hợp lệ.");
+
+        if (string.IsNullOrWhiteSpace(request.EditorSessionId))
+            throw new HubException("EditorSessionId không hợp lệ.");
+
+        if (request.BaseRevision < 0)
+            throw new HubException("BaseRevision không hợp lệ.");
+
+        if (request.ClientSequence < 0)
+            throw new HubException("ClientSequence không hợp lệ.");
 
         var userId = GetRequiredUserId();
 
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
-            blockId,
+            request.BlockId,
             userId,
             Context.ConnectionAborted);
 
         EnsureExists(access.Exists, "Block không tồn tại.");
-        EnsureAllowed(access.CanAcquireLease, "Bạn không có quyền renew lease của block này.");
+        EnsureAllowed(access.CanEditDocument, "Bạn không có quyền sửa block này.");
 
-        var result = await _blockEditLeaseService.RenewAsync(
-            blockId,
-            userId,
-            Context.ConnectionId,
-            Context.ConnectionAborted);
-
-        var lease = result.Granted ? result.Lease : result.CurrentHolder;
-
-        return new BlockLeaseHubResponse(
-            BlockId: blockId,
-            PageId: access.PageId,
-            Granted: result.Granted,
-            Status: result.Granted ? "renewed" : "conflict",
-            HolderUserId: lease?.UserId,
-            HolderDisplayName: lease?.HolderDisplayName,
-            ExpiresAtUtc: lease?.ExpiresAtUtc);
-    }
-
-    public async Task ReleaseBlockLease(Guid blockId)
-    {
-        if (blockId == Guid.Empty)
-            throw new HubException("BlockId không hợp lệ.");
-
-        var userId = GetRequiredUserId();
-
-        var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
-            blockId,
-            userId,
-            Context.ConnectionAborted);
-
-        EnsureExists(access.Exists, "Block không tồn tại.");
-        EnsureAllowed(access.CanAcquireLease, "Bạn không có quyền release lease của block này.");
-
-        var leaseBeforeRelease = await _blockEditLeaseService.GetCurrentAsync(
-            blockId,
-            Context.ConnectionAborted);
-
-        await _blockEditLeaseService.ReleaseAsync(
-            blockId,
-            userId,
-            Context.ConnectionId,
-            Context.ConnectionAborted);
-
-        if (leaseBeforeRelease is not null &&
-            leaseBeforeRelease.UserId == userId &&
-            string.Equals(leaseBeforeRelease.ConnectionId, Context.ConnectionId, StringComparison.Ordinal))
-        {
-            var payload = new BlockLeaseDto(
-                BlockId: blockId,
-                PageId: access.PageId,
-                Granted: true,
-                Status: "released",
-                HolderUserId: null,
-                HolderDisplayName: null,
-                ExpiresAtUtc: null,
-                IsHeldByCurrentUser: false);
-
-            await _realtimePublisher.PublishToPageAsync(
-                new DocumentRealtimeEnvelope(
-                    EventName: "BlockLeaseChanged",
-                    WorkspaceId: access.WorkspaceId,
-                    PageId: access.PageId,
-                    BlockId: blockId,
-                    ActorId: userId,
-                    OccurredAtUtc: _clock.UtcNow,
-                    Revision: null,
-                    Payload: payload),
-                Context.ConnectionAborted);
-        }
-    }
-
-    public async Task<BlockLeaseHubResponse> GetBlockLease(Guid blockId)
-    {
-        if (blockId == Guid.Empty)
-            throw new HubException("BlockId không hợp lệ.");
-
-        var userId = GetRequiredUserId();
-
-        var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
-            blockId,
-            userId,
-            Context.ConnectionAborted);
-
-        EnsureExists(access.Exists, "Block không tồn tại.");
-        EnsureAllowed(access.CanReadDocument, "Bạn không có quyền xem lease của block này.");
+        if (access.PageId != request.PageId)
+            throw new HubException("Block không thuộc page này.");
 
         var lease = await _blockEditLeaseService.GetCurrentAsync(
-            blockId,
+            request.BlockId,
             Context.ConnectionAborted);
 
-        if (lease is null)
-        {
-            return new BlockLeaseHubResponse(
-                BlockId: blockId,
-                PageId: access.PageId,
-                Granted: false,
-                Status: "not_held",
-                HolderUserId: null,
-                HolderDisplayName: null,
-                ExpiresAtUtc: null);
-        }
+        EnsureCurrentLeaseHolder(lease, userId, request.EditorSessionId);
 
-        return new BlockLeaseHubResponse(
-            BlockId: blockId,
-            PageId: access.PageId,
-            Granted: lease.UserId == userId,
-            Status: lease.UserId == userId ? "held_by_current_user" : "held_by_other_user",
-            HolderUserId: lease.UserId,
-            HolderDisplayName: lease.HolderDisplayName,
-            ExpiresAtUtc: lease.ExpiresAtUtc);
+        var dto = new BlockDraftDto(
+            WorkspaceId: access.WorkspaceId,
+            PageId: request.PageId,
+            BlockId: request.BlockId,
+            UserId: userId,
+            UserName: GetCurrentUserDisplayName(),
+            ConnectionId: Context.ConnectionId,
+            EditorSessionId: request.EditorSessionId,
+            BaseRevision: request.BaseRevision,
+            ClientSequence: request.ClientSequence,
+            Type: NormalizeSmallText(request.Type, 50),
+            TextContent: request.TextContent,
+            PropsJson: request.PropsJson,
+            OccurredAtUtc: _clock.UtcNow);
+
+        await Clients
+            .OthersInGroup(RealtimeGroupNames.Page(request.PageId))
+            .SendAsync("BlockDraftChanged", dto, Context.ConnectionAborted);
+    }
+
+    public async Task SendBlockEditingState(BlockEditingStateRequest request)
+    {
+        if (request.PageId == Guid.Empty)
+            throw new HubException("PageId không hợp lệ.");
+
+        if (request.BlockId == Guid.Empty)
+            throw new HubException("BlockId không hợp lệ.");
+
+        if (string.IsNullOrWhiteSpace(request.EditorSessionId))
+            throw new HubException("EditorSessionId không hợp lệ.");
+
+        var userId = GetRequiredUserId();
+
+        var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
+            request.BlockId,
+            userId,
+            Context.ConnectionAborted);
+
+        EnsureExists(access.Exists, "Block không tồn tại.");
+        EnsureAllowed(access.CanEditDocument, "Bạn không có quyền sửa block này.");
+
+        if (access.PageId != request.PageId)
+            throw new HubException("Block không thuộc page này.");
+
+        var lease = await _blockEditLeaseService.GetCurrentAsync(
+            request.BlockId,
+            Context.ConnectionAborted);
+
+        EnsureCurrentLeaseHolder(lease, userId, request.EditorSessionId);
+
+        var dto = new BlockEditingStateDto(
+            WorkspaceId: access.WorkspaceId,
+            PageId: request.PageId,
+            BlockId: request.BlockId,
+            UserId: userId,
+            UserName: GetCurrentUserDisplayName(),
+            ConnectionId: Context.ConnectionId,
+            EditorSessionId: request.EditorSessionId,
+            IsEditing: request.IsEditing,
+            OccurredAtUtc: _clock.UtcNow);
+
+        await Clients
+            .OthersInGroup(RealtimeGroupNames.Page(request.PageId))
+            .SendAsync("BlockEditingStateChanged", dto, Context.ConnectionAborted);
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
@@ -572,6 +488,7 @@ public sealed class CollaborationHub : Hub
             .Select(group =>
             {
                 var lastSeenUtc = group.Max(x => x.LastSeenUtc);
+
                 return new PagePresenceUserDto(
                     group.Key.UserId,
                     group.Key.UserName,
@@ -667,5 +584,32 @@ public sealed class CollaborationHub : Hub
     {
         if (!allowed)
             throw new HubException(message);
+    }
+
+    private static void EnsureCurrentLeaseHolder(
+        BlockLeaseInfo? lease,
+        Guid userId,
+        string editorSessionId)
+    {
+        if (lease is null)
+            throw new HubException("Bạn phải acquire edit lease trước khi gửi draft.");
+
+        if (lease.UserId != userId)
+            throw new HubException("Block đang được người khác chỉnh sửa.");
+
+        if (!string.Equals(lease.ConnectionId, editorSessionId, StringComparison.Ordinal))
+            throw new HubException("EditorSessionId không khớp với lease hiện tại.");
+    }
+
+    private static string? NormalizeSmallText(string? value, int maxLength)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        var normalized = value.Trim();
+
+        return normalized.Length <= maxLength
+            ? normalized
+            : normalized[..maxLength];
     }
 }

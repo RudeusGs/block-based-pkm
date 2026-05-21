@@ -86,10 +86,11 @@ public sealed class PagesController : BaseController
         CancellationToken cancellationToken)
     {
         var command = new UpdatePageMetadataCommand(
-            pageId,
-            request.Title,
-            request.Icon,
-            request.CoverImage);
+                pageId,
+                request.ExpectedRevision,
+                request.Title,
+                request.Icon,
+                request.CoverImage);
 
         var result = await _updatePageMetadataHandler.HandleAsync(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
