@@ -79,10 +79,14 @@ export const blockController = {
   delete(blockId: Guid, params: DeleteBlockParams) {
     const { editorSessionId, expectedRevision, note } = params
 
+    // Gửi editorSessionId ở cả query và header để tương thích với backend
+    // đang bind theo [FromQuery] hoặc [FromHeader]. Trước đó chỉ gửi header
+    // nên một số API DELETE không nhận session => delete không chạy.
     return api.delete<ApiResult<BlockMutationResponse>>(
       `blocks/${blockId}`,
       {
         expectedRevision,
+        editorSessionId,
         note,
       },
       {
@@ -93,3 +97,5 @@ export const blockController = {
     )
   },
 }
+
+

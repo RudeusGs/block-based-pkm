@@ -10,7 +10,7 @@ public static class DocumentRevisionGuard
         if (expectedRevision < 0)
             return DocumentErrors.InvalidExpectedRevision;
 
-        if (page.CurrentRevision != expectedRevision)
+        if (expectedRevision > page.CurrentRevision)
             return DocumentErrors.RevisionConflict;
 
         return null;

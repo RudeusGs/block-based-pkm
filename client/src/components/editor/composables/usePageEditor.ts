@@ -103,10 +103,32 @@ class InlineStylePersistTool {
 
 const SAVE_DEBOUNCE_MS = 1200
 const SOFT_SYNC_DELAY_MS = 650
+const REMOTE_MUTATION_FLUSH_DELAY_MS = 220
+const REMOTE_MUTATION_IDLE_DELAY_MS = 720
 const POINTER_THROTTLE_MS = 70
 const REMOTE_TYPING_TTL_MS = 2200
 const REMOTE_POINTER_TTL_MS = 2400
 const RELEASE_LEASE_DELAY_MS = 900
+
+const TEXT_BLOCK_HTML_SELECTORS: Record<string, string[]> = {
+  paragraph: ['.ce-paragraph'],
+  header: ['.ce-header'],
+  quote: ['.cdx-quote__text'],
+  warning: ['.cdx-warning__message'],
+}
+
+const INLINE_STYLE_ALLOWED_PROPERTIES = new Set([
+  'font-family',
+  'font-size',
+  'line-height',
+  'color',
+  'background-color',
+  'border-radius',
+  'padding',
+  'font-weight',
+  'font-style',
+  'text-decoration',
+])
 
 function defaultEditorData(): OutputData {
   return {
@@ -234,11 +256,13 @@ function plainTextFromEditorBlock(block: EditorBlockData) {
 }
 
 function blockToPropsJson(block: EditorBlockData) {
+  const normalizedBlock = normalizeEditorBlock(block)
+
   const payload: StoredEditorJsBlockProps = {
     editorjs: {
-      type: block.type,
-      data: (block.data ?? {}) as Record<string, unknown>,
-      tunes: (block.tunes ?? null) as Record<string, unknown> | null,
+      type: normalizedBlock.type,
+      data: (normalizedBlock.data ?? {}) as Record<string, unknown>,
+      tunes: (normalizedBlock.tunes ?? null) as Record<string, unknown> | null,
     },
   }
 
@@ -265,6 +289,156 @@ function parsePropsJson(propsJson: string | null) {
   return safeJsonParse<StoredEditorJsBlockProps>(propsJson)
 }
 
+const SUPPORTED_EDITOR_BLOCK_TYPES = new Set([
+  'paragraph',
+  'header',
+  'list',
+  'checklist',
+  'quote',
+  'code',
+  'delimiter',
+  'table',
+  'warning',
+])
+
+function asPlainObject(value: unknown): Record<string, any> {
+  return value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, any>)
+    : {}
+}
+
+function toStringValue(value: unknown, fallback = '') {
+  return typeof value === 'string' ? value : fallback
+}
+
+function normalizeEditorBlockType(type: unknown) {
+  const value = typeof type === 'string' && type.trim() ? type.trim() : 'paragraph'
+  return SUPPORTED_EDITOR_BLOCK_TYPES.has(value) ? value : 'paragraph'
+}
+
+function normalizeHeaderLevel(value: unknown) {
+  const level = typeof value === 'number' ? value : Number(value)
+
+  return [1, 2, 3, 4, 5, 6].includes(level) ? level : 2
+}
+
+function normalizeChecklistItems(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.map((item) => {
+    if (typeof item === 'string') {
+      return { text: item, checked: false }
+    }
+
+    const raw = asPlainObject(item)
+
+    return {
+      text: toStringValue(raw.text ?? raw.content, ''),
+      checked: Boolean(raw.checked),
+    }
+  })
+}
+
+function normalizeTableContent(value: unknown) {
+  if (!Array.isArray(value)) return []
+
+  return value.map((row) => {
+    if (!Array.isArray(row)) return []
+    return row.map((cell) => toStringValue(cell, ''))
+  })
+}
+
+function normalizeEditorBlockData(
+  type: string,
+  data: unknown,
+  fallbackText = ''
+): Record<string, unknown> {
+  const raw = asPlainObject(data)
+
+  switch (type) {
+    case 'paragraph':
+      return {
+        text: toStringValue(raw.text, fallbackText),
+      }
+
+    case 'header':
+      return {
+        text: toStringValue(raw.text, fallbackText),
+        level: normalizeHeaderLevel(raw.level),
+      }
+
+    case 'quote':
+      return {
+        text: toStringValue(raw.text, fallbackText),
+        caption: toStringValue(raw.caption, ''),
+        alignment: raw.alignment === 'center' ? 'center' : 'left',
+      }
+
+    case 'warning':
+      return {
+        title: toStringValue(raw.title, ''),
+        message: toStringValue(raw.message, fallbackText),
+      }
+
+    case 'code':
+      return {
+        code: toStringValue(raw.code, fallbackText),
+      }
+
+    case 'checklist':
+      return {
+        items: normalizeChecklistItems(raw.items),
+      }
+
+    case 'list': {
+      const style = raw.style === 'ordered' || raw.style === 'checklist'
+        ? raw.style
+        : 'unordered'
+
+      return {
+        style,
+        items: Array.isArray(raw.items) ? raw.items : [],
+      }
+    }
+
+    case 'table':
+      return {
+        content: normalizeTableContent(raw.content),
+        withHeadings: Boolean(raw.withHeadings),
+      }
+
+    case 'delimiter':
+      return {}
+
+    default:
+      return {
+        text: fallbackText,
+      }
+  }
+}
+
+function normalizeEditorBlock(
+  block: EditorBlockData,
+  fallbackText = ''
+): EditorBlockData {
+  const type = normalizeEditorBlockType(block.type)
+
+  return {
+    ...block,
+    type,
+    data: normalizeEditorBlockData(type, block.data, fallbackText),
+  } as EditorBlockData
+}
+
+function normalizeEditorData(data: OutputData): OutputData {
+  return {
+    ...data,
+    blocks: Array.isArray(data.blocks)
+      ? data.blocks.map((block) => normalizeEditorBlock(block))
+      : [],
+  }
+}
+
 function backendBlockToEditorBlock(
   block: BlockResponse,
   editorBlockId: string = block.id
@@ -273,42 +447,51 @@ function backendBlockToEditorBlock(
   const stored = propsJson?.editorjs
 
   if (stored?.type) {
-    return {
-      id: editorBlockId,
-      type: stored.type,
-      data: stored.data ?? {},
-      tunes: stored.tunes ?? undefined,
-    } as EditorBlockData
+    return normalizeEditorBlock(
+      {
+        id: editorBlockId,
+        type: stored.type,
+        data: stored.data ?? {},
+        tunes: stored.tunes ?? undefined,
+      } as EditorBlockData,
+      block.textContent ?? ''
+    )
   }
 
   if (block.type === 'editorjs' && block.propsJson) {
     const legacy = safeJsonParse<OutputData>(block.propsJson)
 
     if (legacy?.blocks?.[0]) {
-      return {
-        ...legacy.blocks[0],
-        id: editorBlockId,
-      } as EditorBlockData
+      return normalizeEditorBlock(
+        {
+          ...legacy.blocks[0],
+          id: editorBlockId,
+        } as EditorBlockData,
+        block.textContent ?? ''
+      )
     }
   }
 
-  return {
-    id: editorBlockId,
-    type: block.type === 'paragraph' ? 'paragraph' : block.type,
-    data: {
-      text: block.textContent ?? '',
-    },
-  } as EditorBlockData
+  return normalizeEditorBlock(
+    {
+      id: editorBlockId,
+      type: block.type === 'paragraph' ? 'paragraph' : block.type,
+      data: {
+        text: block.textContent ?? '',
+      },
+    } as EditorBlockData,
+    block.textContent ?? ''
+  )
 }
 
 function documentToEditorData(document: PageDocumentResponse): OutputData {
-  return {
+  return normalizeEditorData({
     time: Date.now(),
     version: '2.31.0',
     blocks: sortBackendBlocks(document.blocks).map((block) =>
       backendBlockToEditorBlock(block)
     ),
-  }
+  })
 }
 
 function normalizeMutationPayload(payload: unknown): BlockMutationResponse | null {
@@ -342,12 +525,33 @@ function normalizeMutationPayload(payload: unknown): BlockMutationResponse | nul
   }
 }
 
-function normalizeDeletedBlockIds(payload: unknown): Guid[] {
+function normalizeDeletedBlockIds(payload: unknown, envelope?: RealtimeEnvelope<unknown>): Guid[] {
   const raw = getObject(payload)
-  if (!raw) return []
+  const ids =
+    raw?.deletedBlockIds ??
+    raw?.DeletedBlockIds ??
+    raw?.blockIds ??
+    raw?.BlockIds ??
+    null
 
-  const ids = raw.deletedBlockIds ?? raw.DeletedBlockIds
-  return Array.isArray(ids) ? (ids as Guid[]) : []
+  if (Array.isArray(ids)) {
+    return ids.filter(
+      (id): id is Guid => typeof id === 'string' && id.trim().length > 0
+    )
+  }
+
+  const block = getObject(raw?.block ?? raw?.Block)
+  const singleId =
+    raw?.blockId ??
+    raw?.BlockId ??
+    raw?.id ??
+    raw?.Id ??
+    block?.id ??
+    block?.Id ??
+    envelope?.blockId ??
+    null
+
+  return typeof singleId === 'string' && singleId.trim() ? [singleId] : []
 }
 
 function getEnvelopePageId(envelope: unknown): Guid | null {
@@ -445,11 +649,18 @@ export function usePageEditor(props: PageEditorProps) {
 
   let saveTimer: number | null = null
   let softSyncTimer: number | null = null
+  let remoteMutationFlushTimer: number | null = null
   let releaseBlockTimer: number | null = null
   let pointerSendTimer: number | null = null
   let heartbeatTimer: number | null = null
+  let leaseRenewTimer: number | null = null
   let pendingRemoteRefresh = false
   let isDestroyed = false
+  let localSaveMutedUntil = 0
+  let remoteEditorMutationDepth = 0
+
+  const pendingRemoteBlocks = new Map<Guid, BlockResponse>()
+  const pendingRemoteDeletedIds = new Set<Guid>()
 
   let lastPointerPayload:
     | {
@@ -467,6 +678,7 @@ export function usePageEditor(props: PageEditorProps) {
   let unsubscribeBlockEditingStateChanged: (() => void) | null = null
   let unsubscribeBlockLeaseChanged: (() => void) | null = null
   let unsubscribePageMousePointerChanged: (() => void) | null = null
+  let unsubscribePagePresenceChanged: (() => void) | null = null
 
   function getEditorSessionId() {
     return realtimeClient.state.connectionId ?? `local-${holderId}`
@@ -474,6 +686,38 @@ export function usePageEditor(props: PageEditorProps) {
 
   function getCurrentUserDisplayName() {
     return 'Bạn'
+  }
+
+  function muteLocalSaves(durationMs = 900) {
+    localSaveMutedUntil = Math.max(localSaveMutedUntil, Date.now() + durationMs)
+
+    if (saveTimer) {
+      window.clearTimeout(saveTimer)
+      saveTimer = null
+    }
+  }
+
+  function isLocalSaveMuted() {
+    return isApplyingRemote.value || Date.now() < localSaveMutedUntil
+  }
+
+  async function runAsRemoteEditorMutation<T>(callback: () => Promise<T>) {
+    remoteEditorMutationDepth += 1
+    isApplyingRemote.value = true
+    muteLocalSaves(1000)
+
+    try {
+      return await callback()
+    } finally {
+      remoteEditorMutationDepth = Math.max(0, remoteEditorMutationDepth - 1)
+
+      window.setTimeout(() => {
+        if (remoteEditorMutationDepth === 0) {
+          isApplyingRemote.value = false
+          muteLocalSaves(500)
+        }
+      }, 160)
+    }
   }
 
   function resolveServerBlockId(editorBlockId: string | undefined | null) {
@@ -523,6 +767,17 @@ export function usePageEditor(props: PageEditorProps) {
 
   function markLeaseHeld(blockId: Guid, editorSessionId: string) {
     const next = new Set(heldLeaseBlockIds.value)
+
+    // Backend lease service chỉ cho 1 session giữ 1 block tại một thời điểm.
+    // Khi session này acquire block mới, server tự thả block cũ; frontend cũng phải dọn
+    // state cũ để không tưởng mình còn lease rồi PATCH dính 409 LeaseRequired.
+    for (const [heldBlockId, heldSessionId] of heldLeaseSessionIds.entries()) {
+      if (heldBlockId !== blockId && heldSessionId === editorSessionId) {
+        next.delete(heldBlockId)
+        heldLeaseSessionIds.delete(heldBlockId)
+      }
+    }
+
     next.add(blockId)
     heldLeaseBlockIds.value = next
     heldLeaseSessionIds.set(blockId, editorSessionId)
@@ -545,8 +800,51 @@ export function usePageEditor(props: PageEditorProps) {
     )
   }
 
+  async function renewCurrentLease(blockId: Guid) {
+    const editorSessionId = heldLeaseSessionIds.get(blockId) ?? getEditorSessionId()
+
+    try {
+      const result = await blockController.renewLease(blockId, { editorSessionId })
+
+      if (result.isSuccess && result.data?.granted) {
+        markLeaseHeld(blockId, editorSessionId)
+        return true
+      }
+    } catch {
+      // Lease có thể đã expire hoặc server restart. Ta clear local state rồi acquire lại.
+    }
+
+    clearLease(blockId)
+    return false
+  }
+
+  async function renewHeldLeases() {
+    const blockIds = [...heldLeaseBlockIds.value]
+
+    for (const blockId of blockIds) {
+      await renewCurrentLease(blockId)
+    }
+  }
+
+  function startLeaseRenewal() {
+    if (leaseRenewTimer) {
+      window.clearInterval(leaseRenewTimer)
+    }
+
+    leaseRenewTimer = window.setInterval(() => {
+      void renewHeldLeases().catch(() => {})
+    }, 10000)
+  }
+
+  function stopLeaseRenewal() {
+    if (!leaseRenewTimer) return
+
+    window.clearInterval(leaseRenewTimer)
+    leaseRenewTimer = null
+  }
+
   async function ensureBlockLease(blockId: Guid) {
-    if (hasCurrentLease(blockId)) return
+    if (hasCurrentLease(blockId) && await renewCurrentLease(blockId)) return
 
     const editorSessionId = getEditorSessionId()
 
@@ -736,21 +1034,124 @@ export function usePageEditor(props: PageEditorProps) {
     refreshRemotePointerList()
   }
 
+  function sanitizeInlineStyleAttribute(styleValue: string | null) {
+    if (!styleValue) return ''
+
+    const probe = document.createElement('span')
+    probe.setAttribute('style', styleValue)
+
+    const kept: string[] = []
+
+    for (const property of INLINE_STYLE_ALLOWED_PROPERTIES) {
+      const value = probe.style.getPropertyValue(property)
+
+      if (value) {
+        kept.push(`${property}: ${value}`)
+      }
+    }
+
+    return kept.join('; ')
+  }
+
+  function normalizeInlineHtml(html: string) {
+    const template = document.createElement('template')
+    template.innerHTML = html
+
+    template.content.querySelectorAll<HTMLElement>('[style]').forEach((element) => {
+      const style = sanitizeInlineStyleAttribute(element.getAttribute('style'))
+
+      if (style) {
+        element.setAttribute('style', style)
+      } else {
+        element.removeAttribute('style')
+      }
+    })
+
+    template.content.querySelectorAll<HTMLElement>('span[data-editor-inline-style]').forEach(
+      (element) => {
+        element.classList.add('editor-inline-style')
+      }
+    )
+
+    return template.innerHTML
+  }
+
+  function getBlockInnerHtml(editorBlockId: string | undefined, selectors: string[]) {
+    const blockElement = getEditorBlockElementByEditorId(editorBlockId)
+    if (!blockElement) return null
+
+    for (const selector of selectors) {
+      const element = blockElement.querySelector<HTMLElement>(selector)
+
+      if (element) {
+        return normalizeInlineHtml(element.innerHTML)
+      }
+    }
+
+    return null
+  }
+
+  function hydrateInlineHtmlFromDom(data: OutputData): OutputData {
+    return {
+      ...data,
+      blocks: data.blocks.map((block) => {
+        const selectors = TEXT_BLOCK_HTML_SELECTORS[block.type]
+        if (!selectors) return block
+
+        const html = getBlockInnerHtml(block.id, selectors)
+        if (html === null) return block
+
+        return {
+          ...block,
+          data: {
+            ...(block.data ?? {}),
+            text: html,
+          },
+        } as EditorBlockData
+      }),
+    }
+  }
+
+  function dispatchEditorContentChanged(delay = 300) {
+    try {
+      holderRef.value?.dispatchEvent(
+        new InputEvent('input', {
+          bubbles: true,
+          inputType: 'formatSetBlockText',
+        })
+      )
+    } catch {
+      holderRef.value?.dispatchEvent(new Event('input', { bubbles: true }))
+    }
+
+    scheduleSave(delay)
+  }
+
+  async function runWithStableViewport<T>(callback: () => Promise<T>) {
+    const scrollX = window.scrollX
+    const scrollY = window.scrollY
+
+    const result = await callback()
+
+    window.requestAnimationFrame(() => {
+      window.scrollTo(scrollX, scrollY)
+    })
+
+    return result
+  }
+
   async function saveEditorSnapshot() {
     if (!editor.value || !isReady.value) return defaultEditorData()
 
-    try {
-      return await editor.value.save()
-    } catch {
-      return defaultEditorData()
-    }
+    const data = await editor.value.save()
+    return normalizeEditorData(hydrateInlineHtmlFromDom(data))
   }
 
   async function findEditorBlockIndexByServerId(serverBlockId: Guid) {
     const data = await saveEditorSnapshot()
 
     return data.blocks.findIndex((block) => {
-      return resolveServerBlockId(block.id) === serverBlockId
+      return resolveServerBlockId(block.id) === serverBlockId || block.id === serverBlockId
     })
   }
 
@@ -761,17 +1162,23 @@ export function usePageEditor(props: PageEditorProps) {
 
     if (typeof editorAny.blocks?.update !== 'function') return false
 
-    try {
-      await editorAny.blocks.update(block.id, block.data, block.tunes)
-      return true
-    } catch {
-      try {
-        await editorAny.blocks.update(block.id, block.data)
-        return true
-      } catch {
-        return false
-      }
-    }
+    const safeBlock = normalizeEditorBlock(block)
+
+    return runAsRemoteEditorMutation(() =>
+      runWithStableViewport(async () => {
+        try {
+          await editorAny.blocks.update(safeBlock.id, safeBlock.data, safeBlock.tunes)
+          return true
+        } catch {
+          try {
+            await editorAny.blocks.update(safeBlock.id, safeBlock.data)
+            return true
+          } catch {
+            return false
+          }
+        }
+      })
+    )
   }
 
   async function insertEditorBlock(
@@ -786,30 +1193,39 @@ export function usePageEditor(props: PageEditorProps) {
     if (typeof editorAny.blocks?.insert !== 'function') return false
 
     const safeIndex = Math.max(0, index)
+    const safeBlock = normalizeEditorBlock(block)
 
-    try {
-      await editorAny.blocks.insert(
-        block.type,
-        block.data ?? {},
-        block.tunes ?? {},
-        safeIndex,
-        false,
-        false,
-        block.id
-      )
-    } catch {
-      try {
-        await editorAny.blocks.insert(
-          block.type,
-          block.data ?? {},
-          {},
-          safeIndex,
-          false
-        )
-      } catch {
-        return false
-      }
-    }
+    const inserted = await runAsRemoteEditorMutation(() =>
+      runWithStableViewport(async () => {
+        try {
+          await editorAny.blocks.insert(
+            safeBlock.type,
+            safeBlock.data ?? {},
+            safeBlock.tunes ?? {},
+            safeIndex,
+            false,
+            false,
+            safeBlock.id
+          )
+          return true
+        } catch {
+          try {
+            await editorAny.blocks.insert(
+              safeBlock.type,
+              safeBlock.data ?? {},
+              {},
+              safeIndex,
+              false
+            )
+            return true
+          } catch {
+            return false
+          }
+        }
+      })
+    )
+
+    if (!inserted) return false
 
     const data = await saveEditorSnapshot()
     const insertedBlock = data.blocks[safeIndex]
@@ -832,13 +1248,17 @@ export function usePageEditor(props: PageEditorProps) {
 
     if (index < 0) return false
 
-    try {
-      await editorAny.blocks.delete(index)
-      forgetServerBlockAlias(serverBlockId)
-      return true
-    } catch {
-      return false
-    }
+    return runAsRemoteEditorMutation(() =>
+      runWithStableViewport(async () => {
+        try {
+          await editorAny.blocks.delete(index)
+          forgetServerBlockAlias(serverBlockId)
+          return true
+        } catch {
+          return false
+        }
+      })
+    )
   }
 
   async function applyRemoteBlockToEditor(block: BlockResponse) {
@@ -849,6 +1269,16 @@ export function usePageEditor(props: PageEditorProps) {
     const editorBlock = backendBlockToVisibleEditorBlock(block)
 
     if (existingIndex >= 0) {
+      const currentData = await saveEditorSnapshot()
+      const currentBlock = currentData.blocks[existingIndex]
+
+      if (
+        currentBlock &&
+        editorBlockSignature(currentBlock) === serverBlockSignature(block)
+      ) {
+        return true
+      }
+
       return patchEditorBlock(editorBlock)
     }
 
@@ -888,8 +1318,9 @@ export function usePageEditor(props: PageEditorProps) {
     for (const block of sortBackendBlocks(document.blocks)) {
       const activeUiBlockId = getEditorBlockIdForServerBlock(block.id)
 
-      if (activeUiBlockId === activeEditorBlockId.value || isSaving.value) {
+      if (activeEditorBlockId.value || isSaving.value) {
         remoteBlocksPendingUi.add(block.id)
+        pendingRemoteRefresh = true
         continue
       }
 
@@ -909,7 +1340,11 @@ export function usePageEditor(props: PageEditorProps) {
       const serverBlockId = resolveServerBlockId(editorBlock.id)
 
       if (!serverBlockId || serverIds.has(serverBlockId)) continue
-      if (editorBlock.id === activeEditorBlockId.value || isSaving.value) continue
+      if (activeEditorBlockId.value || isSaving.value) {
+        pendingRemoteRefresh = true
+        remoteBlocksPendingUi.add(serverBlockId)
+        continue
+      }
 
       await deleteEditorBlock(serverBlockId)
     }
@@ -933,6 +1368,10 @@ export function usePageEditor(props: PageEditorProps) {
       void softSyncFromServer()
         .then(() => {
           pendingRemoteRefresh = false
+
+          if (error.value?.startsWith('Revision lệch')) {
+            error.value = null
+          }
         })
         .catch(() => {
           pendingRemoteRefresh = true
@@ -940,18 +1379,78 @@ export function usePageEditor(props: PageEditorProps) {
     }, delay)
   }
 
+  function scheduleRemoteMutationFlush(delay = REMOTE_MUTATION_FLUSH_DELAY_MS) {
+    if (remoteMutationFlushTimer) {
+      window.clearTimeout(remoteMutationFlushTimer)
+    }
+
+    remoteMutationFlushTimer = window.setTimeout(() => {
+      remoteMutationFlushTimer = null
+      void flushRemoteMutationQueue()
+    }, delay)
+  }
+
+  async function flushRemoteMutationQueue() {
+    if (isSaving.value || isApplyingRemote.value || activeEditorBlockId.value) {
+      scheduleRemoteMutationFlush(REMOTE_MUTATION_IDLE_DELAY_MS)
+      return
+    }
+
+    const deletedIds = [...pendingRemoteDeletedIds]
+    pendingRemoteDeletedIds.clear()
+
+    for (const id of deletedIds) {
+      const uiBlockId = getEditorBlockIdForServerBlock(id)
+
+      if (activeEditorBlockId.value) {
+        pendingRemoteRefresh = true
+        remoteBlocksPendingUi.add(id)
+        pendingRemoteDeletedIds.add(id)
+        continue
+      }
+
+      await deleteEditorBlock(id)
+      delete serverBlocksById.value[id]
+      delete serverBlockSignatures.value[id]
+      clearLease(id)
+      clearRemoteTyping(id)
+      remoteBlocksPendingUi.delete(id)
+    }
+
+    const blocks = sortBackendBlocks([...pendingRemoteBlocks.values()])
+    pendingRemoteBlocks.clear()
+
+    for (const block of blocks) {
+      const uiBlockId = getEditorBlockIdForServerBlock(block.id)
+
+      if (activeEditorBlockId.value) {
+        remoteBlocksPendingUi.add(block.id)
+        pendingRemoteBlocks.set(block.id, block)
+        pendingRemoteRefresh = true
+        continue
+      }
+
+      const applied = await applyRemoteBlockToEditor(block)
+
+      if (applied) {
+        remoteBlocksPendingUi.delete(block.id)
+      } else {
+        remoteBlocksPendingUi.add(block.id)
+        pendingRemoteRefresh = true
+      }
+    }
+
+    if (pendingRemoteRefresh && !activeEditorBlockId.value) {
+      scheduleSoftSync(260)
+    }
+  }
+
   async function renderEditorData(data: OutputData) {
     if (!editor.value || !isReady.value) return
 
-    isApplyingRemote.value = true
-
-    try {
-      await editor.value.render(data)
-    } finally {
-      window.setTimeout(() => {
-        isApplyingRemote.value = false
-      }, 80)
-    }
+    await runAsRemoteEditorMutation(async () => {
+      await editor.value!.render(normalizeEditorData(data))
+    })
   }
 
   function getEditorTools() {
@@ -1025,7 +1524,7 @@ export function usePageEditor(props: PageEditorProps) {
 
     editor.value = new EditorJS({
       holder: holderId,
-      data,
+      data: normalizeEditorData(data),
       tools: getEditorTools(),
       autofocus: false,
       placeholder: canEditDocument.value
@@ -1035,6 +1534,20 @@ export function usePageEditor(props: PageEditorProps) {
       minHeight: 220,
       onReady: () => {
         isReady.value = true
+      },
+      onChange: () => {
+        if (
+          !canEditDocument.value ||
+          isLocalSaveMuted() ||
+          isLoading.value ||
+          !isReady.value
+        ) {
+          return
+        }
+
+        // EditorJS delete/toolbox changes không phải lúc nào cũng bubble `input`.
+        // Bắt onChange để create/update/delete block luôn được đẩy về DB.
+        scheduleSave(SAVE_DEBOUNCE_MS)
       },
     })
 
@@ -1050,6 +1563,16 @@ export function usePageEditor(props: PageEditorProps) {
 
       const serverBlock = serverBlocksById.value[serverBlockId]
       if (!serverBlock) return false
+
+      // Nếu block này đang pending remote UI và mình không giữ lease, tuyệt đối không save ngược
+      // stale DOM lên server. Đây là nguyên nhân làm 2 tab giật và spam 409.
+      if (remoteBlocksPendingUi.has(serverBlockId) && !hasCurrentLease(serverBlockId)) {
+        return false
+      }
+
+      if (block.id !== activeEditorBlockId.value && !hasCurrentLease(serverBlockId)) {
+        return false
+      }
 
       return editorBlockSignature(block) !== serverBlockSignatures.value[serverBlockId]
     })
@@ -1166,11 +1689,15 @@ export function usePageEditor(props: PageEditorProps) {
           note: null,
         })
 
-        if (!result.isSuccess || !result.data) {
+        if (!result.isSuccess) {
           throw new Error(getApiResultErrorMessage(result, 'Không xóa được block.'))
         }
 
-        currentRevision.value = result.data.appliedRevision
+        currentRevision.value =
+          typeof result.data?.appliedRevision === 'number'
+            ? result.data.appliedRevision
+            : currentRevision.value + 1
+
         delete serverBlocksById.value[blockId]
         delete serverBlockSignatures.value[blockId]
         clearLease(blockId)
@@ -1192,14 +1719,14 @@ export function usePageEditor(props: PageEditorProps) {
       !props.pageId ||
       !editor.value ||
       !isReady.value ||
-      isApplyingRemote.value ||
+      isLocalSaveMuted() ||
       isLoading.value
     ) {
       return
     }
 
     try {
-      const data = await editor.value.save()
+      const data = await saveEditorSnapshot()
       await syncEditorDataToServer(data)
     } catch (saveError: any) {
       if (saveError?.status === 409 || saveError?.data?.statusCode === 409) {
@@ -1214,6 +1741,8 @@ export function usePageEditor(props: PageEditorProps) {
   }
 
   function scheduleSave(delay = SAVE_DEBOUNCE_MS) {
+    if (isLocalSaveMuted() || isDestroyed) return
+
     if (saveTimer) {
       window.clearTimeout(saveTimer)
     }
@@ -1319,7 +1848,7 @@ export function usePageEditor(props: PageEditorProps) {
   }
 
   function handleEditorBeforeInput(event: InputEvent) {
-    if (!canEditDocument.value || isApplyingRemote.value || isLoading.value) return
+    if (!canEditDocument.value || isLocalSaveMuted() || isLoading.value) return
     if (!isEditingBeforeInputIntent(event)) return
 
     const blockId = getEditorBlockIdFromEvent(event)
@@ -1330,7 +1859,7 @@ export function usePageEditor(props: PageEditorProps) {
   }
 
   function handleEditorKeydown(event: KeyboardEvent) {
-    if (!canEditDocument.value || isApplyingRemote.value || isLoading.value) return
+    if (!canEditDocument.value || isLocalSaveMuted() || isLoading.value) return
     if (!isEditingKeyboardIntent(event)) return
 
     const blockId = getEditorBlockIdFromEvent(event)
@@ -1341,7 +1870,7 @@ export function usePageEditor(props: PageEditorProps) {
   }
 
   function handleEditorInput() {
-    if (!canEditDocument.value || isApplyingRemote.value || isLoading.value) return
+    if (!canEditDocument.value || isLocalSaveMuted() || isLoading.value) return
 
     scheduleSave(SAVE_DEBOUNCE_MS)
 
@@ -1373,6 +1902,11 @@ export function usePageEditor(props: PageEditorProps) {
     activeEditorBlockId.value = nextBlockId
     scheduleReleaseBlockLease(blockId)
     scheduleSave(250)
+
+    if (!nextBlockId && pendingRemoteRefresh) {
+      scheduleRemoteMutationFlush(220)
+      scheduleSoftSync(360)
+    }
   }
 
   function getOwnPointerColor() {
@@ -1513,28 +2047,32 @@ export function usePageEditor(props: PageEditorProps) {
 
     if (!mutation.block) return
 
+    const nextSignature = serverBlockSignature(mutation.block)
+    const previousSignature = serverBlockSignatures.value[mutation.block.id]
+
     serverBlocksById.value[mutation.block.id] = mutation.block
-    serverBlockSignatures.value[mutation.block.id] =
-      serverBlockSignature(mutation.block)
+    serverBlockSignatures.value[mutation.block.id] = nextSignature
+    pendingRemoteDeletedIds.delete(mutation.block.id)
 
-    const uiBlockId = getEditorBlockIdForServerBlock(mutation.block.id)
+    // Một số backend có thể broadcast duplicate event. Nếu content không đổi
+    // thì tuyệt đối không update EditorJS DOM, tránh flicker/giật block.
+    if (previousSignature === nextSignature) return
 
-    if (uiBlockId === activeEditorBlockId.value || isSaving.value) {
+    // Không patch EditorJS DOM khi người dùng đang đặt caret/sửa bất kỳ block nào.
+    // EditorJS update/delete sẽ emit onChange trễ và có thể kích hoạt save ngược gây giật + 409.
+    if (activeEditorBlockId.value || isSaving.value) {
       remoteBlocksPendingUi.add(mutation.block.id)
       pendingRemoteRefresh = true
+      scheduleRemoteMutationFlush(REMOTE_MUTATION_IDLE_DELAY_MS)
       return
     }
 
-    const applied = await applyRemoteBlockToEditor(mutation.block)
-
-    if (applied) {
-      remoteBlocksPendingUi.delete(mutation.block.id)
-      return
-    }
-
-    remoteBlocksPendingUi.add(mutation.block.id)
-    pendingRemoteRefresh = true
-    scheduleSoftSync(SOFT_SYNC_DELAY_MS)
+    pendingRemoteBlocks.set(mutation.block.id, mutation.block)
+    scheduleRemoteMutationFlush(
+      isTextToolbarVisible.value
+        ? REMOTE_MUTATION_IDLE_DELAY_MS
+        : REMOTE_MUTATION_FLUSH_DELAY_MS
+    )
   }
 
   async function handleBlockDeleted(envelope: RealtimeEnvelope<unknown>) {
@@ -1545,7 +2083,7 @@ export function usePageEditor(props: PageEditorProps) {
 
     if (envelopePageId && envelopePageId !== props.pageId) return
 
-    const deletedIds = normalizeDeletedBlockIds(payload)
+    const deletedIds = normalizeDeletedBlockIds(payload, envelope)
 
     if (deletedIds.length === 0) {
       pendingRemoteRefresh = true
@@ -1560,22 +2098,20 @@ export function usePageEditor(props: PageEditorProps) {
       : false
 
     for (const id of deletedIds) {
-      delete serverBlocksById.value[id]
-      delete serverBlockSignatures.value[id]
+      pendingRemoteBlocks.delete(id)
+      pendingRemoteDeletedIds.add(id)
       clearLease(id)
       clearRemoteTyping(id)
-      forgetServerBlockAlias(id)
       remoteBlocksPendingUi.delete(id)
     }
 
-    if (activeDeleted || isSaving.value) {
+    if (activeDeleted || activeEditorBlockId.value || isSaving.value) {
       pendingRemoteRefresh = true
+      scheduleRemoteMutationFlush(REMOTE_MUTATION_IDLE_DELAY_MS)
       return
     }
 
-    for (const id of deletedIds) {
-      await deleteEditorBlock(id)
-    }
+    scheduleRemoteMutationFlush(REMOTE_MUTATION_FLUSH_DELAY_MS)
   }
 
   function bindRealtimeEvents() {
@@ -1618,6 +2154,12 @@ export function usePageEditor(props: PageEditorProps) {
         handlePageMousePointerChanged
       )
     }
+
+    // Backend publish presence ngay khi JoinPage. Đăng ký handler no-op để SignalR
+    // không spam Warning: No client method with name 'pagepresencechanged'.
+    if (!unsubscribePagePresenceChanged) {
+      unsubscribePagePresenceChanged = realtimeClient.on('PagePresenceChanged', () => {})
+    }
   }
 
   function unbindRealtimeEvents() {
@@ -1628,6 +2170,7 @@ export function usePageEditor(props: PageEditorProps) {
     unsubscribeBlockEditingStateChanged?.()
     unsubscribeBlockLeaseChanged?.()
     unsubscribePageMousePointerChanged?.()
+    unsubscribePagePresenceChanged?.()
 
     unsubscribeBlockCreated = null
     unsubscribeBlockUpdated = null
@@ -1636,6 +2179,7 @@ export function usePageEditor(props: PageEditorProps) {
     unsubscribeBlockEditingStateChanged = null
     unsubscribeBlockLeaseChanged = null
     unsubscribePageMousePointerChanged = null
+    unsubscribePagePresenceChanged = null
   }
 
   async function joinRealtimePage() {
@@ -1643,8 +2187,9 @@ export function usePageEditor(props: PageEditorProps) {
 
     try {
       await realtimeClient.start()
-      await realtimeClient.joinPage(props.pageId)
       bindRealtimeEvents()
+      await realtimeClient.joinPage(props.pageId)
+      startLeaseRenewal()
 
       if (heartbeatTimer) {
         window.clearInterval(heartbeatTimer)
@@ -1667,6 +2212,8 @@ export function usePageEditor(props: PageEditorProps) {
       window.clearInterval(heartbeatTimer)
       heartbeatTimer = null
     }
+
+    stopLeaseRenewal()
 
     handleEditorPointerLeave()
 
@@ -1747,6 +2294,32 @@ export function usePageEditor(props: PageEditorProps) {
     return true
   }
 
+  async function ensureRangeCanBeEdited(range: Range) {
+    const editorBlockId = getEditorBlockIdFromNode(range.commonAncestorContainer)
+
+    if (!editorBlockId) return true
+
+    activeEditorBlockId.value = editorBlockId
+
+    const serverBlockId = resolveServerBlockId(editorBlockId)
+
+    if (!serverBlockId) {
+      scheduleSave(SAVE_DEBOUNCE_MS)
+      return true
+    }
+
+    try {
+      await ensureBlockLease(serverBlockId)
+      return true
+    } catch (leaseError) {
+      error.value = getApiErrorMessage(
+        leaseError,
+        'Block này đang được người khác chỉnh sửa.'
+      )
+      return false
+    }
+  }
+
   async function applyStyleToSelection(styles: Record<string, string>) {
     if (!restoreSelection()) return
 
@@ -1756,8 +2329,12 @@ export function usePageEditor(props: PageEditorProps) {
     const range = selection.getRangeAt(0)
     if (range.collapsed) return
 
+    const canEditRange = await ensureRangeCanBeEdited(range)
+    if (!canEditRange) return
+
     const span = document.createElement('span')
-    span.dataset.editorInlineStyle = 'true'
+    span.className = 'editor-inline-style'
+    span.setAttribute('data-editor-inline-style', 'word-toolbar')
 
     for (const [key, value] of Object.entries(styles)) {
       span.style.setProperty(key, value)
@@ -1777,7 +2354,8 @@ export function usePageEditor(props: PageEditorProps) {
     selection.addRange(nextRange)
     selectedRange.value = nextRange.cloneRange()
 
-    scheduleSave(300)
+    rememberTextSelection()
+    dispatchEditorContentChanged(300)
   }
 
   function applyFontFamily() {
@@ -1815,25 +2393,43 @@ export function usePageEditor(props: PageEditorProps) {
     })
   }
 
-  function toggleBold() {
+  async function toggleBold() {
     if (!restoreSelection()) return
+
+    const selection = window.getSelection()
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+
+    if (range && !(await ensureRangeCanBeEdited(range))) return
+
     document.execCommand('bold')
     rememberTextSelection()
-    scheduleSave(300)
+    dispatchEditorContentChanged(300)
   }
 
-  function toggleItalic() {
+  async function toggleItalic() {
     if (!restoreSelection()) return
+
+    const selection = window.getSelection()
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+
+    if (range && !(await ensureRangeCanBeEdited(range))) return
+
     document.execCommand('italic')
     rememberTextSelection()
-    scheduleSave(300)
+    dispatchEditorContentChanged(300)
   }
 
-  function clearInlineStyle() {
+  async function clearInlineStyle() {
     if (!restoreSelection()) return
+
+    const selection = window.getSelection()
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null
+
+    if (range && !(await ensureRangeCanBeEdited(range))) return
+
     document.execCommand('removeFormat')
     rememberTextSelection()
-    scheduleSave(300)
+    dispatchEditorContentChanged(300)
   }
 
   async function resetForPageChange(oldPageId: Guid | null) {
@@ -1847,6 +2443,11 @@ export function usePageEditor(props: PageEditorProps) {
       softSyncTimer = null
     }
 
+    if (remoteMutationFlushTimer) {
+      window.clearTimeout(remoteMutationFlushTimer)
+      remoteMutationFlushTimer = null
+    }
+
     if (releaseBlockTimer) {
       window.clearTimeout(releaseBlockTimer)
       releaseBlockTimer = null
@@ -1857,6 +2458,8 @@ export function usePageEditor(props: PageEditorProps) {
       pointerSendTimer = null
     }
 
+    stopLeaseRenewal()
+
     await releaseAllLeases()
     await leaveRealtimePage(oldPageId)
     unbindRealtimeEvents()
@@ -1864,6 +2467,8 @@ export function usePageEditor(props: PageEditorProps) {
     localToServerBlockIds.clear()
     serverToLocalBlockIds.clear()
     remoteBlocksPendingUi.clear()
+    pendingRemoteBlocks.clear()
+    pendingRemoteDeletedIds.clear()
     remotePointerMap.clear()
     remotePointerTimers.clear()
     remoteTypingTimers.clear()
@@ -1905,6 +2510,11 @@ export function usePageEditor(props: PageEditorProps) {
       softSyncTimer = null
     }
 
+    if (remoteMutationFlushTimer) {
+      window.clearTimeout(remoteMutationFlushTimer)
+      remoteMutationFlushTimer = null
+    }
+
     if (releaseBlockTimer) {
       window.clearTimeout(releaseBlockTimer)
       releaseBlockTimer = null
@@ -1919,6 +2529,8 @@ export function usePageEditor(props: PageEditorProps) {
       window.clearInterval(heartbeatTimer)
       heartbeatTimer = null
     }
+
+    stopLeaseRenewal()
 
     for (const timer of remotePointerTimers.values()) {
       window.clearTimeout(timer)
@@ -1975,3 +2587,5 @@ export function usePageEditor(props: PageEditorProps) {
     handleEditorPointerLeave,
   }
 }
+
+

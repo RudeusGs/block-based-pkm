@@ -29,6 +29,24 @@ const state = reactive<RealtimeState>({
 
 const handlersByEventName = new Map<string, HandlerSet>()
 
+const KNOWN_BACKEND_EVENTS = [
+  'WorkspacePresenceChanged',
+  'PagePresenceChanged',
+  'PageCursorChanged',
+  'PageMousePointerChanged',
+  'BlockCreated',
+  'BlockUpdated',
+  'BlockDeleted',
+  'BlockDraftChanged',
+  'BlockEditingStateChanged',
+  'BlockLeaseChanged',
+  'TaskCreated',
+  'TaskUpdated',
+  'TaskDeleted',
+  'NotificationCreated',
+  'RecommendationCreated',
+] as const
+
 let connection: HubConnection | null = null
 let startPromise: Promise<void> | null = null
 
@@ -184,7 +202,12 @@ function createConnection() {
     state.lastDisconnectedAtUtc = new Date().toISOString()
   })
 
-  for (const eventName of handlersByEventName.keys()) {
+  const eventNames = new Set<string>([
+    ...KNOWN_BACKEND_EVENTS,
+    ...handlersByEventName.keys(),
+  ])
+
+  for (const eventName of eventNames) {
     const normalizedEventName = eventName.trim()
     const lowerEventName = normalizedEventName.toLowerCase()
 
@@ -381,3 +404,5 @@ export const realtimeClient = {
   sendBlockDraft,
   sendBlockEditingState,
 }
+
+

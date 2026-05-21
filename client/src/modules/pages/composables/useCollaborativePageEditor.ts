@@ -292,6 +292,7 @@ export function useCollaborativePageEditor(
   let unsubscribeBlockDeleted: (() => void) | null = null
   let unsubscribeBlockDraftChanged: (() => void) | null = null
   let unsubscribeBlockEditingStateChanged: (() => void) | null = null
+  let unsubscribePagePresenceChanged: (() => void) | null = null
 
   const hasPage = computed(() => Boolean(options.pageId.value))
   const isConnected = computed(() => realtimeClient.state.status === 'connected')
@@ -580,8 +581,9 @@ export function useCollaborativePageEditor(
     isLoading.value = true
 
     try {
-      await ensureRealtimeJoined(pageId)
+      // Register handlers before starting connection to avoid missing server broadcasts
       bindRealtimeEvents()
+      await ensureRealtimeJoined(pageId)
       await loadPageDocument(pageId)
     } catch (loadError) {
       error.value = getApiErrorMessage(loadError, 'Không tải được page này.')
@@ -773,7 +775,16 @@ export function useCollaborativePageEditor(
 
     const state = getBlockState(block.id, getBlockText(block))
 
-    if (!state.isLeaseHeld || state.isSaving || !state.isDirty) return
+    if (state.isSaving || !state.isDirty) return
+
+    // Ensure lease is held before attempting to save
+    if (!state.isLeaseHeld) {
+      const acquired = await acquireBlock(block)
+      if (!acquired) {
+        state.error = 'Không thể lấy quyền sửa block. Vui lòng thử lại.'
+        return
+      }
+    }
 
     const pageId = options.pageId.value
     const editorSessionId = realtimeClient.state.connectionId
@@ -785,6 +796,28 @@ export function useCollaborativePageEditor(
     state.error = null
 
     try {
+      // Try to renew lease immediately before saving to avoid TTL race.
+      try {
+        const renewResult = await blockController.renewLease(block.id, {
+          editorSessionId,
+        })
+
+        if (!renewResult.isSuccess || !renewResult.data?.granted) {
+          // If we can't renew, mark lease lost and try to reacquire before saving.
+          state.isLeaseHeld = false
+          state.isLeaseDenied = true
+          state.holderDisplayName =
+            renewResult.data?.holderDisplayName ?? 'người khác'
+
+          const reacquired = await acquireBlock(block)
+          if (!reacquired) {
+            state.error = 'Không thể gia hạn hoặc lấy lại lease. Vui lòng thử lại.'
+            return
+          }
+        }
+      } catch {
+        // ignore renew errors; update will surface failure if necessary
+      }
       const result = await blockController.update(block.id, {
         expectedRevision: currentRevision.value,
         editorSessionId,
@@ -807,16 +840,21 @@ export function useCollaborativePageEditor(
       state.remoteUserName = null
     } catch (saveError: any) {
       if (getHttpStatus(saveError) === 409 && retryOnConflict) {
+        // On conflict, reload and reacquire lease
         await reloadPageDocument()
 
         const latestBlock = findBlock(blockId)
 
         if (latestBlock) {
           const latestState = getBlockState(blockId, getBlockText(latestBlock))
-          latestState.isLeaseHeld = true
           latestState.localDraftText = text
           latestState.isDirty = text !== latestState.lastSavedText
-          await saveBlock(blockId, false)
+          
+          // Reacquire lease before retry
+          const reacquired = await acquireBlock(latestBlock)
+          if (reacquired) {
+            await saveBlock(blockId, false)
+          }
         }
 
         return
@@ -1103,6 +1141,12 @@ export function useCollaborativePageEditor(
     }
   }
 
+  function handlePagePresenceChanged(envelope: RealtimeEnvelope<unknown>) {
+    // Page presence change - currently just a notification
+    // Can be used for showing who's currently viewing the page
+    // For now, we don't need to do anything specific
+  }
+
   async function handleBlockMutation(envelope: RealtimeEnvelope<unknown>) {
     const pageId = options.pageId.value
 
@@ -1189,6 +1233,13 @@ export function useCollaborativePageEditor(
         handleRemoteEditingState
       )
     }
+
+    if (!unsubscribePagePresenceChanged) {
+      unsubscribePagePresenceChanged = realtimeClient.on(
+        'PagePresenceChanged',
+        handlePagePresenceChanged
+      )
+    }
   }
 
   function unbindRealtimeEvents() {
@@ -1197,12 +1248,14 @@ export function useCollaborativePageEditor(
     unsubscribeBlockDeleted?.()
     unsubscribeBlockDraftChanged?.()
     unsubscribeBlockEditingStateChanged?.()
+    unsubscribePagePresenceChanged?.()
 
     unsubscribeBlockCreated = null
     unsubscribeBlockUpdated = null
     unsubscribeBlockDeleted = null
     unsubscribeBlockDraftChanged = null
     unsubscribeBlockEditingStateChanged = null
+    unsubscribePagePresenceChanged = null
   }
 
   watch(
