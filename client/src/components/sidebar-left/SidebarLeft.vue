@@ -366,11 +366,16 @@ async function refreshSidebarTree() {
   }
 }
 
+function notifyProfileUpdated() {
+  window.dispatchEvent(new CustomEvent('pkm:profile-updated'))
+}
+
 async function saveProfileSettings() {
   const saved = await settings.saveProfileSettings()
 
   if (saved) {
     await account.fetchMyProfile()
+    notifyProfileUpdated()
   }
 }
 
@@ -379,6 +384,7 @@ async function uploadAvatarImage(file: File) {
 
   if (uploaded) {
     await account.fetchMyProfile()
+    notifyProfileUpdated()
   }
 }
 
@@ -551,6 +557,3 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
-
-
-

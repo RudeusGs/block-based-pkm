@@ -273,7 +273,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { taskController } from '@/api/services/task.api'
 import { taskCommentController } from '@/api/services/task-comment.api'
 import { workspaceController } from '@/api/services/workspace.api'
@@ -282,6 +282,7 @@ import {
   getApiResultErrorMessage,
 } from '@/api/utils/api-error.util'
 import { useTaskRealtime } from '@/modules/task/composables/useTaskRealtime'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 import CreateTaskPanel from './CreateTaskPanel.vue'
 import TaskDetailDrawer from './TaskDetailDrawer.vue'
 import type { Guid } from '@/api/models/common.model'
@@ -332,6 +333,7 @@ const taskActionError = ref<string | null>(null)
 let taskRequestId = 0
 let memberRequestId = 0
 let commentRequestId = 0
+let memberRefreshTimer: number | null = null
 
 const workspaceIdRef = computed(() => props.workspaceId)
 const pageIdRef = computed(() => props.pageId)
@@ -490,6 +492,7 @@ function scrollIntoView(options?: ScrollIntoViewOptions) {
 
 defineExpose({
   scrollIntoView,
+  refreshMembers,
 })
 
 function memberDisplayName(member: WorkspaceMemberResponse) {
@@ -521,19 +524,25 @@ function mapMember(member: WorkspaceMemberResponse): TaskMemberOption {
     displayName,
     email: member.email,
     role: member.role,
-    avatarUrl: member.avatarUrl || avatarUrlForName(displayName),
+    avatarUrl: normalizeImageUrl(member.avatarUrl) ?? avatarUrlForName(displayName),
     initials: memberInitials(displayName),
     isCurrentUser: member.isCurrentUser,
     isOwner: member.isOwner,
   }
 }
 
-async function fetchMembers(targetWorkspaceId = props.workspaceId) {
+async function fetchMembers(
+  targetWorkspaceId = props.workspaceId,
+  options: { silent?: boolean } = {}
+) {
   if (!targetWorkspaceId) return
 
   const currentRequestId = ++memberRequestId
 
-  isLoadingMembers.value = true
+  if (!options.silent) {
+    isLoadingMembers.value = true
+  }
+
   membersError.value = null
 
   try {
@@ -562,13 +571,15 @@ async function fetchMembers(targetWorkspaceId = props.workspaceId) {
   } catch (error) {
     if (currentRequestId !== memberRequestId) return
 
-    membersError.value = getApiErrorMessage(
-      error,
-      'Không thể tải danh sách member.'
-    )
-    members.value = []
+    if (!options.silent) {
+      membersError.value = getApiErrorMessage(
+        error,
+        'Không thể tải danh sách member.'
+      )
+      members.value = []
+    }
   } finally {
-    if (currentRequestId === memberRequestId) {
+    if (currentRequestId === memberRequestId && !options.silent) {
       isLoadingMembers.value = false
     }
   }
@@ -665,11 +676,56 @@ function refreshTasks() {
   void fetchTasks()
 }
 
-function refreshMembers() {
+function refreshMembers(options: { silent?: boolean } = {}) {
   if (!props.workspaceId) return
 
-  void fetchMembers(props.workspaceId)
+  void fetchMembers(props.workspaceId, options)
 }
+
+function refreshMembersSilently() {
+  refreshMembers({ silent: true })
+}
+
+function startMemberRefreshTimer() {
+  stopMemberRefreshTimer()
+
+  memberRefreshTimer = window.setInterval(() => {
+    if (props.workspaceId && !isLoadingMembers.value) {
+      refreshMembersSilently()
+    }
+  }, 30_000)
+}
+
+function stopMemberRefreshTimer() {
+  if (memberRefreshTimer !== null) {
+    window.clearInterval(memberRefreshTimer)
+    memberRefreshTimer = null
+  }
+}
+
+function handleProfileUpdated() {
+  refreshMembersSilently()
+}
+
+function handleVisibilityRefresh() {
+  if (document.visibilityState === 'visible') {
+    refreshMembersSilently()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('pkm:profile-updated', handleProfileUpdated)
+  window.addEventListener('focus', refreshMembersSilently)
+  document.addEventListener('visibilitychange', handleVisibilityRefresh)
+  startMemberRefreshTimer()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('pkm:profile-updated', handleProfileUpdated)
+  window.removeEventListener('focus', refreshMembersSilently)
+  document.removeEventListener('visibilitychange', handleVisibilityRefresh)
+  stopMemberRefreshTimer()
+})
 
 function normalizeStatus(status: string): NormalizedTaskStatus {
   const normalized = status.trim().toLowerCase().replace(/[\s_-]+/g, '')
@@ -750,7 +806,7 @@ function memberFallback(userId: Guid): TaskMemberOption {
     displayName,
     email: '',
     role: 'member',
-    avatarUrl: '',
+    avatarUrl: avatarUrlForName(displayName),
     initials: fallbackInitials,
     isCurrentUser: false,
     isOwner: false,

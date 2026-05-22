@@ -183,10 +183,12 @@
               >
                 <div class="member-avatar-wrap">
                   <img
-                    v-if="member.avatarUrl"
+                    v-if="canShowMemberAvatar(member)"
                     class="member-avatar"
-                    :src="member.avatarUrl"
+                    :src="memberAvatarSrc(member)"
                     :alt="memberName(member)"
+                    referrerpolicy="no-referrer"
+                    @error="markAvatarFailed(member.userId)"
                   />
 
                   <div
@@ -246,10 +248,12 @@
               >
                 <div class="member-avatar-wrap">
                   <img
-                    v-if="member.avatarUrl"
+                    v-if="canShowMemberAvatar(member)"
                     class="member-avatar"
-                    :src="member.avatarUrl"
+                    :src="memberAvatarSrc(member)"
                     :alt="memberName(member)"
+                    referrerpolicy="no-referrer"
+                    @error="markAvatarFailed(member.userId)"
                   />
 
                   <div
@@ -296,7 +300,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 import type { WorkspaceMemberListItem } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 
 const props = defineProps<{
@@ -316,6 +321,7 @@ const emit = defineEmits<{
 }>()
 
 const searchTerm = ref('')
+const failedAvatarUserIds = ref<Set<string>>(new Set())
 
 const normalizedSearchTerm = computed(() => {
   return searchTerm.value.trim().toLowerCase()
@@ -346,6 +352,25 @@ const visibleOnlineMembers = computed(() => {
 const visibleOfflineMembers = computed(() => {
   return visibleMembers.value.filter((member) => member.availability === 'offline')
 })
+
+watch(
+  () => props.members.map((member) => `${member.userId}:${member.avatarUrl ?? ''}`).join('|'),
+  () => {
+    failedAvatarUserIds.value = new Set()
+  }
+)
+
+function memberAvatarSrc(member: WorkspaceMemberListItem) {
+  return normalizeImageUrl(member.avatarUrl) ?? undefined
+}
+
+function canShowMemberAvatar(member: WorkspaceMemberListItem) {
+  return Boolean(memberAvatarSrc(member)) && !failedAvatarUserIds.value.has(member.userId)
+}
+
+function markAvatarFailed(userId: string) {
+  failedAvatarUserIds.value = new Set([...failedAvatarUserIds.value, userId])
+}
 
 function memberName(member: WorkspaceMemberListItem) {
   return member.isCurrentUser ? 'Bạn' : member.displayName

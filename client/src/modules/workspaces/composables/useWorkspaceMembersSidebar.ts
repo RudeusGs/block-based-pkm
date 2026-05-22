@@ -1,6 +1,7 @@
 import {
   computed,
   onBeforeUnmount,
+  onMounted,
   ref,
   watch,
   type ComputedRef,
@@ -11,6 +12,7 @@ import {
   getApiResultErrorMessage,
 } from '@/api/utils/api-error.util'
 import { realtimeClient } from '@/realtime/realtime.client'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 import type { RealtimeEnvelope } from '@/realtime/realtime.types'
 import type { Guid } from '@/api/models/common.model'
 import type { WorkspaceMemberResponse } from '@/api/models/workspace.model'
@@ -49,6 +51,9 @@ interface WorkspaceJoinAckPayload {
   presence?: WorkspacePresencePayload
   Presence?: WorkspacePresencePayload
 }
+
+const WORKSPACE_HEARTBEAT_INTERVAL_MS = 15_000
+const MEMBERS_BACKGROUND_REFRESH_INTERVAL_MS = 30_000
 
 function normalizeString(value: unknown) {
   return typeof value === 'string' ? value.trim() : ''
@@ -143,6 +148,8 @@ export function useWorkspaceMembersSidebar(
 
   let requestId = 0
   let unsubscribePresenceChanged: (() => void) | null = null
+  let workspaceHeartbeatTimer: number | null = null
+  let membersRefreshTimer: number | null = null
 
   const onlineMembers = computed(() => {
     return members.value.filter((member) => member.availability === 'online')
@@ -165,6 +172,7 @@ export function useWorkspaceMembersSidebar(
   function mapMember(member: WorkspaceMemberResponse): WorkspaceMemberListItem {
     return {
       ...member,
+      avatarUrl: normalizeImageUrl(member.avatarUrl),
       displayName: memberDisplayName(member),
       initials: memberInitials(member),
       availability: memberAvailability(member),
@@ -208,6 +216,59 @@ export function useWorkspaceMembersSidebar(
     )
   }
 
+  function stopWorkspaceHeartbeat() {
+    if (workspaceHeartbeatTimer !== null) {
+      window.clearInterval(workspaceHeartbeatTimer)
+      workspaceHeartbeatTimer = null
+    }
+  }
+
+  function stopMembersBackgroundRefresh() {
+    if (membersRefreshTimer !== null) {
+      window.clearInterval(membersRefreshTimer)
+      membersRefreshTimer = null
+    }
+  }
+
+  async function heartbeatWorkspace(targetWorkspaceId = joinedWorkspaceId.value) {
+    if (!targetWorkspaceId) return
+
+    try {
+      const presence = await realtimeClient.heartbeatWorkspace(targetWorkspaceId)
+
+      realtimeError.value = null
+      applyPresencePayload(presence as WorkspacePresencePayload)
+    } catch (heartbeatError) {
+      realtimeError.value = getApiErrorMessage(
+        heartbeatError,
+        'Không thể cập nhật trạng thái online.'
+      )
+    }
+  }
+
+  function startWorkspaceHeartbeat(targetWorkspaceId: Guid) {
+    stopWorkspaceHeartbeat()
+
+    workspaceHeartbeatTimer = window.setInterval(() => {
+      if (joinedWorkspaceId.value === targetWorkspaceId) {
+        void heartbeatWorkspace(targetWorkspaceId)
+      }
+    }, WORKSPACE_HEARTBEAT_INTERVAL_MS)
+  }
+
+  function startMembersBackgroundRefresh(targetWorkspaceId: Guid) {
+    stopMembersBackgroundRefresh()
+
+    membersRefreshTimer = window.setInterval(() => {
+      if (
+        workspaceId.value === targetWorkspaceId &&
+        !isLoading.value
+      ) {
+        void fetchMembers(targetWorkspaceId, { silent: true })
+      }
+    }, MEMBERS_BACKGROUND_REFRESH_INTERVAL_MS)
+  }
+
   async function connectWorkspaceRealtime(
     targetWorkspaceId = workspaceId.value,
     force = false
@@ -226,6 +287,8 @@ export function useWorkspaceMembersSidebar(
         joinedWorkspaceId.value === targetWorkspaceId &&
         joinedConnectionId.value === currentConnectionId
       ) {
+        startWorkspaceHeartbeat(targetWorkspaceId)
+        startMembersBackgroundRefresh(targetWorkspaceId)
         return
       }
 
@@ -236,6 +299,8 @@ export function useWorkspaceMembersSidebar(
       realtimeError.value = null
 
       applyPresencePayload(getPresenceFromJoinAck(ack))
+      startWorkspaceHeartbeat(targetWorkspaceId)
+      startMembersBackgroundRefresh(targetWorkspaceId)
     } catch (realtimeConnectError) {
       realtimeError.value = getApiErrorMessage(
         realtimeConnectError,
@@ -246,6 +311,9 @@ export function useWorkspaceMembersSidebar(
 
   async function leaveJoinedWorkspace(targetWorkspaceId = joinedWorkspaceId.value) {
     if (!targetWorkspaceId) return
+
+    stopWorkspaceHeartbeat()
+    stopMembersBackgroundRefresh()
 
     try {
       await realtimeClient.leaveWorkspace(targetWorkspaceId)
@@ -262,17 +330,27 @@ export function useWorkspaceMembersSidebar(
     }
   }
 
-  async function fetchMembers(targetWorkspaceId = workspaceId.value) {
+  async function fetchMembers(
+    targetWorkspaceId = workspaceId.value,
+    options: { silent?: boolean } = {}
+  ) {
     if (!targetWorkspaceId) {
       members.value = []
       loadedWorkspaceId.value = null
-      error.value = 'Không tìm thấy workspace hiện tại.'
+
+      if (!options.silent) {
+        error.value = 'Không tìm thấy workspace hiện tại.'
+      }
+
       return
     }
 
     const currentRequestId = ++requestId
 
-    isLoading.value = true
+    if (!options.silent) {
+      isLoading.value = true
+    }
+
     error.value = null
 
     try {
@@ -295,13 +373,16 @@ export function useWorkspaceMembersSidebar(
     } catch (fetchError) {
       if (currentRequestId !== requestId) return
 
-      error.value = getApiErrorMessage(
-        fetchError,
-        'Không thể tải danh sách thành viên.'
-      )
-      members.value = []
+      if (!options.silent) {
+        error.value = getApiErrorMessage(
+          fetchError,
+          'Không thể tải danh sách thành viên.'
+        )
+      }
+
+      members.value = options.silent ? members.value : []
     } finally {
-      if (currentRequestId === requestId) {
+      if (currentRequestId === requestId && !options.silent) {
         isLoading.value = false
       }
     }
@@ -312,9 +393,11 @@ export function useWorkspaceMembersSidebar(
 
     void connectWorkspaceRealtime()
 
-    if (loadedWorkspaceId.value !== workspaceId.value || !members.value.length) {
-      void fetchMembers()
-    }
+    void fetchMembers(workspaceId.value, {
+      silent:
+        loadedWorkspaceId.value === workspaceId.value &&
+        members.value.length > 0,
+    })
   }
 
   function close() {
@@ -324,6 +407,19 @@ export function useWorkspaceMembersSidebar(
   function refresh() {
     void connectWorkspaceRealtime(workspaceId.value, true)
     void fetchMembers()
+  }
+
+  function refreshMembersAfterProfileChange() {
+    if (!workspaceId.value) return
+
+    void fetchMembers(workspaceId.value, { silent: true })
+  }
+
+  function refreshMembersWhenPageVisible() {
+    if (document.visibilityState !== 'visible' || !workspaceId.value) return
+
+    void heartbeatWorkspace(workspaceId.value)
+    void fetchMembers(workspaceId.value, { silent: true })
   }
 
   watch(
@@ -341,10 +437,7 @@ export function useWorkspaceMembersSidebar(
 
       if (nextWorkspaceId) {
         void connectWorkspaceRealtime(nextWorkspaceId, true)
-
-        if (isOpen.value) {
-          void fetchMembers(nextWorkspaceId)
-        }
+        void fetchMembers(nextWorkspaceId, { silent: true })
       }
     },
     { immediate: true }
@@ -354,12 +447,28 @@ export function useWorkspaceMembersSidebar(
     if (status === 'connected' && workspaceId.value) {
       void connectWorkspaceRealtime(workspaceId.value, true)
     }
+
+    if (status === 'disconnected' || status === 'error') {
+      stopWorkspaceHeartbeat()
+    }
+  })
+
+  onMounted(() => {
+    window.addEventListener('pkm:profile-updated', refreshMembersAfterProfileChange)
+    document.addEventListener('visibilitychange', refreshMembersWhenPageVisible)
+    window.addEventListener('focus', refreshMembersWhenPageVisible)
   })
 
   onBeforeUnmount(() => {
+    window.removeEventListener('pkm:profile-updated', refreshMembersAfterProfileChange)
+    document.removeEventListener('visibilitychange', refreshMembersWhenPageVisible)
+    window.removeEventListener('focus', refreshMembersWhenPageVisible)
+
     unsubscribePresenceChanged?.()
     unsubscribePresenceChanged = null
 
+    stopWorkspaceHeartbeat()
+    stopMembersBackgroundRefresh()
     void leaveJoinedWorkspace()
   })
 
