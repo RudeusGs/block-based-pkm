@@ -227,7 +227,9 @@
       <button
         class="app-icon-btn"
         type="button"
-        title="History"
+        title="Activity log"
+        aria-label="Activity log"
+        @click="openActivityLog"
       >
         <span class="material-symbols-outlined">history</span>
       </button>
@@ -368,6 +370,7 @@ const emit = defineEmits<{
   'jump-to-tasks': []
   'open-members': []
   'workspace-deleted': [workspaceId: Guid]
+  'open-activity-log': []
 }>()
 
 const toast = useToast()
@@ -424,6 +427,12 @@ function closeInviteModal() {
 function openWorkspaceMembers() {
   isMoreMenuOpen.value = false
   emit('open-members')
+}
+
+function openActivityLog() {
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+  emit('open-activity-log')
 }
 
 function openDeleteWorkspaceConfirm() {
@@ -1117,6 +1126,3 @@ onBeforeUnmount(() => {
   }
 }
 </style>
-
-
-

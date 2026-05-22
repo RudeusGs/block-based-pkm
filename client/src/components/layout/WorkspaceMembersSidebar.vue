@@ -18,7 +18,7 @@
           aria-modal="true"
           aria-label="Thành viên workspace"
           tabindex="-1"
-          @click.stop
+          @click.stop="activeMemberMenuId = null"
           @keydown.esc="emit('close')"
         >
           <header class="workspace-members-header">
@@ -41,8 +41,8 @@
                 type="button"
                 class="members-icon-btn"
                 title="Tải lại"
-                :disabled="props.isLoading"
-                @click="emit('refresh')"
+                :disabled="props.isLoading || props.isMutatingMember"
+                @click.stop="emit('refresh')"
               >
                 <span class="material-symbols-outlined">refresh</span>
               </button>
@@ -51,7 +51,7 @@
                 type="button"
                 class="members-icon-btn"
                 title="Đóng"
-                @click="emit('close')"
+                @click.stop="emit('close')"
               >
                 <span class="material-symbols-outlined">close</span>
               </button>
@@ -89,7 +89,7 @@
               v-if="searchTerm"
               type="button"
               title="Xóa tìm kiếm"
-              @click="searchTerm = ''"
+              @click.stop="searchTerm = ''"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
@@ -102,6 +102,14 @@
               <span></span>
               {{ props.onlineMembers.length }} đang hoạt động
             </span>
+          </div>
+
+          <div
+            v-if="props.memberActionError"
+            class="member-action-error"
+          >
+            <span class="material-symbols-outlined">error</span>
+            <span>{{ props.memberActionError }}</span>
           </div>
 
           <main
@@ -142,21 +150,12 @@
           </main>
 
           <main
-            v-else-if="!props.members.length"
-            class="workspace-members-state"
-          >
-            <span class="material-symbols-outlined">person_add</span>
-            <strong>Workspace này chưa có thành viên</strong>
-            <p>Danh sách thành viên sẽ xuất hiện ở đây sau khi có người tham gia.</p>
-          </main>
-
-          <main
-            v-else-if="!visibleMembers.length"
+            v-else-if="visibleMembers.length === 0"
             class="workspace-members-state compact"
           >
-            <span class="material-symbols-outlined">manage_search</span>
-            <strong>Không tìm thấy ai</strong>
-            <p>Thử tìm bằng tên, username hoặc quyền khác nhé.</p>
+            <span class="material-symbols-outlined">person_search</span>
+            <strong>Không tìm thấy thành viên</strong>
+            <p>Thử nhập tên, username hoặc role khác nha.</p>
           </main>
 
           <main
@@ -176,10 +175,7 @@
                 v-for="member in visibleOnlineMembers"
                 :key="member.userId"
                 class="member-row"
-                :class="{
-                  current: member.isCurrentUser,
-                  owner: member.isOwner,
-                }"
+                :class="memberRowClass(member)"
               >
                 <div class="member-avatar-wrap">
                   <img
@@ -225,6 +221,74 @@
                 >
                   {{ roleLabel(member) }}
                 </span>
+
+                <div
+                  v-if="canShowMemberActions(member)"
+                  class="member-action-wrap"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="member-more-btn"
+                    :class="{ active: activeMemberMenuId === member.userId }"
+                    :title="`Quản lý ${memberName(member)}`"
+                    :disabled="isMemberMutating(member)"
+                    @click="toggleMemberMenu(member)"
+                  >
+                    <span
+                      v-if="isMemberMutating(member)"
+                      class="member-action-spinner"
+                    ></span>
+
+                    <span
+                      v-else
+                      class="material-symbols-outlined"
+                    >
+                      more_horiz
+                    </span>
+                  </button>
+
+                  <div
+                    v-if="activeMemberMenuId === member.userId"
+                    class="member-dropdown"
+                  >
+                    <div class="member-dropdown-label">Change role</div>
+
+                    <button
+                      v-for="roleOption in roleOptions"
+                      :key="roleOption.value"
+                      type="button"
+                      class="member-dropdown-item"
+                      :disabled="isRoleActionDisabled(member, roleOption.value)"
+                      @click="handleRoleChange(member, roleOption.value)"
+                    >
+                      <span class="material-symbols-outlined">
+                        {{ isCurrentRole(member, roleOption.value) ? 'check' : roleOption.icon }}
+                      </span>
+
+                      <span>
+                        <strong>{{ roleOption.label }}</strong>
+                        <small>{{ roleOption.description }}</small>
+                      </span>
+                    </button>
+
+                    <div class="member-dropdown-divider"></div>
+
+                    <button
+                      type="button"
+                      class="member-dropdown-item danger"
+                      :disabled="isMemberMutating(member)"
+                      @click="openRemoveMemberConfirm(member)"
+                    >
+                      <span class="material-symbols-outlined">person_remove</span>
+
+                      <span>
+                        <strong>Xóa khỏi workspace</strong>
+                        <small>Gỡ quyền truy cập của thành viên này.</small>
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </article>
             </section>
 
@@ -241,10 +305,7 @@
                 v-for="member in visibleOfflineMembers"
                 :key="member.userId"
                 class="member-row"
-                :class="{
-                  current: member.isCurrentUser,
-                  owner: member.isOwner,
-                }"
+                :class="memberRowClass(member)"
               >
                 <div class="member-avatar-wrap">
                   <img
@@ -290,10 +351,91 @@
                 >
                   {{ roleLabel(member) }}
                 </span>
+
+                <div
+                  v-if="canShowMemberActions(member)"
+                  class="member-action-wrap"
+                  @click.stop
+                >
+                  <button
+                    type="button"
+                    class="member-more-btn"
+                    :class="{ active: activeMemberMenuId === member.userId }"
+                    :title="`Quản lý ${memberName(member)}`"
+                    :disabled="isMemberMutating(member)"
+                    @click="toggleMemberMenu(member)"
+                  >
+                    <span
+                      v-if="isMemberMutating(member)"
+                      class="member-action-spinner"
+                    ></span>
+
+                    <span
+                      v-else
+                      class="material-symbols-outlined"
+                    >
+                      more_horiz
+                    </span>
+                  </button>
+
+                  <div
+                    v-if="activeMemberMenuId === member.userId"
+                    class="member-dropdown"
+                  >
+                    <div class="member-dropdown-label">Change role</div>
+
+                    <button
+                      v-for="roleOption in roleOptions"
+                      :key="roleOption.value"
+                      type="button"
+                      class="member-dropdown-item"
+                      :disabled="isRoleActionDisabled(member, roleOption.value)"
+                      @click="handleRoleChange(member, roleOption.value)"
+                    >
+                      <span class="material-symbols-outlined">
+                        {{ isCurrentRole(member, roleOption.value) ? 'check' : roleOption.icon }}
+                      </span>
+
+                      <span>
+                        <strong>{{ roleOption.label }}</strong>
+                        <small>{{ roleOption.description }}</small>
+                      </span>
+                    </button>
+
+                    <div class="member-dropdown-divider"></div>
+
+                    <button
+                      type="button"
+                      class="member-dropdown-item danger"
+                      :disabled="isMemberMutating(member)"
+                      @click="openRemoveMemberConfirm(member)"
+                    >
+                      <span class="material-symbols-outlined">person_remove</span>
+
+                      <span>
+                        <strong>Xóa khỏi workspace</strong>
+                        <small>Gỡ quyền truy cập của thành viên này.</small>
+                      </span>
+                    </button>
+                  </div>
+                </div>
               </article>
             </section>
           </main>
         </aside>
+
+        <ConfirmActionModal
+          :open="Boolean(memberToRemove)"
+          title="Xóa thành viên khỏi workspace?"
+          :message="removeMemberConfirmMessage"
+          :description="removeMemberConfirmDescription"
+          confirm-label="Xóa thành viên"
+          submitting-label="Đang xóa..."
+          :is-submitting="isRemovingSelectedMember"
+          :error="props.memberActionError"
+          @close="closeRemoveMemberConfirm"
+          @confirm="confirmRemoveMember"
+        />
       </div>
     </Transition>
   </Teleport>
@@ -301,7 +443,10 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
 import { normalizeImageUrl } from '@/utils/image-url.util'
+import type { Guid } from '@/api/models/common.model'
+import type { WorkspaceRoleValue } from '@/api/models/workspace.model'
 import type { WorkspaceMemberListItem } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 
 const props = defineProps<{
@@ -313,15 +458,49 @@ const props = defineProps<{
   memberCountLabel: string
   isLoading: boolean
   error: string | null
+  canManageMembers: boolean
+  isMutatingMember: boolean
+  mutatingMemberId: Guid | null
+  memberActionError: string | null
 }>()
 
 const emit = defineEmits<{
   close: []
   refresh: []
+  changeRole: [member: WorkspaceMemberListItem, role: WorkspaceRoleValue]
+  removeMember: [member: WorkspaceMemberListItem]
 }>()
+
+const roleOptions: Array<{
+  value: WorkspaceRoleValue
+  label: string
+  description: string
+  icon: string
+}> = [
+  {
+    value: 'manager',
+    label: 'Manager',
+    description: 'Quản lý workspace và member.',
+    icon: 'admin_panel_settings',
+  },
+  {
+    value: 'member',
+    label: 'Member',
+    description: 'Tạo, sửa page và task theo quyền.',
+    icon: 'edit_note',
+  },
+  {
+    value: 'viewer',
+    label: 'Viewer',
+    description: 'Chỉ xem nội dung workspace.',
+    icon: 'visibility',
+  },
+]
 
 const searchTerm = ref('')
 const failedAvatarUserIds = ref<Set<string>>(new Set())
+const activeMemberMenuId = ref<Guid | null>(null)
+const memberToRemove = ref<WorkspaceMemberListItem | null>(null)
 
 const normalizedSearchTerm = computed(() => {
   return searchTerm.value.trim().toLowerCase()
@@ -353,10 +532,52 @@ const visibleOfflineMembers = computed(() => {
   return visibleMembers.value.filter((member) => member.availability === 'offline')
 })
 
+const isRemovingSelectedMember = computed(() => {
+  return Boolean(
+    memberToRemove.value &&
+      props.isMutatingMember &&
+      props.mutatingMemberId === memberToRemove.value.userId
+  )
+})
+
+const removeMemberConfirmMessage = computed(() => {
+  const member = memberToRemove.value
+
+  if (!member) return 'Bạn có chắc muốn xóa thành viên này khỏi workspace không?'
+
+  return `Bạn sắp xóa "${member.displayName}" khỏi workspace "${props.workspaceName}".`
+})
+
+const removeMemberConfirmDescription = computed(() => {
+  const member = memberToRemove.value
+
+  if (!member) return 'Thành viên này sẽ mất quyền truy cập workspace.'
+
+  return `${member.email || member.userName || member.displayName} sẽ không còn thấy page, task và tài nguyên trong workspace này.`
+})
+
 watch(
-  () => props.members.map((member) => `${member.userId}:${member.avatarUrl ?? ''}`).join('|'),
+  () => props.members.map((member) => `${member.userId}:${member.avatarUrl ?? ''}:${member.role}`).join('|'),
   () => {
     failedAvatarUserIds.value = new Set()
+
+    if (
+      memberToRemove.value &&
+      !props.members.some((member) => member.userId === memberToRemove.value?.userId)
+    ) {
+      memberToRemove.value = null
+    }
+  }
+)
+
+watch(
+  () => props.open,
+  (open) => {
+    if (!open) {
+      activeMemberMenuId.value = null
+      memberToRemove.value = null
+      searchTerm.value = ''
+    }
   }
 )
 
@@ -408,10 +629,18 @@ function roleLabel(member: WorkspaceMemberListItem) {
     : 'Member'
 }
 
+function normalizedRole(member: WorkspaceMemberListItem) {
+  const role = member.role?.trim().toLowerCase()
+
+  if (role === 'manager' || role === 'viewer') return role
+
+  return 'member'
+}
+
 function roleClass(member: WorkspaceMemberListItem) {
   if (member.isOwner) return 'owner'
 
-  const role = member.role?.trim().toLowerCase()
+  const role = normalizedRole(member)
 
   if (role === 'manager') return 'manager'
   if (role === 'viewer') return 'viewer'
@@ -419,10 +648,76 @@ function roleClass(member: WorkspaceMemberListItem) {
   return 'member'
 }
 
+function canShowMemberActions(member: WorkspaceMemberListItem) {
+  return props.canManageMembers && !member.isCurrentUser && !member.isOwner
+}
+
+function memberRowClass(member: WorkspaceMemberListItem) {
+  return {
+    current: member.isCurrentUser,
+    owner: member.isOwner,
+    'has-actions': canShowMemberActions(member),
+  }
+}
+
+function isMemberMutating(member: WorkspaceMemberListItem) {
+  return props.isMutatingMember && props.mutatingMemberId === member.userId
+}
+
+function isCurrentRole(member: WorkspaceMemberListItem, role: WorkspaceRoleValue) {
+  return normalizedRole(member) === role
+}
+
+function isRoleActionDisabled(
+  member: WorkspaceMemberListItem,
+  role: WorkspaceRoleValue
+) {
+  return (
+    isMemberMutating(member) ||
+    !canShowMemberActions(member) ||
+    isCurrentRole(member, role)
+  )
+}
+
+function toggleMemberMenu(member: WorkspaceMemberListItem) {
+  activeMemberMenuId.value =
+    activeMemberMenuId.value === member.userId ? null : member.userId
+}
+
+function handleRoleChange(
+  member: WorkspaceMemberListItem,
+  role: WorkspaceRoleValue
+) {
+  if (isRoleActionDisabled(member, role)) return
+
+  activeMemberMenuId.value = null
+  emit('changeRole', member, role)
+}
+
+function openRemoveMemberConfirm(member: WorkspaceMemberListItem) {
+  if (!canShowMemberActions(member) || isMemberMutating(member)) return
+
+  activeMemberMenuId.value = null
+  memberToRemove.value = member
+}
+
+function closeRemoveMemberConfirm() {
+  if (isRemovingSelectedMember.value) return
+
+  memberToRemove.value = null
+}
+
+function confirmRemoveMember() {
+  if (!memberToRemove.value || isRemovingSelectedMember.value) return
+
+  emit('removeMember', memberToRemove.value)
+}
+
 function memberMatchesSearch(member: WorkspaceMemberListItem, keyword: string) {
   return [
     memberName(member),
     member.userName,
+    member.email,
     roleLabel(member),
     availabilityLabel(member),
   ]
@@ -1178,4 +1473,184 @@ function memberMatchesSearch(member: WorkspaceMemberListItem, keyword: string) {
     animation: none;
   }
 }
+
+.member-row.has-actions {
+  grid-template-columns: 36px minmax(0, 1fr) max-content 30px;
+}
+
+.member-action-wrap {
+  position: relative;
+  display: inline-flex;
+  justify-content: flex-end;
+}
+
+.member-more-btn {
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--members-faint);
+  background: transparent;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+
+.member-more-btn:hover:not(:disabled),
+.member-more-btn.active {
+  color: var(--members-text);
+  background: #2a2a2a;
+}
+
+.member-more-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.member-more-btn .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.member-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 20;
+  width: 214px;
+  padding: 6px;
+  border: 1px solid #333333;
+  border-radius: 10px;
+  background: #1b1b1b;
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, 0.46),
+    0 0 0 1px rgba(255, 255, 255, 0.03);
+}
+
+.member-dropdown-label {
+  padding: 6px 8px 5px;
+  color: #7f7f7f;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.member-dropdown-item {
+  width: 100%;
+  min-height: 34px;
+  border: 0;
+  border-radius: 7px;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  color: #d7d7d7;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.member-dropdown-item:hover:not(:disabled) {
+  color: #f1f1f1;
+  background: #292929;
+}
+
+.member-dropdown-item:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
+.member-dropdown-item .material-symbols-outlined {
+  color: #9a9a9a;
+  font-size: 17px;
+}
+
+.member-dropdown-item strong {
+  display: block;
+  color: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+  line-height: 1.2;
+}
+
+.member-dropdown-item small {
+  display: block;
+  margin-top: 2px;
+  color: #777777;
+  font-size: 11px;
+  line-height: 1.25;
+}
+
+.member-dropdown-item.danger {
+  color: #f0a7a7;
+}
+
+.member-dropdown-item.danger:hover:not(:disabled) {
+  color: #ffc7c7;
+  background: rgba(239, 68, 68, 0.11);
+}
+
+.member-dropdown-divider {
+  height: 1px;
+  margin: 6px 2px;
+  background: #303030;
+}
+
+.member-action-error {
+  margin: 0 14px 10px;
+  padding: 8px 10px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 8px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: #f0a7a7;
+  background: rgba(239, 68, 68, 0.075);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.member-action-error .material-symbols-outlined {
+  margin-top: 1px;
+  font-size: 16px;
+}
+
+.member-action-spinner {
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  border: 2px solid #3a3a3a;
+  border-top-color: #f1f1f1;
+  animation: member-skeleton-loading 0.75s linear infinite;
+}
+
+@media (max-width: 575.98px) {
+  .member-row.has-actions {
+    grid-template-columns: 36px minmax(0, 1fr) 30px;
+  }
+
+  .member-row.has-actions .member-role {
+    grid-column: 2;
+  }
+
+  .member-row.has-actions .member-action-wrap {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .member-dropdown {
+    right: 0;
+    width: min(214px, calc(100vw - 28px));
+  }
+}
+
 </style>
+
+
+

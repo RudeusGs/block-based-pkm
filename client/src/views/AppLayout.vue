@@ -6,6 +6,7 @@
       <AppTopNav
         @jump-to-tasks="scrollToTasks"
         @open-members="workspaceMembers.open"
+        @open-activity-log="openActivityLog"
         @workspace-deleted="handleWorkspaceDeleted"
       />
 
@@ -75,8 +76,21 @@
       :member-count-label="workspaceMembers.memberCountLabel.value"
       :is-loading="workspaceMembers.isLoading.value"
       :error="workspaceMembers.error.value"
+      :can-manage-members="workspaceMembers.canManageMembers.value"
+      :is-mutating-member="workspaceMembers.isMutatingMember.value"
+      :mutating-member-id="workspaceMembers.mutatingMemberId.value"
+      :member-action-error="workspaceMembers.memberActionError.value"
       @close="workspaceMembers.close"
       @refresh="workspaceMembers.refresh"
+      @change-role="workspaceMembers.changeMemberRole"
+      @remove-member="workspaceMembers.removeMember"
+    />
+
+    <WorkspaceActivityLogPanel
+      :open="isActivityLogOpen"
+      :workspace-id="currentWorkspaceId"
+      :workspace-name="workspaceNavigation.workspaceName.value"
+      @close="closeActivityLog"
     />
   </div>
 </template>
@@ -88,6 +102,7 @@ import AppTopNav from '@/components/layout/AppTopNav.vue'
 import WorkspaceMembersSidebar from '@/components/layout/WorkspaceMembersSidebar.vue'
 import PageEditor from '@/components/editor/PageEditor.vue'
 import WorkTasksSection from '@/components/task/WorkTasksSection.vue'
+import WorkspaceActivityLogPanel from '@/components/activity/WorkspaceActivityLogPanel.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import { useWorkspaceMembersSidebar } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 import type { Guid } from '@/api/models/common.model'
@@ -102,6 +117,7 @@ type WorkTasksSectionExpose = {
 
 const taskSectionRef = ref<WorkTasksSectionExpose | null>(null)
 const sidebarLeftRef = ref<SidebarLeftExpose | null>(null)
+const isActivityLogOpen = ref(false)
 
 const workspaceNavigation = useWorkspaceNavigation()
 
@@ -145,6 +161,15 @@ function handlePageCoverUploaded(payload: {
 function handleWorkspaceDeleted(workspaceId: Guid) {
   sidebarLeftRef.value?.handleWorkspaceDeleted?.(workspaceId)
   workspaceMembers.close()
+  closeActivityLog()
+}
+
+function openActivityLog() {
+  isActivityLogOpen.value = true
+}
+
+function closeActivityLog() {
+  isActivityLogOpen.value = false
 }
 
 function scrollToTasks() {
@@ -158,6 +183,9 @@ function scrollToTasks() {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
+
+
+
 
 
 

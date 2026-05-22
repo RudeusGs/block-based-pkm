@@ -15,7 +15,10 @@ import { realtimeClient } from '@/realtime/realtime.client'
 import { normalizeImageUrl } from '@/utils/image-url.util'
 import type { RealtimeEnvelope } from '@/realtime/realtime.types'
 import type { Guid } from '@/api/models/common.model'
-import type { WorkspaceMemberResponse } from '@/api/models/workspace.model'
+import type {
+  WorkspaceMemberResponse,
+  WorkspaceRoleValue,
+} from '@/api/models/workspace.model'
 
 export type WorkspaceMemberAvailability = 'online' | 'offline'
 
@@ -145,6 +148,9 @@ export function useWorkspaceMembersSidebar(
   const joinedWorkspaceId = ref<Guid | null>(null)
   const joinedConnectionId = ref<string | null>(null)
   const onlineUserIds = ref<Set<Guid>>(new Set())
+  const isMutatingMember = ref(false)
+  const mutatingMemberId = ref<Guid | null>(null)
+  const memberActionError = ref<string | null>(null)
 
   let requestId = 0
   let unsubscribePresenceChanged: (() => void) | null = null
@@ -163,6 +169,20 @@ export function useWorkspaceMembersSidebar(
     const total = members.value.length
 
     return total === 1 ? '1 member' : `${total} members`
+  })
+
+  const currentWorkspaceMember = computed(() => {
+    return members.value.find((member) => member.isCurrentUser) ?? null
+  })
+
+  const canManageMembers = computed(() => {
+    const currentMember = currentWorkspaceMember.value
+
+    if (!currentMember) return false
+
+    const role = currentMember.role?.trim().toLowerCase()
+
+    return currentMember.isOwner || role === 'owner' || role === 'manager'
   })
 
   function memberAvailability(member: WorkspaceMemberResponse): WorkspaceMemberAvailability {
@@ -409,6 +429,149 @@ export function useWorkspaceMembersSidebar(
     void fetchMembers()
   }
 
+
+  function assertCanMutateMember(targetMember: WorkspaceMemberListItem) {
+    if (!workspaceId.value) {
+      memberActionError.value = 'Không tìm thấy workspace hiện tại.'
+      return false
+    }
+
+    if (!canManageMembers.value) {
+      memberActionError.value = 'Bạn không có quyền quản lý thành viên workspace này.'
+      return false
+    }
+
+    if (targetMember.isCurrentUser) {
+      memberActionError.value = 'Bạn không thể tự thay đổi quyền hoặc xóa chính mình khỏi workspace.'
+      return false
+    }
+
+    if (targetMember.isOwner) {
+      memberActionError.value = 'Không thể thay đổi hoặc xóa owner của workspace.'
+      return false
+    }
+
+    if (isMutatingMember.value) {
+      return false
+    }
+
+    return true
+  }
+
+  async function changeMemberRole(
+    targetMember: WorkspaceMemberListItem,
+    role: WorkspaceRoleValue
+  ) {
+    const targetWorkspaceId = workspaceId.value ?? targetMember.workspaceId
+
+    if (!assertCanMutateMember(targetMember) || !targetWorkspaceId) return
+
+    const normalizedRole = role.trim().toLowerCase() as WorkspaceRoleValue
+    const currentRole = targetMember.role?.trim().toLowerCase()
+
+    if (currentRole === normalizedRole) return
+
+    isMutatingMember.value = true
+    mutatingMemberId.value = targetMember.userId
+    memberActionError.value = null
+
+    try {
+      const result = await workspaceController.changeMemberRole(
+        targetWorkspaceId,
+        targetMember.userId,
+        {
+          role: normalizedRole,
+        }
+      )
+
+      if (!result.isSuccess || !result.data) {
+        memberActionError.value = getApiResultErrorMessage(
+          result,
+          'Không thể thay đổi role của thành viên.'
+        )
+        return
+      }
+
+      const updatedMember = mapMember(result.data)
+
+      members.value = members.value
+        .map((member) =>
+          member.userId === updatedMember.userId ? updatedMember : member
+        )
+        .sort(compareMembers)
+
+      window.dispatchEvent(
+        new CustomEvent('pkm:workspace-members-updated', {
+          detail: {
+            workspaceId: targetWorkspaceId,
+            userId: targetMember.userId,
+            action: 'role-changed',
+            role: normalizedRole,
+          },
+        })
+      )
+
+      void fetchMembers(targetWorkspaceId, { silent: true })
+    } catch (mutationError) {
+      memberActionError.value = getApiErrorMessage(
+        mutationError,
+        'Không thể thay đổi role của thành viên.'
+      )
+    } finally {
+      isMutatingMember.value = false
+      mutatingMemberId.value = null
+    }
+  }
+
+  async function removeMember(targetMember: WorkspaceMemberListItem) {
+    const targetWorkspaceId = workspaceId.value ?? targetMember.workspaceId
+
+    if (!assertCanMutateMember(targetMember) || !targetWorkspaceId) return
+
+    isMutatingMember.value = true
+    mutatingMemberId.value = targetMember.userId
+    memberActionError.value = null
+
+    try {
+      const result = await workspaceController.removeMember(
+        targetWorkspaceId,
+        targetMember.userId
+      )
+
+      if (!result.isSuccess) {
+        memberActionError.value = getApiResultErrorMessage(
+          result,
+          'Không thể xóa thành viên khỏi workspace.'
+        )
+        return
+      }
+
+      members.value = members.value.filter(
+        (member) => member.userId !== targetMember.userId
+      )
+
+      window.dispatchEvent(
+        new CustomEvent('pkm:workspace-members-updated', {
+          detail: {
+            workspaceId: targetWorkspaceId,
+            userId: targetMember.userId,
+            action: 'removed',
+          },
+        })
+      )
+
+      void fetchMembers(targetWorkspaceId, { silent: true })
+    } catch (mutationError) {
+      memberActionError.value = getApiErrorMessage(
+        mutationError,
+        'Không thể xóa thành viên khỏi workspace.'
+      )
+    } finally {
+      isMutatingMember.value = false
+      mutatingMemberId.value = null
+    }
+  }
+
   function refreshMembersAfterProfileChange() {
     if (!workspaceId.value) return
 
@@ -428,6 +591,7 @@ export function useWorkspaceMembersSidebar(
       members.value = []
       error.value = null
       realtimeError.value = null
+      memberActionError.value = null
       loadedWorkspaceId.value = null
       onlineUserIds.value = new Set()
 
@@ -480,11 +644,20 @@ export function useWorkspaceMembersSidebar(
     isLoading,
     error,
     realtimeError,
+    isMutatingMember,
+    mutatingMemberId,
+    memberActionError,
+    canManageMembers,
     memberCountLabel,
     open,
     close,
     refresh,
     fetchMembers,
     connectWorkspaceRealtime,
+    changeMemberRole,
+    removeMember,
   }
 }
+
+
+

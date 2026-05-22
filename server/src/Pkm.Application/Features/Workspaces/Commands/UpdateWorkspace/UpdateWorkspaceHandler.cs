@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
+using Pkm.Domain.Audit;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
@@ -21,6 +23,7 @@ public sealed class UpdateWorkspaceHandler
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly UpdateWorkspaceCommandValidator _validator;
+    private readonly IActivityLogService _activityLogService;
 
     public UpdateWorkspaceHandler(
         ICurrentUser currentUser,
@@ -31,7 +34,8 @@ public sealed class UpdateWorkspaceHandler
         IClock clock,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        UpdateWorkspaceCommandValidator validator)
+        UpdateWorkspaceCommandValidator validator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceRepository = workspaceRepository;
@@ -42,6 +46,7 @@ public sealed class UpdateWorkspaceHandler
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkspaceDto>> HandleAsync(
@@ -90,6 +95,16 @@ public sealed class UpdateWorkspaceHandler
 
             _workspaceRepository.Update(workspace);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    workspace.Id,
+                    currentUserId,
+                    ActivityAction.Update,
+                    ActivityEntityType.Workspace,
+                    workspace.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật workspace '{workspace.Name}'."),
+                cancellationToken);
 
             await _redisCache.RemoveAsync(
                 WorkspaceCacheKeys.Detail(_redisKeyFactory, workspace.Id),

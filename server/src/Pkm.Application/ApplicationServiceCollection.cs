@@ -1,4 +1,6 @@
 using Microsoft.Extensions.DependencyInjection;
+using Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Account.Commands.ChangeMyPassword;
 using Pkm.Application.Features.Account.Commands.UpdateMyProfile;
 using Pkm.Application.Features.Account.Queries.GetMyProfile;
@@ -86,6 +88,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<IDocumentAccessEvaluator, DocumentAccessEvaluator>();
         services.AddScoped<ITaskAccessEvaluator, TaskAccessEvaluator>();
         services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
 
@@ -179,6 +182,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<DeleteTaskCommentHandler>();
         services.AddScoped<RestoreTaskCommentHandler>();
 
+        services.AddScoped<ListWorkspaceActivityLogsHandler>();
         services.AddScoped<ListNotificationsHandler>();
         services.AddScoped<GetUnreadNotificationCountHandler>();
         services.AddScoped<MarkNotificationAsReadHandler>();

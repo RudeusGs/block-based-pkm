@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
+using Pkm.Domain.Audit;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Domain.Common;
 using Pkm.Domain.Workspaces;
@@ -19,6 +21,7 @@ public sealed class CreateWorkspaceHandler
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly CreateWorkspaceCommandValidator _validator;
+    private readonly IActivityLogService _activityLogService;
 
     public CreateWorkspaceHandler(
         ICurrentUser currentUser,
@@ -28,7 +31,8 @@ public sealed class CreateWorkspaceHandler
         IClock clock,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        CreateWorkspaceCommandValidator validator)
+        CreateWorkspaceCommandValidator validator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceRepository = workspaceRepository;
@@ -38,6 +42,7 @@ public sealed class CreateWorkspaceHandler
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkspaceDto>> HandleAsync(
@@ -72,6 +77,16 @@ public sealed class CreateWorkspaceHandler
             _workspaceMemberRepository.Add(ownerMember);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    workspace.Id,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.Workspace,
+                    workspace.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã tạo workspace '{workspace.Name}'."),
+                cancellationToken);
 
             // Invalidate user's workspace list cache
             var versionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, currentUserId);

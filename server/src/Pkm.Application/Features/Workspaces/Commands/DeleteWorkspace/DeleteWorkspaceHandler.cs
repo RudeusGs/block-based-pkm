@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
+using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
 
@@ -15,6 +17,7 @@ public sealed class DeleteWorkspaceHandler
     private readonly IClock _clock;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IActivityLogService _activityLogService;
 
     public DeleteWorkspaceHandler(
         ICurrentUser currentUser,
@@ -23,7 +26,8 @@ public sealed class DeleteWorkspaceHandler
         IUnitOfWork unitOfWork,
         IClock clock,
         IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IRedisKeyFactory redisKeyFactory,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceRepository = workspaceRepository;
@@ -32,6 +36,7 @@ public sealed class DeleteWorkspaceHandler
         _clock = clock;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result> HandleAsync(
@@ -75,6 +80,16 @@ public sealed class DeleteWorkspaceHandler
         _workspaceRepository.Update(workspace);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                workspace.Id,
+                currentUserId,
+                ActivityAction.Delete,
+                ActivityEntityType.Workspace,
+                workspace.Id,
+                $"{_currentUser.UserName ?? "Có người"} đã xóa workspace '{workspace.Name}'."),
+            cancellationToken);
 
         await _redisCache.RemoveAsync(
             WorkspaceCacheKeys.Detail(_redisKeyFactory, request.WorkspaceId),

@@ -3,6 +3,8 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
+using Pkm.Domain.Audit;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Workspaces.Models;
@@ -20,6 +22,7 @@ public sealed class AcceptWorkspaceInvitationHandler
     private readonly IClock _clock;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IActivityLogService _activityLogService;
     private readonly INotificationService _notificationService;
 
     public AcceptWorkspaceInvitationHandler(
@@ -30,7 +33,8 @@ public sealed class AcceptWorkspaceInvitationHandler
         IClock clock,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _userRepository = userRepository;
         _workspaceInvitationRepository = workspaceInvitationRepository;
@@ -39,6 +43,7 @@ public sealed class AcceptWorkspaceInvitationHandler
         _clock = clock;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
+        _activityLogService = activityLogService;
         _notificationService = notificationService;
     }
 
@@ -116,6 +121,16 @@ public sealed class AcceptWorkspaceInvitationHandler
         _workspaceInvitationRepository.Update(invitation);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                invitation.WorkspaceId,
+                targetUser.Id,
+                ActivityAction.Create,
+                ActivityEntityType.WorkspaceMember,
+                targetUser.Id,
+                $"{targetUser.FullName} đã tham gia workspace."),
+            cancellationToken);
 
         await InvalidateWorkspaceMemberCachesAsync(
             invitation.WorkspaceId,
