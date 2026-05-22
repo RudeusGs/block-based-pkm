@@ -1,5 +1,4 @@
 :root {
-  color-scheme: dark;
 
   --pe-bg: #0f0f0f;
   --pe-bg-2: #141414;
@@ -44,10 +43,20 @@
     0 2px 12px rgba(0, 0, 0, 0.35);
 }
 
-html,
-body,
-#app {
-  min-height: 100%;
+body {
+  overflow-x: hidden;
+}
+
+/*
+  IMPORTANT:
+  Keep the editor theme inside the authenticated app only.
+  This file is imported from PageEditor.vue through script, so Vite treats it as
+  global CSS and keeps it loaded after route changes. Do not style html/body/#app
+  here, otherwise Login/Register will inherit the dark editor colors.
+*/
+.workspace-shell {
+  min-height: 100vh;
+  color-scheme: dark;
   background: var(--pe-bg) !important;
   color: var(--pe-text) !important;
   font-family: var(--pe-font-sans);
@@ -56,31 +65,27 @@ body,
   -moz-osx-font-smoothing: grayscale;
 }
 
-body {
-  overflow-x: hidden;
-}
-
-* {
+.workspace-shell * {
   scrollbar-width: thin;
   scrollbar-color: #303030 var(--pe-bg);
 }
 
-*::-webkit-scrollbar {
+.workspace-shell *::-webkit-scrollbar {
   width: 10px;
   height: 10px;
 }
 
-*::-webkit-scrollbar-track {
+.workspace-shell *::-webkit-scrollbar-track {
   background: var(--pe-bg);
 }
 
-*::-webkit-scrollbar-thumb {
+.workspace-shell *::-webkit-scrollbar-thumb {
   border: 2px solid var(--pe-bg);
   border-radius: 999px;
   background: #303030;
 }
 
-*::-webkit-scrollbar-thumb:hover {
+.workspace-shell *::-webkit-scrollbar-thumb:hover {
   background: #444444;
 }
 
@@ -1508,5 +1513,6 @@ body .tc-popover__item--focused,
   text-overflow: ellipsis;
   pointer-events: none;
 }
+
 
 

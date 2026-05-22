@@ -3,7 +3,7 @@
     <canvas ref="particleCanvas" class="particle-canvas"></canvas>
     <nav class="navbar navbar-expand-md fixed-top">
       <div class="container-xl px-4">
-        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#">
+        <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#" @click.prevent="scrollToTop">
           <span class="material-symbols-outlined text-primary-accent">architecture</span>
           Block-based
         </a>
@@ -13,15 +13,23 @@
         <div class="collapse navbar-collapse" id="mainNav">
           <ul class="navbar-nav mx-auto gap-4">
             <li class="nav-item">
-              <a class="nav-link nav-active" href="#">Features</a>
+              <a class="nav-link nav-active" href="#features" @click.prevent="scrollToSection('features')">Features</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#">How It Works</a>
+              <a class="nav-link" href="#how-it-works" @click.prevent="scrollToSection('how-it-works')">How It Works</a>
             </li>
 
           </ul>
           <div class="d-flex align-items-center gap-3">
-            <button class="btn btn-primary-white px-4 py-2 rounded-3 fw-semibold"><a class="btn-getstarted" href="/login">Get Started</a></button>
+            <button
+              class="btn btn-primary-white px-4 py-2 rounded-3 fw-semibold"
+              type="button"
+              :disabled="isNavigating"
+              :aria-busy="isNavigating"
+              @click="goToAuthEntry"
+            >
+              Get Started
+            </button>
           </div>
         </div>
       </div>
@@ -42,13 +50,27 @@
             A precision-engineered productivity environment designed for high-performance teams. Replace disconnected tools with a single, elegant source of truth.
           </p>
           <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
-            <button class="btn btn-primary-solid px-5 py-3 rounded-3 fw-bold">Get Started for free</button>
-            <button class="btn btn-ghost px-5 py-3 rounded-3 fw-semibold">Try Demo</button>
+            <button
+              class="btn btn-primary-solid px-5 py-3 rounded-3 fw-bold"
+              type="button"
+              :disabled="isNavigating"
+              :aria-busy="isNavigating"
+              @click="goToAuthEntry"
+            >
+              Get Started for free
+            </button>
+            <button
+              class="btn btn-ghost px-5 py-3 rounded-3 fw-semibold"
+              type="button"
+              @click="scrollToSection('demo')"
+            >
+              Try Demo
+            </button>
           </div>
         </div>
       </section>
 
-      <section class="container-xl px-4 mb-5 pb-5">
+      <section id="demo" class="container-xl px-4 mb-5 pb-5">
         <div class="demo-wrapper position-relative">
           <div class="demo-glow-bg"></div>
           <div class="demo-panel position-relative rounded-4 overflow-hidden">
@@ -189,7 +211,7 @@
         </div>
       </section>
 
-      <section class="container-xl px-4 mb-5 pb-5">
+      <section id="features" class="container-xl px-4 mb-5 pb-5">
         <div class="mb-5">
           <h2 class="fw-bold mb-2" style="font-size: 2.25rem; letter-spacing: -0.04em;">Built for the modern builder.</h2>
           <p class="text-muted">Everything you need, nothing you don't. Pure productivity.</p>
@@ -240,7 +262,7 @@
         </div>
       </section>
 
-      <section class="how-section py-5 mb-5">
+      <section id="how-it-works" class="how-section py-5 mb-5">
         <div class="container-xl px-4">
           <div class="text-center mb-5 pb-3">
             <h2 class="fw-bold mb-2 text-white" style="font-size: 2.25rem; letter-spacing: -0.04em;">Three steps to flow.</h2>
@@ -324,7 +346,15 @@
           <div class="position-relative" style="z-index: 1;">
             <h2 class="fw-bold mb-4 text-white" style="font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -0.04em;">Ready to architect your focus?</h2>
             <p class="text-muted fs-5 mb-5 mx-auto" style="max-width: 500px;">Join the new standard of productivity today.</p>
-            <button class="btn btn-cta px-5 py-3 rounded-4 fw-black fs-5">Get Started Now</button>
+            <button
+              class="btn btn-cta px-5 py-3 rounded-4 fw-black fs-5"
+              type="button"
+              :disabled="isNavigating"
+              :aria-busy="isNavigating"
+              @click="goToAuthEntry"
+            >
+              Get Started Now
+            </button>
           </div>
         </div>
       </section>
@@ -346,89 +376,163 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue';
+import { onMounted, onUnmounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { isAuthenticated } from '@/modules/auth/utils/auth-token.util'
 
-const particleCanvas = ref<HTMLCanvasElement | null>(null);
+const router = useRouter()
+const particleCanvas = ref<HTMLCanvasElement | null>(null)
+const isNavigating = ref(false)
+
+function closeMobileNavbar() {
+  const nav = document.getElementById('mainNav')
+
+  if (!nav) return
+
+  nav.classList.remove('show')
+
+  const toggler = document.querySelector<HTMLButtonElement>(
+    '[data-bs-target="#mainNav"]'
+  )
+
+  toggler?.setAttribute('aria-expanded', 'false')
+}
+
+function scrollToTop() {
+  closeMobileNavbar()
+
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth',
+  })
+}
+
+function scrollToSection(sectionId: string) {
+  closeMobileNavbar()
+
+  const section = document.getElementById(sectionId)
+
+  section?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
+
+async function goToAuthEntry() {
+  if (isNavigating.value) return
+
+  isNavigating.value = true
+  closeMobileNavbar()
+
+  try {
+    if (isAuthenticated()) {
+      await router.replace({ name: 'app' })
+      return
+    }
+
+    await router.push({
+      name: 'login',
+      query: {
+        redirect: '/app',
+      },
+    })
+  } catch (error) {
+    console.error('Landing navigation failed:', error)
+  } finally {
+    isNavigating.value = false
+  }
+}
 
 onMounted(() => {
-  const canvas = particleCanvas.value;
-  if (!canvas) return;
+  const canvas = particleCanvas.value
+  if (!canvas) return
 
-  const ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  const canvasContext = canvas.getContext('2d')
+  if (!canvasContext) return
 
-  let particles: any[] = [];
-  let animationFrame: number;
-
-  const resize = () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  };
+  const ctx: CanvasRenderingContext2D = canvasContext
 
   class Particle {
-    x: number; y: number;
-    size: number;
-    speedX: number; speedY: number;
-    color: string;
-    life: number;
+    x: number
+    y: number
+    size: number
+    speedX: number
+    speedY: number
+    life: number
 
     constructor(x: number, y: number) {
-      this.x = x;
-      this.y = y;
-      this.size = Math.random() * 3 + 1; // Kích thước chấm 1px - 4px
-      this.speedX = (Math.random() - 0.5) * 1.5; // Tốc độ bay ngang
-      this.speedY = (Math.random() - 0.5) * 1.5; // Tốc độ bay dọc
-      this.color = 'rgba(255, 255, 255, 0.5)'; // Màu trắng mờ
-      this.life = 1; // Độ bền (sẽ giảm dần để mờ đi)
+      this.x = x
+      this.y = y
+      this.size = Math.random() * 3 + 1
+      this.speedX = (Math.random() - 0.5) * 1.5
+      this.speedY = (Math.random() - 0.5) * 1.5
+      this.life = 1
     }
 
     update() {
-      this.x += this.speedX;
-      this.y += this.speedY;
-      if (this.life > 0) this.life -= 0.02;
+      this.x += this.speedX
+      this.y += this.speedY
+
+      if (this.life > 0) {
+        this.life -= 0.02
+      }
     }
 
     draw() {
-      if (!ctx) return;
-      ctx.fillStyle = `rgba(255, 255, 255, ${this.life})`;
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.fillStyle = `rgba(255, 255, 255, ${this.life})`
+      ctx.beginPath()
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2)
+      ctx.fill()
     }
   }
 
-  const handleMouseMove = (e: MouseEvent) => {
-    for (let i = 0; i < 2; i++) {
-      particles.push(new Particle(e.clientX, e.clientY));
+  let particles: Particle[] = []
+  let animationFrame = 0
+
+  const resize = () => {
+    canvas.width = window.innerWidth
+    canvas.height = window.innerHeight
+  }
+
+  const handleMouseMove = (event: MouseEvent) => {
+    for (let i = 0; i < 2; i += 1) {
+      particles.push(new Particle(event.clientX, event.clientY))
     }
-  };
+  }
 
   const animate = () => {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    for (let i = 0; i < particles.length; i++) {
-      particles[i].update();
-      particles[i].draw();
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
 
-      if (particles[i].life <= 0) {
-        particles.splice(i, 1);
-        i--;
+    for (let i = 0; i < particles.length; i += 1) {
+      const particle = particles[i]
+
+      if (!particle) continue
+
+      particle.update()
+      particle.draw()
+
+      if (particle.life <= 0) {
+        particles.splice(i, 1)
+        i -= 1
       }
     }
-    animationFrame = requestAnimationFrame(animate);
-  };
 
-  window.addEventListener('resize', resize);
-  window.addEventListener('mousemove', handleMouseMove);
-  resize();
-  animate();
+    animationFrame = requestAnimationFrame(animate)
+  }
+
+  window.addEventListener('resize', resize)
+  window.addEventListener('mousemove', handleMouseMove)
+
+  resize()
+  animate()
 
   onUnmounted(() => {
-    window.removeEventListener('resize', resize);
-    window.removeEventListener('mousemove', handleMouseMove);
-    cancelAnimationFrame(animationFrame);
-  });
-});
+    window.removeEventListener('resize', resize)
+    window.removeEventListener('mousemove', handleMouseMove)
+    cancelAnimationFrame(animationFrame)
+    particles = []
+  })
+})
 </script>
 
 <style scoped>
@@ -512,6 +616,18 @@ onMounted(() => {
 }
 
 .btn-primary-white:hover { opacity: 0.9; }
+
+.btn-primary-white:disabled,
+.btn-primary-solid:disabled,
+.btn-cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.btn-ghost:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
 
 /* ─── Hero ─── */
 .hero-glow {
@@ -662,7 +778,6 @@ onMounted(() => {
 .site-footer { background: #000000; border-top: 1px solid #1a1a1a; }
 .footer-link { color: #525252; text-decoration: none; transition: color 0.2s; font-size: 0.75rem; text-transform: uppercase; }
 .footer-link:hover { color: #ffffff; }
-.btn-getstarted { color: #000000; text-decoration: none; }
 @media (max-width: 768px) {
   .hero-title { font-size: 3rem; }
 }

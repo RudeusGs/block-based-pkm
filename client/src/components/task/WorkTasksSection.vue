@@ -11,12 +11,18 @@
         </h2>
 
         <p class="section-subtitle d-flex flex-wrap align-items-center gap-2 mb-0 small text-on-surface-variant">
-          <span>{{ tasks.length }} tasks</span>
+          <span>{{ tasks.length }} items</span>
           <span class="tiny-separator"></span>
-          <span>{{ pageId ? 'Synced realtime theo page hiện tại' : 'Chọn page để xem task' }}</span>
+          <span>{{ pageId ? 'Page database' : 'Select a page' }}</span>
+
+          <template v-if="pageId && !canManageTasks">
+            <span class="tiny-separator"></span>
+            <span>{{ taskPermissionLabel }}</span>
+          </template>
+
           <template v-if="realtimeError">
             <span class="tiny-separator"></span>
-            <span class="task-realtime-warning">Realtime: {{ realtimeError }}</span>
+            <span class="task-realtime-warning">Sync issue: {{ realtimeError }}</span>
           </template>
         </p>
       </div>
@@ -26,20 +32,22 @@
           class="task-action-btn btn btn-sm d-flex align-items-center gap-1"
           type="button"
           :disabled="!pageId || isLoadingTasks"
+          title="Refresh tasks"
           @click="refreshTasks"
         >
           <span class="material-symbols-outlined">refresh</span>
-          Refresh
+          Sync
         </button>
 
         <button
+          v-if="canManageTasks"
           class="new-task-btn btn btn-sm d-flex align-items-center gap-1 ms-lg-2"
           type="button"
           :disabled="!pageId"
           @click="openCreateTaskPanel"
         >
           <span class="material-symbols-outlined">add</span>
-          New Task
+          New
         </button>
       </div>
     </div>
@@ -210,10 +218,11 @@
         >
           <span class="material-symbols-outlined">playlist_add_check</span>
           <h3>Page này chưa có task</h3>
-          <p>Bấm New Task để tạo task đầu tiên, assign nhiều người ngay nếu cần.</p>
+          <p>{{ emptyTaskDescription }}</p>
         </div>
 
         <button
+          v-if="canManageTasks"
           class="add-row-btn btn w-100 text-start rounded-0 d-flex align-items-center gap-2 px-4 py-2"
           type="button"
           :disabled="!pageId"
@@ -226,6 +235,7 @@
     </div>
 
     <CreateTaskPanel
+      v-if="canManageTasks"
       v-model="isCreateTaskPanelOpen"
       :workspace-id="workspaceId"
       :page-id="pageId"
@@ -245,6 +255,7 @@
       :comments="selectedTaskComments"
       :members="members"
       :can-manage-assignees="canManageTaskAssignees"
+      :can-change-status="selectedTaskCanChangeStatus"
       :page-title="pageTitle"
       :is-loading-comments="isLoadingComments"
       :comments-error="commentsError"
@@ -342,6 +353,27 @@ const canManageTaskAssignees = computed(() => {
   return currentMember.isOwner || role === 'owner' || role === 'manager'
 })
 
+const canManageTasks = computed(() => canManageTaskAssignees.value)
+
+const selectedTaskCanChangeStatus = computed(() => {
+  return canChangeStatusForRawTask(selectedRawTask.value)
+})
+
+const taskPermissionLabel = computed(() => {
+  if (isLoadingMembers.value) return 'Checking permissions...'
+  if (membersError.value) return 'Permission unknown'
+
+  return canManageTasks.value ? 'Can edit' : 'View only'
+})
+
+const emptyTaskDescription = computed(() => {
+  if (canManageTasks.value) {
+    return 'Bấm New để tạo task đầu tiên, assign nhiều người ngay nếu cần.'
+  }
+
+  return 'Bạn có thể xem task và comment. Việc tạo task mới chỉ dành cho owner hoặc manager.'
+})
+
 const assignableMembers = computed(() => {
   if (!canManageTaskAssignees.value) return []
 
@@ -410,10 +442,20 @@ watch(
 )
 
 watch(
+  canManageTasks,
+  (canManage) => {
+    if (!canManage) {
+      isCreateTaskPanelOpen.value = false
+    }
+  }
+)
+
+watch(
   () => props.pageId,
   (pageId) => {
     selectedTaskId.value = null
     isTaskDetailOpen.value = false
+    isCreateTaskPanelOpen.value = false
     rawTasks.value = []
     tasksError.value = null
     commentsError.value = null
@@ -781,7 +823,7 @@ function compareTaskViews(left: WorkTaskView, right: WorkTaskView) {
 }
 
 function openCreateTaskPanel() {
-  if (!props.pageId) return
+  if (!props.pageId || !canManageTasks.value) return
 
   isCreateTaskPanelOpen.value = true
 }
@@ -847,7 +889,6 @@ function upsertComment(comment: TaskCommentResponse) {
     ...rawCommentsByTaskId.value,
     [comment.taskId]: nextList.sort(compareComments),
   }
-
 }
 
 function removeComment(comment: TaskCommentResponse) {
@@ -1016,14 +1057,43 @@ async function unassignTaskMember(userId: Guid) {
   }
 }
 
+function isCurrentUserAssignedToTask(task: WorkTaskResponse) {
+  const currentUserId = currentWorkspaceMember.value?.userId
+  if (!currentUserId) return false
+
+  return (task.assignees ?? []).some((assignee) => assignee.userId === currentUserId)
+}
+
+function canChangeStatusForRawTask(task: WorkTaskResponse | null) {
+  if (!task) return false
+  if (normalizeStatus(task.status) === 'done') return false
+
+  return canManageTasks.value || isCurrentUserAssignedToTask(task)
+}
+
 async function changeTaskStatus(status: WorkTaskStatusRequest) {
-  if (!selectedRawTask.value || isMutatingTask.value) return
+  const task = selectedRawTask.value
+
+  if (!task || isMutatingTask.value) return
+
+  if (normalizeStatus(task.status) === 'done') {
+    taskActionError.value = 'Task đã Done và trạng thái đã được khóa.'
+    return
+  }
+
+  if (normalizeStatus(task.status) === status) return
+
+  if (!canChangeStatusForRawTask(task)) {
+    taskActionError.value =
+      'Bạn cần được assign vào task này hoặc có quyền owner/manager để đổi trạng thái.'
+    return
+  }
 
   isMutatingTask.value = true
   taskActionError.value = null
 
   try {
-    const result = await taskController.changeStatus(selectedRawTask.value.id, {
+    const result = await taskController.changeStatus(task.id, {
       status,
     })
 

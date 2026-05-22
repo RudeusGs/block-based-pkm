@@ -1140,6 +1140,13 @@
   transform: rotate(90deg);
 }
 
+.lunar-section-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
 .lunar-section-action {
   width: 25px;
   height: 25px;
@@ -1158,18 +1165,29 @@
     color 140ms ease;
 }
 
-.lunar-section-head:hover .lunar-section-action {
+.lunar-section-head:hover .lunar-section-action,
+.lunar-section-action.refreshing,
+.lunar-section-action:focus-visible {
   opacity: 1;
 }
 
-.lunar-section-action:hover {
+.lunar-section-action:hover:not(:disabled) {
   color: var(--sidebar-text);
   border-color: var(--sidebar-border);
   background: var(--sidebar-bg-hover);
 }
 
+.lunar-section-action:disabled {
+  cursor: default;
+  opacity: 1;
+}
+
 .lunar-section-action i {
   font-size: 13px;
+}
+
+.lunar-spin-icon {
+  animation: lunar-spin 800ms linear infinite;
 }
 
 .lunar-workspace-list {
@@ -1535,6 +1553,7 @@
   .lunar-icon-btn,
   .lunar-ai-generate-btn,
   .lunar-ai-spinner,
+  .lunar-spin-icon,
   .lunar-ai-actions button,
   .lunar-nav-row,
   .lunar-section-toggle,

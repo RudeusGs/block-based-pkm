@@ -24,9 +24,19 @@
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
 }
 .auth-wrapper {
-  background-color: #f8f9fb;
+  min-height: 100vh;
+  background-color: #f8f9fb !important;
+  color: #111827;
+  color-scheme: light;
   font-family: 'Inter', sans-serif;
   position: relative;
+}
+
+.auth-wrapper .login-container,
+.auth-wrapper .card,
+.auth-wrapper .card-body,
+.auth-wrapper .card-footer {
+  color: #111827;
 }
 
 .login-container {
@@ -68,7 +78,19 @@
 .form-control-custom {
   width: 100%; padding: 12px 14px 12px 42px;
   background: #f1f2f4; border: 1px solid transparent; border-radius: 12px;
+  color: #111827;
+  caret-color: #111827;
+  color-scheme: light;
   font-size: 0.85rem; transition: all 0.2s;
+}
+.form-control-custom::placeholder {
+  color: #9ca3af;
+  opacity: 1;
+}
+.form-control-custom:disabled {
+  color: #6b7280;
+  -webkit-text-fill-color: #6b7280;
+  opacity: 1;
 }
 .form-control-custom:focus { outline: none; background: white; border-color: black; }
 .btn-toggle-pass { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #bbb; }
@@ -76,7 +98,7 @@
 /* Buttons */
 .btn-black { background: black; color: white; border: none; transition: transform 0.2s; }
 .btn-black:hover { background: #222; transform: scale(1.01); color: white; }
-.btn-outline-custom { background: white; border: 1px solid #eee; border-radius: 10px; }
+.btn-outline-custom { background: white; border: 1px solid #eee; border-radius: 10px; color: #111827; }
 
 /* Divider */
 .divider { display: flex; align-items: center; color: #ccc; font-size: 0.65rem; text-transform: uppercase; font-weight: 700; }

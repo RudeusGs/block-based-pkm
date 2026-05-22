@@ -41,11 +41,15 @@
               class="status-pill task-status-option d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
               :class="[
                 statusClass(option.value),
-                { active: task.status === option.value },
+                {
+                  active: task.status === option.value,
+                  locked: isStatusButtonDisabled(option.value),
+                },
               ]"
               type="button"
-              :disabled="isMutatingTask || task.status === option.value"
-              @click="emit('change-status', option.value)"
+              :aria-pressed="task.status === option.value"
+              :disabled="isStatusButtonDisabled(option.value)"
+              @click="handleStatusClick(option.value)"
             >
               <span class="status-pill-dot"></span>
               {{ option.label }}
@@ -66,6 +70,54 @@
               Overdue
             </span>
           </div>
+
+          <p
+            v-if="statusPolicyMessage"
+            class="task-status-policy"
+          >
+            <i class="bi bi-info-circle"></i>
+            <span>{{ statusPolicyMessage }}</span>
+          </p>
+
+          <section
+            v-if="isConfirmDoneOpen"
+            class="task-done-confirm-card"
+            role="alertdialog"
+            aria-modal="false"
+            aria-labelledby="task-done-confirm-title"
+          >
+            <div class="task-done-confirm-icon">
+              <i class="bi bi-check2-circle"></i>
+            </div>
+
+            <div class="task-done-confirm-copy">
+              <h3 id="task-done-confirm-title">Xác nhận hoàn tất task?</h3>
+              <p>
+                Sau khi xác nhận Done, task này sẽ bị khóa trạng thái ở giao diện
+                để tránh kéo ngược tiến độ nhầm.
+              </p>
+            </div>
+
+            <div class="task-done-confirm-actions">
+              <button
+                type="button"
+                class="task-done-confirm-ghost"
+                :disabled="isMutatingTask"
+                @click="cancelDoneConfirm"
+              >
+                Chưa xong
+              </button>
+
+              <button
+                type="button"
+                class="task-done-confirm-primary"
+                :disabled="isMutatingTask"
+                @click="confirmDoneTask"
+              >
+                {{ isMutatingTask ? 'Updating...' : 'Đã xong thật' }}
+              </button>
+            </div>
+          </section>
 
           <div
             v-if="taskActionError"
@@ -290,6 +342,7 @@ const props = withDefaults(
     comments: TaskCommentView[]
     members: TaskMemberOption[]
     canManageAssignees?: boolean
+    canChangeStatus?: boolean
     pageTitle?: string | null
     isLoadingComments?: boolean
     commentsError?: string | null
@@ -299,6 +352,7 @@ const props = withDefaults(
   }>(),
   {
     canManageAssignees: false,
+    canChangeStatus: false,
     pageTitle: '',
     isLoadingComments: false,
     commentsError: null,
@@ -319,6 +373,7 @@ const emit = defineEmits<{
 
 const draftComment = ref('')
 const selectedMemberToAssign = ref<Guid | ''>('')
+const isConfirmDoneOpen = ref(false)
 
 const statusOptions: Array<{ value: WorkTaskStatusRequest; label: string }> = [
   { value: 'todo', label: 'To Do' },
@@ -350,6 +405,22 @@ const totalCommentCount = computed(() => {
   return props.comments.reduce((total, comment) => total + countCommentTree(comment), 0)
 })
 
+const isDoneLocked = computed(() => props.task?.status === 'done')
+
+const statusPolicyMessage = computed(() => {
+  if (!props.task) return ''
+
+  if (isDoneLocked.value) {
+    return 'Task đã Done nên trạng thái đã được khóa, không thể chuyển lại To Do/Doing.'
+  }
+
+  if (!props.canChangeStatus) {
+    return 'Chỉ owner/manager hoặc người đang được assign task này mới được đổi trạng thái.'
+  }
+
+  return ''
+})
+
 watch(
   () => props.open,
   (isOpen) => {
@@ -358,6 +429,7 @@ watch(
     if (!isOpen) {
       draftComment.value = ''
       selectedMemberToAssign.value = ''
+      isConfirmDoneOpen.value = false
     }
   }
 )
@@ -367,8 +439,52 @@ watch(
   () => {
     draftComment.value = ''
     selectedMemberToAssign.value = ''
+    isConfirmDoneOpen.value = false
   }
 )
+
+watch(
+  () => props.task?.status,
+  (status) => {
+    if (status === 'done') {
+      isConfirmDoneOpen.value = false
+    }
+  }
+)
+
+function isStatusButtonDisabled(status: WorkTaskStatusRequest) {
+  if (!props.task) return true
+  if (props.isMutatingTask) return true
+  if (props.task.status === status) return true
+  if (isDoneLocked.value) return true
+
+  return !props.canChangeStatus
+}
+
+function handleStatusClick(status: WorkTaskStatusRequest) {
+  if (isStatusButtonDisabled(status)) return
+
+  if (status === 'done') {
+    isConfirmDoneOpen.value = true
+    return
+  }
+
+  isConfirmDoneOpen.value = false
+  emit('change-status', status)
+}
+
+function cancelDoneConfirm() {
+  if (props.isMutatingTask) return
+
+  isConfirmDoneOpen.value = false
+}
+
+function confirmDoneTask() {
+  if (isStatusButtonDisabled('done')) return
+
+  isConfirmDoneOpen.value = false
+  emit('change-status', 'done')
+}
 
 function submitComment() {
   const content = draftComment.value.trim()
@@ -577,6 +693,117 @@ onBeforeUnmount(() => {
 
 .task-status-option:disabled {
   cursor: default;
+}
+
+.task-status-option.locked:not(.active) {
+  filter: grayscale(0.35);
+}
+
+.task-status-policy {
+  margin: -4px 0 14px;
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 11px;
+  border: 1px solid rgba(96, 165, 250, 0.18);
+  border-radius: 11px;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.08);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.task-status-policy i {
+  margin-top: 1px;
+  color: #93c5fd;
+  font-size: 13px;
+}
+
+.task-done-confirm-card {
+  margin: 0 0 14px;
+  padding: 13px;
+  border: 1px solid rgba(74, 222, 128, 0.2);
+  border-radius: 14px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 11px;
+  background:
+    radial-gradient(circle at top left, rgba(74, 222, 128, 0.12), transparent 34%),
+    #151515;
+  box-shadow: 0 14px 38px rgba(0, 0, 0, 0.22);
+}
+
+.task-done-confirm-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(74, 222, 128, 0.2);
+}
+
+.task-done-confirm-copy {
+  min-width: 0;
+}
+
+.task-done-confirm-copy h3 {
+  margin: 0 0 4px;
+  color: #f1f1f1;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.task-done-confirm-copy p {
+  margin: 0;
+  color: #a3a3a3;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.task-done-confirm-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+.task-done-confirm-actions button {
+  min-height: 31px;
+  border-radius: 9px;
+  padding: 0 11px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.task-done-confirm-ghost {
+  border: 1px solid #303030;
+  color: #d4d4d4;
+  background: #101010;
+}
+
+.task-done-confirm-ghost:hover:not(:disabled) {
+  color: #f1f1f1;
+  background: #202020;
+}
+
+.task-done-confirm-primary {
+  border: 1px solid rgba(74, 222, 128, 0.32);
+  color: #052e16;
+  background: #86efac;
+}
+
+.task-done-confirm-primary:hover:not(:disabled) {
+  background: #bbf7d0;
+}
+
+.task-done-confirm-actions button:disabled {
+  opacity: 0.56;
+  cursor: not-allowed;
 }
 
 .task-detail-overdue {
@@ -1136,3 +1363,5 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 </style>
+
+

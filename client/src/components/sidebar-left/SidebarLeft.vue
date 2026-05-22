@@ -83,6 +83,7 @@
             :workspaces="workspaceTree.workspaces.value"
             :has-workspaces="workspaceTree.hasWorkspaces.value"
             :is-loading-workspaces="workspaceTree.isLoadingWorkspaces.value"
+            :is-refreshing-tree="workspaceTree.isRefreshingSidebarTree.value"
             :workspace-list-error="workspaceTree.workspaceListError.value"
             :selected-workspace-id="workspaceTree.selectedWorkspaceId.value"
             :selected-page-id="workspaceTree.selectedPageId.value"
@@ -93,6 +94,7 @@
             :get-page-list-error="workspaceTree.getPageListError"
             @toggle="workspaceTree.toggleWorkspaces"
             @create-workspace="workspaceTree.openCreateWorkspaceModal"
+            @refresh-tree="refreshSidebarTree"
             @retry-workspaces="workspaceTree.retryLoadWorkspaces"
             @toggle-workspace="workspaceTree.toggleWorkspaceBranch"
             @create-page="workspaceTree.openCreatePageModal"
@@ -351,6 +353,17 @@ function refreshMyTasks() {
   void myTasks.fetchMyTasks()
 }
 
+async function refreshSidebarTree() {
+  await workspaceTree.refreshSidebarTree()
+
+  if (!workspaceTree.workspaceListError.value) {
+    toast.success(
+      'Đã đồng bộ sidebar',
+      'Danh sách workspace và page đã được tải lại.'
+    )
+  }
+}
+
 async function saveProfileSettings() {
   const saved = await settings.saveProfileSettings()
 
@@ -528,5 +541,3 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
-
-

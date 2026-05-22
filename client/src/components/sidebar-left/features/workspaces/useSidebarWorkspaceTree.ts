@@ -20,6 +20,11 @@ import {
   removePageFromTree,
 } from '@/components/sidebar-left/utils/page-tree.util'
 
+interface FetchWorkspacePagesOptions {
+  syncSelection?: boolean
+  preferredPageId?: Guid | null
+}
+
 export function useSidebarWorkspaceTree() {
   const workspaceNavigation = useWorkspaceNavigation()
 
@@ -38,6 +43,7 @@ export function useSidebarWorkspaceTree() {
   const openedWorkspaceIds = ref<Set<Guid>>(new Set())
   const openedPageIds = ref<Set<Guid>>(new Set())
   const loadingPageWorkspaceIds = ref<Set<Guid>>(new Set())
+  const isRefreshingSidebarTree = ref(false)
 
   const pageTreesByWorkspaceId = ref<Record<Guid, PageTreeItem[]>>({})
   const pageListErrorsByWorkspaceId = ref<Record<Guid, string | null>>({})
@@ -232,7 +238,10 @@ export function useSidebarWorkspaceTree() {
     return pageListErrorsByWorkspaceId.value[workspaceId] || null
   }
 
-  async function fetchWorkspacePages(workspaceId: Guid) {
+  async function fetchWorkspacePages(
+    workspaceId: Guid,
+    options: FetchWorkspacePagesOptions = {}
+  ) {
     if (loadingPageWorkspaceIds.value.has(workspaceId)) return
 
     const loadingSet = new Set(loadingPageWorkspaceIds.value)
@@ -267,16 +276,17 @@ export function useSidebarWorkspaceTree() {
         [workspaceId]: buildPageTree(result.data.items),
       }
 
-      const currentSelectedPageId = selectedPageId.value
-      const hasCurrentPage =
-        Boolean(currentSelectedPageId) &&
-        result.data.items.some((page) => page.id === currentSelectedPageId)
+      const shouldSyncSelection = options.syncSelection ?? true
 
-      if (!hasCurrentPage) {
-        const firstPage = result.data.items[0] ?? null
+      if (shouldSyncSelection) {
+        const preferredPageId = options.preferredPageId ?? selectedPageId.value
+        const preferredPage =
+          result.data.items.find((page) => page.id === preferredPageId) ?? null
 
-        selectedPageId.value = firstPage?.id ?? null
-        workspaceNavigation.setPage(firstPage)
+        const nextPage = preferredPage ?? result.data.items[0] ?? null
+
+        selectedPageId.value = nextPage?.id ?? null
+        workspaceNavigation.setPage(nextPage)
       }
     } catch (error) {
       pageListErrorsByWorkspaceId.value = {
@@ -300,6 +310,80 @@ export function useSidebarWorkspaceTree() {
   function retryLoadWorkspaces() {
     clearWorkspaceListError()
     void fetchMyWorkspaces()
+  }
+
+  async function refreshSidebarTree() {
+    if (isRefreshingSidebarTree.value) return
+
+    isRefreshingSidebarTree.value = true
+
+    const previousOpenedWorkspaceIds = new Set(openedWorkspaceIds.value)
+    const previousSelectedWorkspaceId = selectedWorkspaceId.value
+    const previousSelectedPageId = selectedPageId.value
+
+    try {
+      clearWorkspaceListError()
+      await fetchMyWorkspaces()
+
+      const existingWorkspaceIds = new Set(
+        workspaces.value.map((workspace) => workspace.id)
+      )
+      const firstWorkspace = workspaces.value[0] ?? null
+      const nextSelectedWorkspaceId =
+        previousSelectedWorkspaceId &&
+        existingWorkspaceIds.has(previousSelectedWorkspaceId)
+          ? previousSelectedWorkspaceId
+          : firstWorkspace?.id ?? null
+
+      const nextOpenedWorkspaceIds = new Set<Guid>()
+
+      previousOpenedWorkspaceIds.forEach((workspaceId) => {
+        if (existingWorkspaceIds.has(workspaceId)) {
+          nextOpenedWorkspaceIds.add(workspaceId)
+        }
+      })
+
+      if (nextSelectedWorkspaceId) {
+        nextOpenedWorkspaceIds.add(nextSelectedWorkspaceId)
+      }
+
+      openedWorkspaceIds.value = nextOpenedWorkspaceIds
+
+      if (!nextSelectedWorkspaceId) {
+        selectedWorkspaceId.value = null
+        selectedPageId.value = null
+        workspaceNavigation.clearNavigation()
+        return
+      }
+
+      selectedWorkspaceId.value = nextSelectedWorkspaceId
+
+      const nextSelectedWorkspace =
+        workspaces.value.find(
+          (workspace) => workspace.id === nextSelectedWorkspaceId
+        ) ?? null
+
+      if (nextSelectedWorkspace) {
+        workspaceNavigation.setWorkspace({
+          id: nextSelectedWorkspace.id,
+          name: nextSelectedWorkspace.name,
+        })
+      }
+
+      await Promise.all(
+        Array.from(nextOpenedWorkspaceIds).map((workspaceId) =>
+          fetchWorkspacePages(workspaceId, {
+            preferredPageId:
+              workspaceId === nextSelectedWorkspaceId
+                ? previousSelectedPageId
+                : null,
+            syncSelection: workspaceId === nextSelectedWorkspaceId,
+          })
+        )
+      )
+    } finally {
+      isRefreshingSidebarTree.value = false
+    }
   }
 
   function selectPage(page: PageResponse) {
@@ -489,6 +573,7 @@ export function useSidebarWorkspaceTree() {
     workspaces,
     hasWorkspaces,
     isLoadingWorkspaces,
+    isRefreshingSidebarTree,
     workspaceListError,
 
     openedPageIds,
@@ -511,6 +596,7 @@ export function useSidebarWorkspaceTree() {
     getPageListError,
     retryLoadPages,
     retryLoadWorkspaces,
+    refreshSidebarTree,
     selectPage,
     handleWorkspaceCreated,
     handlePageCreated,
@@ -520,5 +606,3 @@ export function useSidebarWorkspaceTree() {
     handleWorkspaceDeleted,
   }
 }
-
-

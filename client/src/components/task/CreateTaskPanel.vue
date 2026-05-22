@@ -464,7 +464,14 @@ function toDueDatePayload(value: string) {
 }
 
 async function handleSubmit() {
-  if (!props.pageId || !isFormValid.value || isCreatingTask.value) return
+  if (
+    !props.pageId ||
+    !props.canManageAssignees ||
+    !isFormValid.value ||
+    isCreatingTask.value
+  ) {
+    return
+  }
 
   const assigneeUserIds =
     props.canManageAssignees && form.assigneeUserIds.length
@@ -514,3 +521,5 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/CreateTaskPanel.css"></style>
+
+

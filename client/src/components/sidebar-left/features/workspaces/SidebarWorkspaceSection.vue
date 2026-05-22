@@ -15,14 +15,34 @@
         <span>Workspaces</span>
       </button>
 
-      <button
-        type="button"
-        class="lunar-section-action"
-        title="Tạo workspace"
-        @click.stop="emit('createWorkspace')"
-      >
-        <i class="bi bi-plus-lg"></i>
-      </button>
+      <div class="lunar-section-actions">
+        <button
+          type="button"
+          class="lunar-section-action"
+          :class="{ refreshing: isRefreshingTree || isLoadingWorkspaces }"
+          :disabled="isRefreshingTree || isLoadingWorkspaces"
+          title="Đồng bộ workspace/page"
+          @click.stop="emit('refreshTree')"
+        >
+          <i
+            class="bi"
+            :class="
+              isRefreshingTree || isLoadingWorkspaces
+                ? 'bi-arrow-repeat lunar-spin-icon'
+                : 'bi-arrow-clockwise'
+            "
+          ></i>
+        </button>
+
+        <button
+          type="button"
+          class="lunar-section-action"
+          title="Tạo workspace"
+          @click.stop="emit('createWorkspace')"
+        >
+          <i class="bi bi-plus-lg"></i>
+        </button>
+      </div>
     </div>
 
     <Transition name="lunar-expand">
@@ -177,6 +197,7 @@ defineProps<{
   workspaces: WorkspaceSidebarItem[]
   hasWorkspaces: boolean
   isLoadingWorkspaces: boolean
+  isRefreshingTree: boolean
   workspaceListError: string | null
   selectedWorkspaceId: Guid | null
   selectedPageId: Guid | null
@@ -190,6 +211,7 @@ defineProps<{
 const emit = defineEmits<{
   toggle: []
   createWorkspace: []
+  refreshTree: []
   retryWorkspaces: []
   toggleWorkspace: [workspace: WorkspaceSidebarItem]
   createPage: [workspace: WorkspaceSidebarItem, parentPageId: Guid | null]
@@ -201,5 +223,3 @@ const emit = defineEmits<{
   deletePage: [page: PageTreeItem]
 }>()
 </script>
-
-

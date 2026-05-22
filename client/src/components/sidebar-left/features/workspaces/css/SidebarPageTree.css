@@ -160,4 +160,78 @@
 }
 
 
+/* Notion-style page tree polish */
+.lunar-page-row {
+  min-height: 28px;
+  margin: 1px 0;
+  padding-top: 2px;
+  padding-right: 2px;
+  padding-bottom: 2px;
+  border: 0;
+  border-radius: 6px;
+  color: #c7c7c2;
+  background: transparent;
+}
 
+.lunar-page-row:hover {
+  color: #f1f1ef;
+  border-color: transparent;
+  background: #2f2f2f;
+}
+
+.lunar-page-row.active {
+  color: #f1f1ef;
+  border-color: transparent;
+  background: #37352f;
+}
+
+.lunar-page-toggle,
+.lunar-page-toggle-spacer {
+  width: 23px;
+  height: 24px;
+}
+
+.lunar-page-toggle {
+  border-radius: 5px;
+  color: #8b8b86;
+}
+
+.lunar-page-toggle:hover {
+  color: #f1f1ef;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lunar-page-icon {
+  width: 20px;
+  height: 21px;
+  margin-right: 5px;
+  color: #a8a8a3;
+  font-size: 13.5px;
+}
+
+.lunar-page-title {
+  color: inherit;
+  font-size: 13.5px;
+  line-height: 19px;
+  font-weight: 500;
+  letter-spacing: -0.008em;
+}
+
+.lunar-page-action {
+  width: 24px;
+  height: 24px;
+  margin-left: 3px;
+  border: 0;
+  border-radius: 5px;
+  color: #8b8b86;
+}
+
+.lunar-page-action:hover {
+  color: #f1f1ef;
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.lunar-page-action i {
+  font-size: 12.5px;
+}
