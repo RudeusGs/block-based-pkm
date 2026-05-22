@@ -15,7 +15,10 @@
             :page-id="currentPageId"
             :page-title="workspaceNavigation.pageName.value"
             :page-icon="workspaceNavigation.pageIcon.value"
+            :page-cover-image="workspaceNavigation.pageCoverImage.value"
+            :page-revision="workspaceNavigation.pageRevision.value"
             :workspace-name="workspaceNavigation.workspaceName.value"
+            @cover-uploaded="handlePageCoverUploaded"
           />
 
           <WorkTasksSection
@@ -127,6 +130,18 @@ const subpages = [
   },
 ]
 
+function handlePageCoverUploaded(payload: {
+  pageId: Guid
+  coverImage: string
+  currentRevision: number
+}) {
+  workspaceNavigation.setPageCoverImage(
+    payload.pageId,
+    payload.coverImage,
+    payload.currentRevision
+  )
+}
+
 function handleWorkspaceDeleted(workspaceId: Guid) {
   sidebarLeftRef.value?.handleWorkspaceDeleted?.(workspaceId)
   workspaceMembers.close()
@@ -143,3 +158,6 @@ function scrollToTasks() {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
+
+
+

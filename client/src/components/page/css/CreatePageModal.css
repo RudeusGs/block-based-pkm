@@ -235,6 +235,97 @@
   color: #666666;
 }
 
+.page-file-input {
+  display: none;
+}
+
+.page-cover-preview {
+  position: relative;
+  width: 100%;
+  height: 110px;
+  overflow: hidden;
+  border: 1px solid #303030;
+  border-radius: 8px;
+  background: #111111;
+  margin-bottom: 8px;
+}
+
+.page-cover-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.page-cover-preview button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #ededed;
+  background: rgba(15, 15, 15, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.page-cover-preview button:hover:not(:disabled) {
+  background: rgba(36, 36, 36, 0.92);
+}
+
+.page-cover-upload-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+
+.page-cover-upload-btn {
+  height: 32px;
+  border: 1px solid #333333;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: #dedede;
+  background: #202020;
+  font-size: 12px;
+  font-weight: 650;
+  white-space: nowrap;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.page-cover-upload-btn:hover:not(:disabled) {
+  color: #ffffff;
+  background: #282828;
+  border-color: #424242;
+}
+
+.page-cover-upload-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.page-cover-upload-btn i {
+  font-size: 14px;
+}
+
+.page-property-error {
+  margin: 6px 0 0;
+  color: #f0a6a6;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 .page-property-help {
   margin: 6px 0 0;
   color: #777777;
@@ -507,4 +598,26 @@
     transition: none;
     animation: none;
   }
+}
+
+
+
+/* Image upload display fix: show the whole selected cover in the preview. */
+.page-cover-preview {
+  min-height: 132px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.006)),
+    #111111;
+}
+
+.page-cover-preview img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  object-position: center center;
+  background: #111111;
 }

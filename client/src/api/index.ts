@@ -7,9 +7,12 @@ export * from './services/task.api'
 export * from './services/task-comment.api'
 export * from './services/notification.api'
 export * from './services/recommendation.api'
+export * from './services/file.api'
 
 export {
   getApiErrorMessage,
   getApiResultErrorMessage,
 } from './utils/api-error.util'
 export type { ApiClientError } from './utils/api-error.util'
+
+

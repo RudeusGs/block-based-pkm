@@ -30,7 +30,7 @@
               class="page-drawer-close"
               type="button"
               title="Close"
-              :disabled="isCreatingPage"
+              :disabled="isCreatingPage || isUploadingCoverImage"
               @click="closeModal"
             >
               <i class="bi bi-x-lg"></i>
@@ -55,7 +55,7 @@
                 type="text"
                 placeholder="Untitled page"
                 maxlength="80"
-                :disabled="isCreatingPage"
+                :disabled="isCreatingPage || isUploadingCoverImage"
               />
 
               <div class="page-title-meta">
@@ -83,7 +83,7 @@
                     type="text"
                     maxlength="8"
                     placeholder="VD: 📄, 🚀, 🧠"
-                    :disabled="isCreatingPage"
+                    :disabled="isCreatingPage || isUploadingCoverImage"
                   />
 
                   <p class="page-property-help">
@@ -99,16 +99,77 @@
                 </label>
 
                 <div class="page-property-value">
-                  <input
-                    v-model="form.coverImage"
-                    class="page-property-input"
-                    type="text"
-                    placeholder="https://..."
-                    :disabled="isCreatingPage"
-                  />
+                  <div
+                    v-if="coverImagePreviewSrc"
+                    class="page-cover-preview"
+                  >
+                    <img
+                      :src="coverImagePreviewSrc"
+                      alt="Page cover preview"
+                      referrerpolicy="no-referrer"
+                      @error="coverPreviewFailed = true"
+                      @load="coverPreviewFailed = false"
+                    />
+
+                    <button
+                      type="button"
+                      title="Remove cover"
+                      :disabled="isCreatingPage || isUploadingCoverImage"
+                      @click="clearCoverImage"
+                    >
+                      <i class="bi bi-x-lg"></i>
+                    </button>
+                  </div>
+
+                  <div class="page-cover-upload-row">
+                    <input
+                      ref="coverImageInputRef"
+                      class="page-file-input"
+                      type="file"
+                      accept="image/*"
+                      :disabled="isCreatingPage || isUploadingCoverImage"
+                      @change="handleCoverImageChange"
+                    />
+
+                    <button
+                      class="page-cover-upload-btn"
+                      type="button"
+                      :disabled="isCreatingPage || isUploadingCoverImage"
+                      @click="coverImageInputRef?.click()"
+                    >
+                      <span
+                        v-if="isUploadingCoverImage"
+                        class="page-btn-spinner"
+                      ></span>
+
+                      <i
+                        v-else
+                        class="bi bi-cloud-arrow-up"
+                      ></i>
+
+                      <span>
+                        {{ isUploadingCoverImage ? 'Uploading...' : 'Upload cover' }}
+                      </span>
+                    </button>
+
+                    <input
+                      v-model="form.coverImage"
+                      class="page-property-input"
+                      type="text"
+                      placeholder="https://..."
+                      :disabled="isCreatingPage || isUploadingCoverImage"
+                    />
+                  </div>
 
                   <p class="page-property-help">
-                    Optional. Có thể thêm cover URL sau.
+                    Upload file ảnh hoặc dán URL. Link upload sẽ được lưu vào coverImage.
+                  </p>
+
+                  <p
+                    v-if="coverUploadError"
+                    class="page-property-error"
+                  >
+                    {{ coverUploadError }}
                   </p>
                 </div>
               </div>
@@ -157,7 +218,7 @@
               <button
                 class="page-btn page-btn-ghost"
                 type="button"
-                :disabled="isCreatingPage"
+                :disabled="isCreatingPage || isUploadingCoverImage"
                 @click="closeModal"
               >
                 Cancel
@@ -166,7 +227,7 @@
               <button
                 class="page-btn page-btn-primary"
                 type="button"
-                :disabled="!isFormValid || isCreatingPage || !workspaceId"
+                :disabled="!isFormValid || isCreatingPage || isUploadingCoverImage || !workspaceId"
                 @click="handleSubmit"
               >
                 <span v-if="isCreatingPage" class="page-btn-spinner"></span>
@@ -191,6 +252,12 @@ import {
   watch,
 } from 'vue'
 import { useCreatePage } from '@/modules/pages/composables/useCreatePage'
+import { fileController } from '@/api/services/file.api'
+import {
+  getApiErrorMessage,
+  getApiResultErrorMessage,
+} from '@/api/utils/api-error.util'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 import type { Guid } from '@/api/models/common.model'
 import type { PageResponse } from '@/api/models/page.model'
 
@@ -220,6 +287,10 @@ const {
 } = useCreatePage()
 
 const titleInputRef = ref<HTMLInputElement | null>(null)
+const coverImageInputRef = ref<HTMLInputElement | null>(null)
+const isUploadingCoverImage = ref(false)
+const coverUploadError = ref<string | null>(null)
+const coverPreviewFailed = ref(false)
 
 const form = reactive<CreatePageForm>({
   title: '',
@@ -248,6 +319,12 @@ const previewIcon = computed(() => {
   return form.icon.trim() || '📄'
 })
 
+const coverImagePreviewSrc = computed(() => {
+  if (coverPreviewFailed.value) return null
+
+  return normalizeImageUrl(form.coverImage)
+})
+
 watch(
   () => props.modelValue,
   async (isOpen) => {
@@ -256,6 +333,8 @@ watch(
     if (!isOpen) return
 
     clearCreatePageError()
+    coverUploadError.value = null
+    coverPreviewFailed.value = false
 
     await nextTick()
     titleInputRef.value?.focus()
@@ -266,10 +345,12 @@ function resetForm() {
   form.title = ''
   form.icon = ''
   form.coverImage = ''
+  coverUploadError.value = null
+  coverPreviewFailed.value = false
 }
 
 function closeModal() {
-  if (isCreatingPage.value) return
+  if (isCreatingPage.value || isUploadingCoverImage.value) return
 
   emit('update:modelValue', false)
 }
@@ -278,8 +359,54 @@ function handleOverlayClick() {
   closeModal()
 }
 
+function clearCoverImage() {
+  form.coverImage = ''
+  coverUploadError.value = null
+  coverPreviewFailed.value = false
+}
+
+async function handleCoverImageChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file) return
+
+  isUploadingCoverImage.value = true
+  coverUploadError.value = null
+  coverPreviewFailed.value = false
+
+  try {
+    const result = await fileController.uploadImage(file, 'page-cover')
+
+    if (!result.isSuccess || !result.data) {
+      coverUploadError.value = getApiResultErrorMessage(
+        result,
+        'Không thể upload cover image.'
+      )
+      return
+    }
+
+    form.coverImage = normalizeImageUrl(result.data.publicUrl) ?? result.data.publicUrl
+  } catch (error) {
+    coverUploadError.value = getApiErrorMessage(
+      error,
+      'Không thể upload cover image.'
+    )
+  } finally {
+    isUploadingCoverImage.value = false
+    input.value = ''
+  }
+}
+
 async function handleSubmit() {
-  if (!props.workspaceId || !isFormValid.value || isCreatingPage.value) return
+  if (
+    !props.workspaceId ||
+    !isFormValid.value ||
+    isCreatingPage.value ||
+    isUploadingCoverImage.value
+  ) {
+    return
+  }
 
   const page = await createPage(props.workspaceId, {
     title: form.title.trim(),
@@ -319,3 +446,5 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/CreatePageModal.css"></style>
+
+

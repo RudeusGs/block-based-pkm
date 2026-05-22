@@ -10,6 +10,60 @@
     </div>
 
     <template v-else>
+      <section
+        v-if="normalizedCoverImage || canEditDocument"
+        class="page-editor-cover"
+        :class="{ 'page-editor-cover--empty': !normalizedCoverImage }"
+      >
+        <img
+          v-if="normalizedCoverImage"
+          :src="normalizedCoverImage"
+          :alt="`${pageTitle || 'Page'} cover`"
+          referrerpolicy="no-referrer"
+          @error="coverImageFailed = true"
+          @load="coverImageFailed = false"
+        />
+
+        <div
+          v-else
+          class="page-editor-cover-placeholder"
+        >
+          <i class="bi bi-image"></i>
+          <span>Add a cover image</span>
+        </div>
+
+        <input
+          ref="coverFileInputRef"
+          class="page-editor-cover-input"
+          type="file"
+          accept="image/*"
+          :disabled="!canEditDocument || isUploadingCoverImage"
+          @change="handleCoverFileChange"
+        />
+
+        <button
+          v-if="canEditDocument"
+          class="page-editor-cover-action"
+          type="button"
+          :disabled="isUploadingCoverImage"
+          @click="coverFileInputRef?.click()"
+        >
+          <span
+            v-if="isUploadingCoverImage"
+            class="page-editor-cover-spinner"
+          ></span>
+
+          <i
+            v-else
+            class="bi bi-cloud-arrow-up"
+          ></i>
+
+          <span>
+            {{ normalizedCoverImage ? 'Change cover' : 'Upload cover' }}
+          </span>
+        </button>
+      </section>
+
       <header class="page-editor-header">
         <button
           class="page-editor-icon"
@@ -135,6 +189,14 @@
         </div>
 
         <div
+          v-if="coverUploadError"
+          class="page-editor-error-banner"
+        >
+          <i class="bi bi-exclamation-triangle"></i>
+          <span>{{ coverUploadError }}</span>
+        </div>
+
+        <div
           v-if="isLoading"
           class="page-editor-loading"
         >
@@ -198,7 +260,15 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue'
 import type { Guid } from '@/api/models/common.model'
+import { fileController } from '@/api/services/file.api'
+import {
+  getApiErrorMessage,
+  getApiResultErrorMessage,
+} from '@/api/utils/api-error.util'
+import { useToast } from '@/components/composables/useToast'
+import { normalizeImageUrl } from '@/utils/image-url.util'
 import { usePageEditor } from './composables/usePageEditor'
 import './css/PageEditor.css'
 
@@ -206,8 +276,96 @@ const props = defineProps<{
   pageId: Guid | null
   pageTitle?: string | null
   pageIcon?: string | null
+  pageCoverImage?: string | null
+  pageRevision?: number | null
   workspaceName?: string | null
 }>()
+
+const emit = defineEmits<{
+  coverUploaded: [payload: {
+    pageId: Guid
+    coverImage: string
+    currentRevision: number
+  }]
+}>()
+
+const toast = useToast()
+const coverFileInputRef = ref<HTMLInputElement | null>(null)
+const isUploadingCoverImage = ref(false)
+const coverUploadError = ref<string | null>(null)
+const coverImageFailed = ref(false)
+const uploadedCoverImage = ref<string | null>(null)
+
+const normalizedCoverImage = computed(() => {
+  if (coverImageFailed.value) return null
+
+  return (
+    normalizeImageUrl(uploadedCoverImage.value) ||
+    normalizeImageUrl(props.pageCoverImage)
+  )
+})
+
+watch(
+  () => [props.pageId, props.pageCoverImage],
+  () => {
+    uploadedCoverImage.value = null
+    coverUploadError.value = null
+    coverImageFailed.value = false
+  }
+)
+
+async function handleCoverFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (!file || !props.pageId || isUploadingCoverImage.value) {
+    if (input) input.value = ''
+    return
+  }
+
+  isUploadingCoverImage.value = true
+  coverUploadError.value = null
+  coverImageFailed.value = false
+
+  try {
+    const result = await fileController.uploadPageCoverImage(
+      props.pageId,
+      file,
+      props.pageRevision
+    )
+
+    if (!result.isSuccess || !result.data) {
+      coverUploadError.value = getApiResultErrorMessage(
+        result,
+        'Không thể upload cover image.'
+      )
+      return
+    }
+
+    const coverImage = normalizeImageUrl(result.data.coverImage) ?? result.data.coverImage
+
+    if (!coverImage) {
+      coverUploadError.value = 'Backend đã xử lý nhưng chưa trả về cover image.'
+      return
+    }
+
+    uploadedCoverImage.value = coverImage
+    emit('coverUploaded', {
+      pageId: props.pageId,
+      coverImage,
+      currentRevision: result.data.currentRevision,
+    })
+    toast.success('Đã cập nhật cover', 'Cover image của page đã được upload.')
+  } catch (error) {
+    coverUploadError.value = getApiErrorMessage(
+      error,
+      'Không thể upload cover image.'
+    )
+  } finally {
+    isUploadingCoverImage.value = false
+    input.value = ''
+  }
+}
 
 const {
   holderRef,
@@ -248,3 +406,5 @@ const {
   handleEditorPointerLeave,
 } = usePageEditor(props)
 </script>
+
+

@@ -1572,3 +1572,45 @@
     animation: none;
   }
 }
+
+/* Image upload display fix: keep avatars square/round and stop browser button padding from squeezing them. */
+.lunar-account-avatar,
+.lunar-account-menu-avatar,
+.lunar-rail-avatar {
+  padding: 0;
+  line-height: 0;
+  aspect-ratio: 1 / 1;
+}
+
+.lunar-account-avatar img,
+.lunar-account-menu-avatar img,
+.lunar-rail-avatar img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  object-position: center center;
+  border-radius: inherit;
+}
+
+.lunar-account-avatar img,
+.lunar-account-menu-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lunar-rail-avatar {
+  border-radius: 999px;
+  background: #181818;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 4px rgba(0, 0, 0, 0.28);
+}
+
+.lunar-rail-avatar img {
+  width: 100%;
+  height: 100%;
+  padding: 2px;
+  object-fit: contain;
+  background: #181818;
+}

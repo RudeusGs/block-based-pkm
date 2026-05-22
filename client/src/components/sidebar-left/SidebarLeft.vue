@@ -162,6 +162,7 @@
       :preferred-day-options="settings.preferredDayOptions"
       :is-loading-profile-settings="settings.isLoadingProfileSettings.value"
       :is-saving-profile-settings="settings.isSavingProfileSettings.value"
+      :is-uploading-avatar-image="settings.isUploadingAvatarImage.value"
       :profile-settings-error="settings.profileSettingsError.value"
       :profile-settings-success="settings.profileSettingsSuccess.value"
       :is-changing-password="settings.isChangingPassword.value"
@@ -173,6 +174,7 @@
       :task-preference-success="settings.taskPreferenceSuccess.value"
       @close="closeSettingsModal"
       @save-profile="saveProfileSettings"
+      @upload-avatar-image="uploadAvatarImage"
       @change-password="settings.changePassword"
       @toggle-preferred-day="settings.togglePreferredDay"
       @save-task-preference="saveTaskPreference"
@@ -372,6 +374,14 @@ async function saveProfileSettings() {
   }
 }
 
+async function uploadAvatarImage(file: File) {
+  const uploaded = await settings.uploadAvatarImage(file)
+
+  if (uploaded) {
+    await account.fetchMyProfile()
+  }
+}
+
 async function saveTaskPreference() {
   const saved = await settings.saveTaskPreference(
     workspaceTree.selectedWorkspaceId.value
@@ -541,3 +551,6 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
+
+
+

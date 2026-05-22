@@ -42,18 +42,22 @@ public sealed class FilesController : BaseController
     [ProducesResponseType(typeof(ApiResult), 413)]
     [ProducesResponseType(typeof(ApiResult), 422)]
     public async Task<ActionResult<ApiResult<StoredFileResponse>>> UploadImage(
-        [FromForm] IFormFile file,
-        [FromForm] string? purpose,
+        [FromForm] UploadImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        using var stream = file.OpenReadStream();
+        if (!HasValidFile(request.File))
+            return BadRequest(CreateFileRequiredFailure<StoredFileResponse>());
+
+        var file = request.File!;
+
+        await using var stream = file.OpenReadStream();
 
         var command = new UploadImageCommand(
             file.FileName,
             ResolveContentType(file),
             file.Length,
             stream,
-            purpose);
+            request.Purpose);
 
         var result = await _uploadImageHandler.HandleAsync(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -68,10 +72,15 @@ public sealed class FilesController : BaseController
     [ProducesResponseType(typeof(ApiResult), 413)]
     [ProducesResponseType(typeof(ApiResult), 422)]
     public async Task<ActionResult<ApiResult<UserProfileResponse>>> UploadMyAvatarImage(
-        [FromForm] IFormFile file,
+        [FromForm] UploadAvatarImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        using var stream = file.OpenReadStream();
+        if (!HasValidFile(request.File))
+            return BadRequest(CreateFileRequiredFailure<UserProfileResponse>());
+
+        var file = request.File!;
+
+        await using var stream = file.OpenReadStream();
 
         var command = new UploadMyAvatarImageCommand(
             file.FileName,
@@ -95,15 +104,19 @@ public sealed class FilesController : BaseController
     [ProducesResponseType(typeof(ApiResult), 422)]
     public async Task<ActionResult<ApiResult<PageResponse>>> UploadPageCoverImage(
         [FromRoute] Guid pageId,
-        [FromForm] IFormFile file,
-        [FromForm] long? expectedRevision,
+        [FromForm] UploadPageCoverImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        using var stream = file.OpenReadStream();
+        if (!HasValidFile(request.File))
+            return BadRequest(CreateFileRequiredFailure<PageResponse>());
+
+        var file = request.File!;
+
+        await using var stream = file.OpenReadStream();
 
         var command = new UploadPageCoverImageCommand(
             pageId,
-            expectedRevision,
+            request.ExpectedRevision,
             file.FileName,
             ResolveContentType(file),
             file.Length,
@@ -113,8 +126,37 @@ public sealed class FilesController : BaseController
         return HandleResult(result, x => x.ToResponse());
     }
 
+    private static bool HasValidFile(IFormFile? file)
+        => file is not null && file.Length > 0;
+
+    private static ApiResult<TResponse> CreateFileRequiredFailure<TResponse>()
+        => ApiResult<TResponse>.Failure(
+            message: "Vui lòng chọn file ảnh để upload.",
+            error: new ApiError(
+                Code: "File.Required",
+                Type: "validation_error",
+                Details: new[] { "Trường file là bắt buộc." }),
+            statusCode: StatusCodes.Status400BadRequest);
+
     private static string ResolveContentType(IFormFile file)
         => string.IsNullOrWhiteSpace(file.ContentType)
             ? "application/octet-stream"
             : file.ContentType;
+}
+
+public sealed class UploadImageFormRequest
+{
+    public IFormFile? File { get; init; }
+    public string? Purpose { get; init; }
+}
+
+public sealed class UploadAvatarImageFormRequest
+{
+    public IFormFile? File { get; init; }
+}
+
+public sealed class UploadPageCoverImageFormRequest
+{
+    public IFormFile? File { get; init; }
+    public long? ExpectedRevision { get; init; }
 }

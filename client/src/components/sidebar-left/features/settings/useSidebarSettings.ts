@@ -1,5 +1,6 @@
 import { reactive, ref } from 'vue'
 import { meController } from '@/api/services/me.api'
+import { fileController } from '@/api/services/file.api'
 import { recommendationController } from '@/api/services/recommendation.api'
 import {
   getApiErrorMessage,
@@ -54,6 +55,7 @@ function applyTaskPreference(
 export function useSidebarSettings() {
   const isLoadingProfileSettings = ref(false)
   const isSavingProfileSettings = ref(false)
+  const isUploadingAvatarImage = ref(false)
   const profileSettingsError = ref<string | null>(null)
   const profileSettingsSuccess = ref<string | null>(null)
 
@@ -148,6 +150,40 @@ export function useSidebarSettings() {
       return false
     } finally {
       isSavingProfileSettings.value = false
+    }
+  }
+
+  async function uploadAvatarImage(file: File) {
+    if (isUploadingAvatarImage.value) return false
+
+    isUploadingAvatarImage.value = true
+    profileSettingsError.value = null
+    profileSettingsSuccess.value = null
+
+    try {
+      const result = await fileController.uploadMyAvatarImage(file)
+
+      if (!result.isSuccess || !result.data) {
+        profileSettingsError.value = getApiResultErrorMessage(
+          result,
+          'Không thể upload avatar.'
+        )
+        return false
+      }
+
+      profileForm.fullName = result.data.fullName
+      profileForm.avatarUrl = normalizeImageUrl(result.data.avatarUrl) ?? ''
+      profileSettingsSuccess.value = 'Đã upload avatar.'
+
+      return true
+    } catch (error) {
+      profileSettingsError.value = getApiErrorMessage(
+        error,
+        'Không thể upload avatar.'
+      )
+      return false
+    } finally {
+      isUploadingAvatarImage.value = false
     }
   }
 
@@ -293,6 +329,7 @@ export function useSidebarSettings() {
 
     isLoadingProfileSettings,
     isSavingProfileSettings,
+    isUploadingAvatarImage,
     profileSettingsError,
     profileSettingsSuccess,
 
@@ -307,9 +344,12 @@ export function useSidebarSettings() {
 
     fetchProfileSettings,
     saveProfileSettings,
+    uploadAvatarImage,
     changePassword,
     fetchTaskPreference,
     saveTaskPreference,
     togglePreferredDay,
   }
 }
+
+

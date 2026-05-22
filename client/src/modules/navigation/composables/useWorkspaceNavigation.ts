@@ -12,6 +12,8 @@ export interface WorkspaceNavigationPage {
   workspaceId: Guid
   title: string
   icon?: string | null
+  coverImage?: string | null
+  currentRevision?: number | null
 }
 
 const state = reactive<{
@@ -46,6 +48,22 @@ function setPage(page: PageResponse | WorkspaceNavigationPage | null) {
     workspaceId: page.workspaceId,
     title: page.title,
     icon: 'icon' in page ? page.icon : null,
+    coverImage: 'coverImage' in page ? page.coverImage : null,
+    currentRevision: 'currentRevision' in page ? page.currentRevision : null,
+  }
+}
+
+function setPageCoverImage(
+  pageId: Guid,
+  coverImage: string | null,
+  currentRevision?: number | null
+) {
+  if (!state.page || state.page.id !== pageId) return
+
+  state.page = {
+    ...state.page,
+    coverImage,
+    currentRevision: currentRevision ?? state.page.currentRevision ?? null,
   }
 }
 
@@ -62,9 +80,14 @@ export function useWorkspaceNavigation() {
     workspaceName: computed(() => state.workspace?.name || 'No workspace'),
     pageName: computed(() => state.page?.title || 'No page'),
     pageIcon: computed(() => state.page?.icon || '📄'),
+    pageCoverImage: computed(() => state.page?.coverImage || null),
+    pageRevision: computed(() => state.page?.currentRevision ?? null),
 
     setWorkspace,
     setPage,
+    setPageCoverImage,
     clearNavigation,
   }
 }
+
+

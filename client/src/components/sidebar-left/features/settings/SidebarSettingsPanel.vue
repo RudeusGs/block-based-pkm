@@ -130,30 +130,49 @@
                         type="text"
                         maxlength="100"
                         placeholder="Tên hiển thị"
-                        :disabled="isSavingProfileSettings"
+                        :disabled="isSavingProfileSettings || isUploadingAvatarImage"
                       />
                     </label>
 
-                    <label class="settings-field">
-                      <span>Avatar URL</span>
+                    <div class="settings-field">
+                      <span>Avatar image</span>
 
-                      <input
-                        v-model="profileForm.avatarUrl"
-                        type="text"
-                        placeholder="https://..."
-                        :disabled="isSavingProfileSettings"
-                      />
-                    </label>
+                      <div class="settings-upload-control">
+                        <input
+                          ref="avatarFileInputRef"
+                          class="settings-file-input"
+                          type="file"
+                          accept="image/*"
+                          :disabled="isSavingProfileSettings || isUploadingAvatarImage"
+                          @change="handleAvatarFileChange"
+                        />
 
-                    <a
-                      v-if="profileAvatarPreviewSrc"
-                      class="settings-avatar-open-link"
-                      :href="profileAvatarPreviewSrc"
-                      target="_blank"
-                      rel="noreferrer"
-                    >
-                      Mở ảnh trong tab mới
-                    </a>
+                        <button
+                          type="button"
+                          class="settings-upload-btn"
+                          :disabled="isSavingProfileSettings || isUploadingAvatarImage"
+                          @click="avatarFileInputRef?.click()"
+                        >
+                          <span
+                            v-if="isUploadingAvatarImage"
+                            class="settings-modal-spinner"
+                          ></span>
+
+                          <i
+                            v-else
+                            class="bi bi-cloud-arrow-up"
+                          ></i>
+
+                          <span>
+                            {{ isUploadingAvatarImage ? 'Uploading...' : 'Upload image' }}
+                          </span>
+                        </button>
+
+                        <small>
+                          JPG, PNG, WebP hoặc GIF.
+                        </small>
+                      </div>
+                    </div>
                   </div>
 
                   <p
@@ -174,7 +193,7 @@
                     <button
                       type="button"
                       class="settings-primary-action"
-                      :disabled="isSavingProfileSettings || !profileForm.fullName.trim()"
+                      :disabled="isSavingProfileSettings || isUploadingAvatarImage || !profileForm.fullName.trim()"
                       @click="emit('saveProfile')"
                     >
                       <span
@@ -464,6 +483,7 @@ const props = defineProps<{
 
   isLoadingProfileSettings: boolean
   isSavingProfileSettings: boolean
+  isUploadingAvatarImage: boolean
   profileSettingsError: string | null
   profileSettingsSuccess: string | null
 
@@ -480,6 +500,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   saveProfile: []
+  uploadAvatarImage: [file: File]
   changePassword: []
   togglePreferredDay: [day: number]
   saveTaskPreference: []
@@ -487,6 +508,7 @@ const emit = defineEmits<{
 
 const activeTab = ref<SidebarSettingsTab>('profile')
 const avatarPreviewFailed = ref(false)
+const avatarFileInputRef = ref<HTMLInputElement | null>(null)
 
 const profileAvatarPreviewSrc = computed(() => {
   return normalizeImageUrl(props.profileForm.avatarUrl) ?? undefined
@@ -506,18 +528,18 @@ const profileInitial = computed(() => {
 
 const avatarPreviewHint = computed(() => {
   if (!props.profileForm.avatarUrl.trim()) {
-    return 'Chưa có avatar URL.'
+    return 'Chưa có avatar.'
   }
 
   if (!profileAvatarPreviewSrc.value) {
-    return 'Không nhận diện được link ảnh.'
+    return 'Không nhận diện được ảnh.'
   }
 
   if (avatarPreviewFailed.value) {
-    return 'Không load được ảnh, kiểm tra lại URL.'
+    return 'Không load được ảnh.'
   }
 
-  return 'Image preview from avatar URL.'
+  return 'Avatar preview.'
 })
 
 const activeTabTitle = computed(() => {
@@ -545,6 +567,17 @@ watch(
     avatarPreviewFailed.value = false
   }
 )
+
+function handleAvatarFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0]
+
+  if (file) {
+    emit('uploadAvatarImage', file)
+  }
+
+  input.value = ''
+}
 
 function handleKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
@@ -792,20 +825,63 @@ onBeforeUnmount(() => {
 }
 
 .settings-profile-preview-copy span,
-.settings-field-help,
-.settings-avatar-open-link {
+.settings-field-help {
   color: #8a8a8a;
   font-size: 12px;
   line-height: 1.45;
 }
 
-.settings-avatar-open-link {
-  width: fit-content;
-  text-decoration: none;
+
+.settings-upload-control {
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
 }
 
-.settings-avatar-open-link:hover {
-  color: #f1f1f1;
+.settings-file-input {
+  display: none;
+}
+
+.settings-upload-btn {
+  min-height: 32px;
+  border: 1px solid #303030;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 10px;
+  color: #e7e7e7;
+  background: #202020;
+  font-size: 12px;
+  font-weight: 650;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.settings-upload-btn:hover:not(:disabled) {
+  color: #ffffff;
+  background: #272727;
+  border-color: #3a3a3a;
+}
+
+.settings-upload-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.settings-upload-btn i {
+  font-size: 14px;
+}
+
+.settings-upload-control small {
+  color: #737373;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 .settings-form-group {
@@ -1087,4 +1163,26 @@ onBeforeUnmount(() => {
     animation: none;
   }
 }
+
+
+/* Image upload display fix: preview avatar without stretching and keep the full image visible. */
+.settings-profile-avatar {
+  padding: 2px;
+  border: 1px solid #343434;
+  border-radius: 999px;
+  background: #171717;
+}
+
+.settings-profile-avatar img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center center;
+  border-radius: inherit;
+  background: #171717;
+}
+
 </style>
+
+
