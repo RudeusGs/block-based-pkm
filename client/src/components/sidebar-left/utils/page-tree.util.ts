@@ -79,3 +79,51 @@ export function insertPageIntoTree(
 
   return inserted ? nextTree : [node, ...tree]
 }
+
+export function removePageFromTree(
+  tree: PageTreeItem[],
+  pageId: Guid
+): {
+  tree: PageTreeItem[]
+  removedIds: Guid[]
+  removedPage: PageTreeItem | null
+} {
+  const removedIds: Guid[] = []
+  let removedPage: PageTreeItem | null = null
+
+  function collectIds(node: PageTreeItem) {
+    removedIds.push(node.id)
+    node.children.forEach(collectIds)
+  }
+
+  function remove(nodes: PageTreeItem[]): PageTreeItem[] {
+    return nodes.reduce<PageTreeItem[]>((nextNodes, node) => {
+      if (node.id === pageId) {
+        removedPage = node
+        collectIds(node)
+        return nextNodes
+      }
+
+      nextNodes.push({
+        ...node,
+        children: remove(node.children),
+      })
+
+      return nextNodes
+    }, [])
+  }
+
+  return {
+    tree: remove(tree),
+    removedIds,
+    removedPage,
+  }
+}
+
+export function findFirstPageInTree(tree: PageTreeItem[]): PageTreeItem | null {
+  const firstPage = tree[0]
+
+  if (!firstPage) return null
+
+  return firstPage
+}

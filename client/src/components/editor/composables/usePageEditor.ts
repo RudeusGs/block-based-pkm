@@ -105,15 +105,6 @@ class InlineStylePersistTool {
     return false
   }
 }
-
-/**
- * FINAL realtime strategy:
- * - Không render lại toàn editor khi nhận realtime event.
- * - Không gọi editor.blocks.update cho text draft/update vì EditorJS sẽ emit onChange -> save loop -> nhấp nháy.
- * - Remote text update được patch thẳng vào DOM contenteditable và saveSnapshot sẽ đọc lại DOM.
- * - Create/delete remote được queue và chỉ apply khi editor rảnh.
- * - Người đang sửa block nào thì giữ lease block đó, renew đều; chuyển block thì server tự release block cũ.
- */
 const SAVE_DEBOUNCE_MS = 850
 const REMOTE_DRAFT_THROTTLE_MS = 120
 const RELEASE_LEASE_DELAY_MS = 4500

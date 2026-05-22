@@ -99,6 +99,9 @@
             @retry-pages="workspaceTree.retryLoadPages"
             @select-page="workspaceTree.selectPage"
             @toggle-page="workspaceTree.togglePageBranch"
+            @page-settings="openPageSettings"
+            @share-page="sharePage"
+            @delete-page="workspaceTree.requestDeletePage"
           />
         </nav>
 
@@ -185,6 +188,19 @@
       :parent-page-id="workspaceTree.createPageParentPageId.value"
       @created="workspaceTree.handlePageCreated"
     />
+
+    <ConfirmActionModal
+      :open="workspaceTree.isDeletePageConfirmOpen.value"
+      title="Xóa page này?"
+      :message="workspaceTree.deletePageConfirmMessage.value"
+      description="Page bị xóa sẽ biến mất khỏi sidebar. Nếu backend đang soft-delete thì vẫn có thể restore bằng API riêng sau này."
+      confirm-label="Xóa page"
+      submitting-label="Đang xóa..."
+      :is-submitting="workspaceTree.isDeletingPage.value"
+      :error="workspaceTree.deletePageError.value"
+      @close="workspaceTree.closeDeletePageConfirm"
+      @confirm="confirmDeletePage"
+    />
   </aside>
 </template>
 
@@ -192,8 +208,11 @@
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import CreateWorkspaceModal from '@/components/workspace/CreateWorkspaceModal.vue'
 import CreatePageModal from '@/components/page/CreatePageModal.vue'
+import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
+import { useToast } from '@/components/composables/useToast'
 import type { Guid } from '@/api/models/common.model'
+import type { PageTreeItem } from './types/sidebar.types'
 
 import SidebarRail from './features/rail/SidebarRail.vue'
 import SidebarAccountHeader from './features/account/SidebarAccountHeader.vue'
@@ -220,6 +239,7 @@ const workspaceNavigation = useWorkspaceNavigation()
 const recommendations = useSidebarRecommendations()
 const myTasks = useSidebarMyTasks()
 const settings = useSidebarSettings()
+const toast = useToast()
 
 const isSettingsModalOpen = ref(false)
 
@@ -349,6 +369,49 @@ async function saveTaskPreference() {
   }
 }
 
+function openPageSettings(page: PageTreeItem) {
+  workspaceTree.selectPage(page)
+
+  toast.info(
+    'Cài đặt page',
+    `Mình đã chọn page "${page.title}". Màn chỉnh metadata có thể nối tiếp vào action này.`
+  )
+}
+
+async function sharePage(page: PageTreeItem) {
+  workspaceTree.selectPage(page)
+
+  const url = `${window.location.origin}/app?pageId=${encodeURIComponent(
+    page.id
+  )}`
+
+  try {
+    await navigator.clipboard.writeText(url)
+
+    toast.success('Đã copy link page', `Link "${page.title}" đã nằm trong clipboard.`)
+  } catch {
+    toast.info('Link page', url, 7000)
+  }
+}
+
+async function confirmDeletePage() {
+  const deletedPage = await workspaceTree.confirmDeletePage()
+
+  if (!deletedPage) {
+    return
+  }
+
+  toast.success('Đã xóa page', `Page "${deletedPage.title}" đã được xóa khỏi workspace.`)
+}
+
+function handleWorkspaceDeleted(workspaceId: Guid) {
+  workspaceTree.handleWorkspaceDeleted(workspaceId)
+}
+
+defineExpose({
+  handleWorkspaceDeleted,
+})
+
 onMounted(() => {
   void account.fetchMyProfile()
   void workspaceTree.fetchMyWorkspaces()
@@ -465,3 +528,5 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
+
+

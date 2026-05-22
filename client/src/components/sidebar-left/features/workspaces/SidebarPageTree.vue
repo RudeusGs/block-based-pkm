@@ -42,6 +42,13 @@
         >
           <i class="bi bi-plus-lg"></i>
         </button>
+
+        <PageActionMenu
+          :page="page"
+          @settings="emit('pageSettings', $event)"
+          @share="emit('sharePage', $event)"
+          @delete="emit('deletePage', $event)"
+        />
       </div>
 
       <SidebarPageTree
@@ -55,12 +62,16 @@
         @select-page="emit('selectPage', $event)"
         @create-child="emit('createChild', $event)"
         @toggle-page="emit('togglePage', $event)"
+        @page-settings="emit('pageSettings', $event)"
+        @share-page="emit('sharePage', $event)"
+        @delete-page="emit('deletePage', $event)"
       />
     </li>
   </ul>
 </template>
 
 <script setup lang="ts">
+import PageActionMenu from './PageActionMenu.vue'
 import type { PageTreeItem } from '@/components/sidebar-left/types/sidebar.types'
 
 defineOptions({
@@ -85,7 +96,13 @@ const emit = defineEmits<{
   selectPage: [page: PageTreeItem]
   createChild: [page: PageTreeItem]
   togglePage: [page: PageTreeItem]
+  pageSettings: [page: PageTreeItem]
+  sharePage: [page: PageTreeItem]
+  deletePage: [page: PageTreeItem]
 }>()
 </script>
 
 <style scoped src="./css/SidebarPageTree.css"></style>
+
+
+

@@ -152,6 +152,9 @@
                   @select-page="emit('selectPage', $event)"
                   @create-child="emit('createPage', workspace, $event.id)"
                   @toggle-page="emit('togglePage', $event.id)"
+                  @page-settings="emit('pageSettings', $event)"
+                  @share-page="emit('sharePage', $event)"
+                  @delete-page="emit('deletePage', $event)"
                 />
               </div>
             </Transition>
@@ -193,5 +196,10 @@ const emit = defineEmits<{
   retryPages: [workspaceId: Guid]
   selectPage: [page: PageResponse]
   togglePage: [pageId: Guid]
+  pageSettings: [page: PageTreeItem]
+  sharePage: [page: PageTreeItem]
+  deletePage: [page: PageTreeItem]
 }>()
 </script>
+
+

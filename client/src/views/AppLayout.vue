@@ -1,11 +1,12 @@
 <template>
   <div class="workspace-shell min-vh-100 d-flex text-on-surface">
-    <SidebarLeft />
+    <SidebarLeft ref="sidebarLeftRef" />
 
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
       <AppTopNav
         @jump-to-tasks="scrollToTasks"
         @open-members="workspaceMembers.open"
+        @workspace-deleted="handleWorkspaceDeleted"
       />
 
       <main class="page-scroll pb-5">
@@ -231,6 +232,7 @@ import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWork
 import { useWorkspaceMembersSidebar } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 
 const taskSectionRef = ref(null)
+const sidebarLeftRef = ref(null)
 const selectedTask = ref(null)
 const isTaskDetailOpen = ref(false)
 
@@ -381,6 +383,11 @@ const subpages = [
   },
 ]
 
+function handleWorkspaceDeleted(workspaceId) {
+  sidebarLeftRef.value?.handleWorkspaceDeleted?.(workspaceId)
+  workspaceMembers.close()
+}
+
 function scrollToTasks() {
   taskSectionRef.value?.scrollIntoView({
     behavior: 'smooth',
@@ -460,3 +467,5 @@ function priorityClass(priority) {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
+
+

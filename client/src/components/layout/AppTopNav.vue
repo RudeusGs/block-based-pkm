@@ -302,6 +302,23 @@
                 <small>Xem danh sách người trong workspace</small>
               </span>
             </button>
+
+            <div class="app-more-separator"></div>
+
+            <button
+              type="button"
+              class="app-more-item danger"
+              role="menuitem"
+              :disabled="!currentWorkspaceId"
+              @click="openDeleteWorkspaceConfirm"
+            >
+              <span class="material-symbols-outlined">delete</span>
+
+              <span>
+                <strong>Xóa workspace này</strong>
+                <small>Xóa workspace và toàn bộ dữ liệu bên trong</small>
+              </span>
+            </button>
           </section>
         </Transition>
       </div>
@@ -320,6 +337,19 @@
       @update:email="inviteMember.email.value = $event"
       @update:role="inviteMember.role.value = $event"
     />
+
+    <ConfirmActionModal
+      :open="deleteWorkspace.isDeleteWorkspaceConfirmOpen.value"
+      title="Xóa workspace này?"
+      :message="deleteWorkspaceConfirmMessage"
+      description="Toàn bộ page, task và member liên quan đến workspace này sẽ bị xóa theo backend. Hành động này không thể hoàn tác."
+      confirm-label="Xóa workspace"
+      submitting-label="Đang xóa..."
+      :is-submitting="deleteWorkspace.isDeletingWorkspace.value"
+      :error="deleteWorkspace.deleteWorkspaceError.value"
+      @close="deleteWorkspace.closeDeleteWorkspaceConfirm"
+      @confirm="confirmDeleteWorkspace"
+    />
   </header>
 </template>
 
@@ -329,18 +359,22 @@ import { useToast } from '@/components/composables/useToast'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import { useNotificationCenter } from '@/modules/notifications/composables/useNotificationCenter'
 import { useInviteWorkspaceMember } from '@/modules/workspaces/composables/useInviteWorkspaceMember'
+import { useDeleteWorkspace } from '@/modules/workspaces/composables/useDeleteWorkspace'
 import type { Guid } from '@/api/models/common.model'
 import InviteWorkspaceMemberModal from './InviteWorkspaceMemberModal.vue'
+import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
 
 const emit = defineEmits<{
   'jump-to-tasks': []
   'open-members': []
+  'workspace-deleted': [workspaceId: Guid]
 }>()
 
 const toast = useToast()
 const workspaceNavigation = useWorkspaceNavigation()
 const notificationCenter = useNotificationCenter()
 const inviteMember = useInviteWorkspaceMember()
+const deleteWorkspace = useDeleteWorkspace()
 
 const isNotificationMenuOpen = ref(false)
 const isMoreMenuOpen = ref(false)
@@ -351,6 +385,16 @@ const moreMenuRef = ref<HTMLElement | null>(null)
 
 const currentWorkspaceId = computed<Guid | null>(() => {
   return workspaceNavigation.workspace.value?.id ?? null
+})
+
+const deleteWorkspaceConfirmMessage = computed(() => {
+  const workspace = deleteWorkspace.workspaceToDelete.value
+
+  if (!workspace) {
+    return 'Bạn có chắc muốn xóa workspace này không?'
+  }
+
+  return `Bạn sắp xóa workspace "${workspace.name}". Toàn bộ page bên trong workspace này cũng sẽ bị ảnh hưởng.`
 })
 
 function toggleNotifications() {
@@ -380,6 +424,37 @@ function closeInviteModal() {
 function openWorkspaceMembers() {
   isMoreMenuOpen.value = false
   emit('open-members')
+}
+
+function openDeleteWorkspaceConfirm() {
+  const workspace = workspaceNavigation.workspace.value
+
+  if (!workspace) {
+    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi xóa.')
+    return
+  }
+
+  isMoreMenuOpen.value = false
+  deleteWorkspace.requestDeleteWorkspace(workspace)
+}
+
+async function confirmDeleteWorkspace() {
+  const deletedWorkspace = await deleteWorkspace.confirmDeleteWorkspace()
+
+  if (!deletedWorkspace) {
+    return
+  }
+
+  toast.success(
+    'Đã xóa workspace',
+    `Workspace "${deletedWorkspace.name}" đã được xóa.`
+  )
+
+  if (currentWorkspaceId.value === deletedWorkspace.id) {
+    workspaceNavigation.clearNavigation()
+  }
+
+  emit('workspace-deleted', deletedWorkspace.id)
 }
 
 async function submitInvite() {
@@ -693,7 +768,7 @@ onBeforeUnmount(() => {
   cursor: pointer;
 }
 
-.app-more-item:hover {
+.app-more-item:hover:not(:disabled) {
   color: #f1f1f1;
   background: #242424;
 }
@@ -704,6 +779,20 @@ onBeforeUnmount(() => {
 
 .app-more-item.primary:hover {
   background: #282828;
+}
+
+.app-more-item.danger {
+  color: #f1a6a6;
+}
+
+.app-more-item.danger:hover:not(:disabled) {
+  color: #ffc8c8;
+  background: rgba(255, 94, 94, 0.1);
+}
+
+.app-more-item:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .app-more-item > .material-symbols-outlined {
@@ -1028,3 +1117,6 @@ onBeforeUnmount(() => {
   }
 }
 </style>
+
+
+

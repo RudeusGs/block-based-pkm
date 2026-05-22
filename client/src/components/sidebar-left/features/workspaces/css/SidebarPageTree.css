@@ -12,6 +12,7 @@
 
 .lunar-page-row {
   min-width: 0;
+  position: relative;
   min-height: 29px;
   display: flex;
   align-items: center;
@@ -121,8 +122,16 @@
     color 140ms ease;
 }
 
+.lunar-page-actions {
+  opacity: 0;
+  transition: opacity 140ms ease;
+}
+
 .lunar-page-row:hover .lunar-page-action,
-.lunar-page-row.active .lunar-page-action {
+.lunar-page-row.active .lunar-page-action,
+.lunar-page-row:hover .lunar-page-actions,
+.lunar-page-row.active .lunar-page-actions,
+.lunar-page-actions.is-open {
   opacity: 1;
 }
 
@@ -149,3 +158,6 @@
     transition: none;
   }
 }
+
+
+

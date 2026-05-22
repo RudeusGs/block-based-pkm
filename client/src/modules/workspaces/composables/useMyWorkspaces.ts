@@ -92,6 +92,12 @@ export function useMyWorkspaces() {
     workspaces.value = [item, ...workspaces.value]
   }
 
+  function removeWorkspace(workspaceId: string) {
+    workspaces.value = workspaces.value.filter(
+      (workspace) => workspace.id !== workspaceId
+    )
+  }
+
   function clearWorkspaceListError() {
     workspaceListError.value = null
   }
@@ -103,6 +109,9 @@ export function useMyWorkspaces() {
     workspaceListError,
     fetchMyWorkspaces,
     prependWorkspace,
+    removeWorkspace,
     clearWorkspaceListError,
   }
 }
+
+
