@@ -91,6 +91,11 @@ public sealed class ChangeWorkTaskStatusHandler
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
         }
 
+        if (task.Status == StatusWorkTask.Done && request.Status != StatusWorkTask.Done)
+        {
+            return Result.Failure<WorkTaskDto>(TaskErrors.TaskStatusLocked);
+        }
+
         var now = _clock.UtcNow;
 
         task.ChangeStatus(request.Status, currentUserId, now);
@@ -133,3 +138,5 @@ public sealed class ChangeWorkTaskStatusHandler
         return Result.Success(dto);
     }
 }
+
+

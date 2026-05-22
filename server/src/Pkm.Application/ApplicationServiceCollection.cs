@@ -21,6 +21,10 @@ using Pkm.Application.Features.Documents.Queries.GetBlockLease;
 using Pkm.Application.Features.Documents.Queries.GetPagePresence;
 using Pkm.Application.Features.Documents.Queries.ListPageBlocks;
 using Pkm.Application.Features.Documents.Services;
+using Pkm.Application.Features.Files.Services;
+using Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
+using Pkm.Application.Features.Files.Commands.UploadMyAvatarImage;
+using Pkm.Application.Features.Files.Commands.UploadImage;
 using Pkm.Application.Features.Notifications.Commands.DeleteNotification;
 using Pkm.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
 using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsRead;
@@ -83,6 +87,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<ITaskAccessEvaluator, TaskAccessEvaluator>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
+        services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
 
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
 
@@ -196,6 +201,10 @@ public static class ApplicationServiceCollection
         services.AddScoped<GetMyProfileHandler>();
         services.AddScoped<UpdateMyProfileHandler>();
         services.AddScoped<ChangeMyPasswordHandler>();
+
+        services.AddScoped<UploadImageHandler>();
+        services.AddScoped<UploadMyAvatarImageHandler>();
+        services.AddScoped<UploadPageCoverImageHandler>();
 
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 

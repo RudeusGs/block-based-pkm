@@ -29,6 +29,11 @@ public static class TaskErrors
         "Chỉ trưởng workspace, manager hoặc người đang được giao task mới có quyền đổi trạng thái task.",
         ResultStatus.Forbidden);
 
+    public static readonly Error TaskStatusLocked = new(
+        "Task.StatusLocked",
+        "Task đã hoàn tất nên không thể đổi trạng thái nữa.",
+        ResultStatus.Conflict);
+
     public static readonly Error PageNotFound = new(
         "Task.PageNotFound",
         "Không tìm thấy page.",
@@ -145,3 +150,4 @@ public static class TaskErrors
             ResultStatus.Validation,
             details);
 }
+

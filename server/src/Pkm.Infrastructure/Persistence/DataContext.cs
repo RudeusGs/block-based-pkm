@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.Common;
+using Pkm.Domain.Files;
 using Pkm.Domain.Notifications;
 using Pkm.Domain.Pages;
 using Pkm.Domain.Recommendations;
@@ -33,6 +34,7 @@ public sealed class DataContext : DbContext
     public DbSet<TaskAssignee> TaskAssignees => Set<TaskAssignee>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<ActivityLog> ActivityLogs => Set<ActivityLog>();
+    public DbSet<StoredFile> StoredFiles => Set<StoredFile>();
     public DbSet<TaskRecommendation> TaskRecommendations => Set<TaskRecommendation>();
     public DbSet<TaskPerformanceMetric> TaskPerformanceMetrics => Set<TaskPerformanceMetric>();
     public DbSet<UserTaskPreference> UserTaskPreferences => Set<UserTaskPreference>();

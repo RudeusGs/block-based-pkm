@@ -46,6 +46,7 @@ public static class PersistenceServiceCollection
         services.AddScoped<ITaskRecommendationRepository, TaskRecommendationRepository>();
         services.AddScoped<IUserTaskPreferenceRepository, UserTaskPreferenceRepository>();
         services.AddScoped<IUserTaskHistoryRepository, UserTaskHistoryRepository>();
+        services.AddScoped<IStoredFileRepository, StoredFileRepository>();
 
         return services;
     }

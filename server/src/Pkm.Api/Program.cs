@@ -7,6 +7,7 @@ using Pkm.Infrastructure.Email;
 using Pkm.Infrastructure.Realtime;
 using Pkm.Infrastructure.Realtime.Hubs;
 using Pkm.Infrastructure.Time;
+using Pkm.Infrastructure.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -47,6 +48,10 @@ builder.Services.AddRealtimeInfrastructure(builder.Configuration);
 // Time:
 // - Đăng ký SystemClock cho IClock
 builder.Services.AddTimeInfrastructure();
+
+// Storage:
+// - Upload ảnh lên Cloudinary và lưu link trong database
+builder.Services.AddStorageInfrastructure(builder.Configuration);
 
 // =========================
 // Application
