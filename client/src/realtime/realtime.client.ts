@@ -43,6 +43,15 @@ const KNOWN_BACKEND_EVENTS = [
   'TaskCreated',
   'TaskUpdated',
   'TaskDeleted',
+  'TaskAssigned',
+  'TaskUnassigned',
+  'TaskStatusChanged',
+  'TaskAssignedFromRecommendation',
+  'TaskCompletedFromRecommendation',
+  'TaskCommentCreated',
+  'TaskCommentUpdated',
+  'TaskCommentDeleted',
+  'TaskCommentRestored',
   'NotificationCreated',
   'RecommendationCreated',
 ] as const
@@ -404,8 +413,3 @@ export const realtimeClient = {
   sendBlockDraft,
   sendBlockEditingState,
 }
-
-
-
-
-

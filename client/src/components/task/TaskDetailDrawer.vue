@@ -16,7 +16,7 @@
         aria-modal="true"
       >
         <header class="task-detail-header">
-          <div>
+          <div class="task-detail-header-main">
             <p class="task-detail-kicker mb-1">Task detail</p>
             <h2 class="task-detail-title mb-0">
               {{ task.title }}
@@ -35,18 +35,27 @@
 
         <section class="task-detail-body">
           <div class="task-detail-status-row">
-            <span
-              class="status-pill d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
-              :class="statusClass(task.status)"
+            <button
+              v-for="option in statusOptions"
+              :key="option.value"
+              class="status-pill task-status-option d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
+              :class="[
+                statusClass(option.value),
+                { active: task.status === option.value },
+              ]"
+              type="button"
+              :disabled="isMutatingTask || task.status === option.value"
+              @click="emit('change-status', option.value)"
             >
               <span class="status-pill-dot"></span>
-              {{ statusLabel(task.status) }}
-            </span>
+              {{ option.label }}
+            </button>
 
             <span
-              class="priority-pill d-inline-block rounded-2 px-2 py-1"
+              class="priority-pill d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
               :class="priorityClass(task.priority)"
             >
+              <span class="priority-pill-dot"></span>
               {{ priorityLabel(task.priority) }}
             </span>
 
@@ -58,18 +67,77 @@
             </span>
           </div>
 
+          <div
+            v-if="taskActionError"
+            class="task-detail-inline-error"
+          >
+            <i class="bi bi-exclamation-triangle"></i>
+            <span>{{ taskActionError }}</span>
+          </div>
+
           <div class="task-detail-grid">
-            <div class="task-detail-field">
-              <span class="task-detail-field-label">Assignee</span>
+            <div
+              v-if="canManageAssignees"
+              class="task-detail-field task-detail-field--wide"
+            >
+              <span class="task-detail-field-label">Assignees</span>
 
-              <div class="task-detail-person">
-                <img
-                  class="task-detail-avatar"
-                  :src="task.assignee.avatarUrl"
-                  :alt="task.assignee.name"
-                />
+              <div
+                v-if="task.assignees.length"
+                class="task-assignee-chip-list"
+              >
+                <span
+                  v-for="assignee in task.assignees"
+                  :key="assignee.userId"
+                  class="task-assignee-chip"
+                >
+                  <img
+                    :src="assignee.avatarUrl"
+                    :alt="assignee.name"
+                  />
+                  <span>{{ assignee.name }}</span>
+                  <button
+                    type="button"
+                    title="Unassign"
+                    :disabled="isMutatingTask"
+                    @click="emit('unassign-member', assignee.userId)"
+                  >
+                    <i class="bi bi-x"></i>
+                  </button>
+                </span>
+              </div>
 
-                <span>{{ task.assignee.name }}</span>
+              <p
+                v-else
+                class="task-detail-muted-line"
+              >
+                Chưa assign ai.
+              </p>
+
+              <div class="task-assign-control">
+                <select
+                  v-model="selectedMemberToAssign"
+                  :disabled="isMutatingTask || !availableMembers.length"
+                >
+                  <option value="">
+                    {{ availableMembers.length ? 'Thêm assignee...' : 'Không còn member để thêm' }}
+                  </option>
+                  <option
+                    v-for="member in availableMembers"
+                    :key="member.userId"
+                    :value="member.userId"
+                  >
+                    {{ member.displayName }} · {{ member.role }}
+                  </option>
+                </select>
+
+                <button
+                  type="button"
+                  :disabled="!selectedMemberToAssign || isMutatingTask"
+                  @click="assignSelectedMember"
+                >
+                  Add
+                </button>
               </div>
             </div>
 
@@ -80,15 +148,7 @@
                 class="task-detail-value"
                 :class="{ 'task-detail-value-danger': task.overdue }"
               >
-                {{ task.dueDate }}
-              </span>
-            </div>
-
-            <div class="task-detail-field">
-              <span class="task-detail-field-label">Task ID</span>
-
-              <span class="task-detail-value">
-                {{ task.id }}
+                {{ task.dueDateLabel }}
               </span>
             </div>
 
@@ -96,7 +156,7 @@
               <span class="task-detail-field-label">Linked page</span>
 
               <span class="task-detail-value">
-                Q4 Roadmap
+                {{ pageTitle || 'Current page' }}
               </span>
             </div>
           </div>
@@ -111,42 +171,6 @@
             </p>
           </section>
 
-          <section class="task-detail-section">
-            <h3 class="task-detail-section-title">
-              Activity
-            </h3>
-
-            <div class="task-activity-list">
-              <div class="task-activity-item">
-                <span class="task-activity-dot"></span>
-
-                <div>
-                  <p class="task-activity-text">
-                    <strong>{{ task.assignee.name }}</strong> was assigned to this task.
-                  </p>
-
-                  <span class="task-activity-time">
-                    2h ago
-                  </span>
-                </div>
-              </div>
-
-              <div class="task-activity-item">
-                <span class="task-activity-dot"></span>
-
-                <div>
-                  <p class="task-activity-text">
-                    Status changed to <strong>{{ statusLabel(task.status) }}</strong>.
-                  </p>
-
-                  <span class="task-activity-time">
-                    1h ago
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-
           <section class="task-detail-section task-comment-section">
             <div class="task-comment-heading">
               <h3 class="task-detail-section-title mb-0">
@@ -154,12 +178,28 @@
               </h3>
 
               <span class="task-comment-count">
-                {{ comments.length }}
+                {{ totalCommentCount }}
               </span>
             </div>
 
             <div
-              v-if="!comments.length"
+              v-if="commentsError"
+              class="task-comment-error"
+            >
+              <i class="bi bi-exclamation-triangle"></i>
+              <span>{{ commentsError }}</span>
+            </div>
+
+            <div
+              v-else-if="isLoadingComments"
+              class="task-comment-loading"
+            >
+              <span></span>
+              <span></span>
+            </div>
+
+            <div
+              v-else-if="!comments.length"
               class="task-comment-empty"
             >
               Chưa có comment. Hãy là người đầu tiên trao đổi về task này.
@@ -169,82 +209,13 @@
               v-else
               class="task-comment-list"
             >
-              <article
+              <TaskCommentThread
                 v-for="comment in comments"
                 :key="comment.id"
-                class="task-comment-item"
-              >
-                <img
-                  class="task-comment-avatar"
-                  :src="comment.author.avatarUrl"
-                  :alt="comment.author.name"
-                />
-
-                <div class="task-comment-main">
-                  <div class="task-comment-bubble">
-                    <div class="task-comment-author-row">
-                      <strong>{{ comment.author.name }}</strong>
-
-                      <span>{{ comment.author.role }}</span>
-                    </div>
-
-                    <p>
-                      {{ comment.content }}
-                    </p>
-                  </div>
-
-                  <div class="task-comment-actions">
-                    <button
-                      type="button"
-                      :class="{ active: isLiked(comment.id) }"
-                      @click="toggleLike(comment.id)"
-                    >
-                      {{ isLiked(comment.id) ? 'Liked' : 'Like' }}
-                    </button>
-
-                    <button type="button">
-                      Reply
-                    </button>
-
-                    <span>
-                      {{ likeCount(comment) }} likes
-                    </span>
-
-                    <span>
-                      {{ comment.createdAt }}
-                    </span>
-                  </div>
-
-                  <div
-                    v-if="comment.replies?.length"
-                    class="task-comment-replies"
-                  >
-                    <article
-                      v-for="reply in comment.replies"
-                      :key="reply.id"
-                      class="task-comment-reply"
-                    >
-                      <img
-                        class="task-comment-avatar small"
-                        :src="reply.author.avatarUrl"
-                        :alt="reply.author.name"
-                      />
-
-                      <div class="task-comment-bubble reply">
-                        <div class="task-comment-author-row">
-                          <strong>{{ reply.author.name }}</strong>
-
-                          <span>{{ reply.author.role }}</span>
-                        </div>
-
-                        <p>
-                          {{ reply.content }}
-                        </p>
-                      </div>
-                    </article>
-                  </div>
-                </div>
-              </article>
+                :comment="comment"
+                :is-adding-comment="isAddingComment"
+                @add-reply="submitReply"
+              />
             </div>
           </section>
         </section>
@@ -252,8 +223,8 @@
         <footer class="task-detail-composer">
           <img
             class="task-comment-avatar"
-            :src="task.assignee.avatarUrl"
-            :alt="task.assignee.name"
+            :src="composerAvatarUrl"
+            alt="You"
           />
 
           <div class="task-comment-input-wrap">
@@ -262,6 +233,7 @@
               class="task-comment-input"
               rows="1"
               placeholder="Viết comment cho task này..."
+              :disabled="isAddingComment"
               @keydown.enter.exact.prevent="submitComment"
             ></textarea>
 
@@ -269,6 +241,7 @@
               <button
                 type="button"
                 title="Attach"
+                disabled
               >
                 <span class="material-symbols-outlined">attach_file</span>
               </button>
@@ -276,6 +249,7 @@
               <button
                 type="button"
                 title="Mention"
+                disabled
               >
                 <span class="material-symbols-outlined">alternate_email</span>
               </button>
@@ -283,10 +257,10 @@
               <button
                 type="button"
                 class="send-comment-btn"
-                :disabled="!draftComment.trim()"
+                :disabled="!draftComment.trim() || isAddingComment"
                 @click="submitComment"
               >
-                Send
+                {{ isAddingComment ? 'Sending...' : 'Send' }}
               </button>
             </div>
           </div>
@@ -296,28 +270,85 @@
   </Teleport>
 </template>
 
-<script setup>
-import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+<script setup lang="ts">
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import TaskCommentThread from './TaskCommentThread.vue'
+import type { Guid } from '@/api/models/common.model'
+import type { WorkTaskStatusRequest } from '@/api/models/task.model'
+import type {
+  NormalizedTaskPriority,
+  NormalizedTaskStatus,
+  TaskCommentView,
+  TaskMemberOption,
+  WorkTaskView,
+} from './task.types'
 
-const props = defineProps({
-  open: {
-    type: Boolean,
-    default: false
-  },
-  task: {
-    type: Object,
-    default: null
-  },
-  comments: {
-    type: Array,
-    default: () => []
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    task: WorkTaskView | null
+    comments: TaskCommentView[]
+    members: TaskMemberOption[]
+    canManageAssignees?: boolean
+    pageTitle?: string | null
+    isLoadingComments?: boolean
+    commentsError?: string | null
+    isAddingComment?: boolean
+    isMutatingTask?: boolean
+    taskActionError?: string | null
+  }>(),
+  {
+    canManageAssignees: false,
+    pageTitle: '',
+    isLoadingComments: false,
+    commentsError: null,
+    isAddingComment: false,
+    isMutatingTask: false,
+    taskActionError: null,
   }
-})
+)
 
-const emit = defineEmits(['close', 'add-comment'])
+const emit = defineEmits<{
+  close: []
+  'add-comment': [content: string]
+  'add-reply': [content: string, parentId: Guid]
+  'assign-member': [userId: Guid]
+  'unassign-member': [userId: Guid]
+  'change-status': [status: WorkTaskStatusRequest]
+}>()
 
 const draftComment = ref('')
-const likedCommentIds = ref(new Set())
+const selectedMemberToAssign = ref<Guid | ''>('')
+
+const statusOptions: Array<{ value: WorkTaskStatusRequest; label: string }> = [
+  { value: 'todo', label: 'To Do' },
+  { value: 'doing', label: 'Doing' },
+  { value: 'done', label: 'Done' },
+]
+
+const assignedUserIds = computed(() => {
+  return new Set(props.task?.assignees.map((assignee) => assignee.userId) ?? [])
+})
+
+const availableMembers = computed(() => {
+  if (!props.canManageAssignees) return []
+
+  return props.members.filter(
+    (member) => !member.isCurrentUser && !assignedUserIds.value.has(member.userId)
+  )
+})
+
+const currentUser = computed(() => {
+  return props.members.find((member) => member.isCurrentUser) ?? null
+})
+
+const composerAvatarUrl = computed(() => {
+  return currentUser.value?.avatarUrl ?? props.task?.assignees[0]?.avatarUrl ?? ''
+})
+
+const totalCommentCount = computed(() => {
+  return props.comments.reduce((total, comment) => total + countCommentTree(comment), 0)
+})
 
 watch(
   () => props.open,
@@ -326,72 +357,87 @@ watch(
 
     if (!isOpen) {
       draftComment.value = ''
+      selectedMemberToAssign.value = ''
     }
+  }
+)
+
+watch(
+  () => props.task?.id,
+  () => {
+    draftComment.value = ''
+    selectedMemberToAssign.value = ''
   }
 )
 
 function submitComment() {
   const content = draftComment.value.trim()
 
-  if (!content) return
+  if (!content || props.isAddingComment) return
 
   emit('add-comment', content)
   draftComment.value = ''
 }
 
-function toggleLike(commentId) {
-  const next = new Set(likedCommentIds.value)
+function submitReply(content: string, parentId: Guid) {
+  if (!content.trim() || props.isAddingComment) return
 
-  if (next.has(commentId)) {
-    next.delete(commentId)
-  } else {
-    next.add(commentId)
+  emit('add-reply', content.trim(), parentId)
+}
+
+function countCommentTree(comment: TaskCommentView): number {
+  return 1 + comment.replies.reduce(
+    (total, reply) => total + countCommentTree(reply),
+    0
+  )
+}
+
+function assignSelectedMember() {
+  if (
+    !selectedMemberToAssign.value ||
+    props.isMutatingTask ||
+    !props.canManageAssignees
+  ) {
+    return
   }
 
-  likedCommentIds.value = next
+  emit('assign-member', selectedMemberToAssign.value)
+  selectedMemberToAssign.value = ''
 }
 
-function isLiked(commentId) {
-  return likedCommentIds.value.has(commentId)
-}
-
-function likeCount(comment) {
-  return comment.likes + (isLiked(comment.id) ? 1 : 0)
-}
-
-function statusLabel(status) {
+function statusLabel(status: NormalizedTaskStatus) {
   return {
     todo: 'To Do',
     doing: 'Doing',
-    done: 'Done'
-  }[status] ?? status
+    done: 'Done',
+  }[status]
 }
 
-function statusClass(status) {
+function statusClass(status: NormalizedTaskStatus | WorkTaskStatusRequest) {
   return {
     todo: 'status-todo',
     doing: 'status-doing',
-    done: 'status-done'
-  }[status] ?? 'status-todo'
+    done: 'status-done',
+  }[status]
 }
 
-function priorityLabel(priority) {
+function priorityLabel(priority: NormalizedTaskPriority) {
   return {
     low: 'Low',
-    medium: 'Med',
-    high: 'High'
-  }[priority] ?? priority
+    medium: 'Medium',
+    high: 'High',
+  }[priority]
 }
 
-function priorityClass(priority) {
+function priorityClass(priority: NormalizedTaskPriority) {
   return {
     low: 'priority-low',
     medium: 'priority-medium',
-    high: 'priority-high'
-  }[priority] ?? 'priority-low'
+    high: 'priority-high',
+  }[priority]
 }
 
-function handleEscape(event) {
+function handleEscape(event: KeyboardEvent) {
   if (event.key === 'Escape' && props.open) {
     emit('close')
   }
@@ -411,7 +457,7 @@ onBeforeUnmount(() => {
 .task-detail-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 900;
+  z-index: 2600;
   background: rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(2px);
 }
@@ -420,8 +466,8 @@ onBeforeUnmount(() => {
   position: fixed;
   top: 0;
   right: 0;
-  z-index: 901;
-  width: min(440px, 100vw);
+  z-index: 2601;
+  width: min(520px, 100vw);
   height: 100vh;
   display: flex;
   flex-direction: column;
@@ -440,6 +486,10 @@ onBeforeUnmount(() => {
   padding: 22px 22px 18px;
   border-bottom: 1px solid #242424;
   background: #101010;
+}
+
+.task-detail-header-main {
+  min-width: 0;
 }
 
 .task-detail-kicker {
@@ -512,17 +562,46 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 20px;
+  margin-bottom: 14px;
+}
+
+.task-status-option {
+  cursor: pointer;
+  opacity: 0.74;
+}
+
+.task-status-option.active,
+.task-status-option:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.task-status-option:disabled {
+  cursor: default;
 }
 
 .task-detail-overdue {
   padding: 4px 8px;
-  border: 1px solid #4a4a4a;
+  border: 1px solid rgba(248, 113, 113, 0.28);
   border-radius: 999px;
-  color: #f1f1f1;
-  background: #202020;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.12);
   font-size: 12px;
   font-weight: 700;
+}
+
+.task-detail-inline-error,
+.task-comment-error {
+  margin-bottom: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 11px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  border-radius: 10px;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.09);
+  font-size: 12.5px;
+  line-height: 1.45;
 }
 
 .task-detail-grid {
@@ -540,6 +619,10 @@ onBeforeUnmount(() => {
   background: #151515;
 }
 
+.task-detail-field--wide {
+  grid-column: 1 / -1;
+}
+
 .task-detail-field-label {
   display: block;
   margin-bottom: 8px;
@@ -548,26 +631,6 @@ onBeforeUnmount(() => {
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-}
-
-.task-detail-person {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #f1f1f1;
-  font-size: 13px;
-  font-weight: 650;
-}
-
-.task-detail-avatar,
-.task-comment-avatar {
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  border-radius: 999px;
-  object-fit: cover;
-  border: 1px solid #2f2f2f;
 }
 
 .task-detail-value {
@@ -581,7 +644,110 @@ onBeforeUnmount(() => {
 }
 
 .task-detail-value-danger {
+  color: #fca5a5;
+}
+
+.task-detail-muted-line {
+  margin: 0 0 10px;
+  color: #737373;
+  font-size: 13px;
+}
+
+.task-assignee-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.task-assignee-chip {
+  min-width: 0;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 5px 4px 4px;
+  border: 1px solid #2f2f2f;
+  border-radius: 999px;
+  color: #e8e8e8;
+  background: #1d1d1d;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+
+.task-assignee-chip img {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #2f2f2f;
+}
+
+.task-assignee-chip span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.task-assignee-chip button {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #858585;
+  background: transparent;
+}
+
+.task-assignee-chip button:hover:not(:disabled) {
   color: #f1f1f1;
+  background: #2a2a2a;
+}
+
+.task-assign-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.task-assign-control select,
+.task-assign-control button {
+  min-height: 32px;
+  border: 1px solid #2f2f2f;
+  border-radius: 8px;
+  color: #d4d4d4;
+  background: #111111;
+  font-size: 12.5px;
+}
+
+.task-assign-control select {
+  min-width: 0;
+  padding: 0 8px;
+  outline: 0;
+}
+
+.task-assign-control select option {
+  color: #ededed;
+  background: #191919;
+}
+
+.task-assign-control button {
+  padding: 0 10px;
+  font-weight: 700;
+}
+
+.task-assign-control button:hover:not(:disabled) {
+  color: #f1f1f1;
+  background: #202020;
+}
+
+.task-assign-control button:disabled,
+.task-assign-control select:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
 }
 
 .task-detail-section {
@@ -604,40 +770,7 @@ onBeforeUnmount(() => {
   color: #a3a3a3;
   font-size: 14px;
   line-height: 1.65;
-}
-
-.task-activity-list {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.task-activity-item {
-  display: grid;
-  grid-template-columns: 14px 1fr;
-  gap: 10px;
-}
-
-.task-activity-dot {
-  width: 8px;
-  height: 8px;
-  margin-top: 7px;
-  border-radius: 999px;
-  background: #a3a3a3;
-}
-
-.task-activity-text {
-  margin: 0;
-  color: #d4d4d4;
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.task-activity-time {
-  display: inline-block;
-  margin-top: 3px;
-  color: #737373;
-  font-size: 11px;
+  white-space: pre-wrap;
 }
 
 .task-comment-heading {
@@ -671,6 +804,26 @@ onBeforeUnmount(() => {
   line-height: 1.5;
 }
 
+.task-comment-loading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 0;
+}
+
+.task-comment-loading span {
+  height: 48px;
+  border-radius: 13px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.035),
+    rgba(255, 255, 255, 0.075),
+    rgba(255, 255, 255, 0.035)
+  );
+  background-size: 220% 100%;
+  animation: task-comment-skeleton 1.2s ease-in-out infinite;
+}
+
 .task-comment-list {
   display: flex;
   flex-direction: column;
@@ -686,6 +839,16 @@ onBeforeUnmount(() => {
 .task-comment-main {
   min-width: 0;
   flex: 1;
+}
+
+.task-comment-avatar {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 999px;
+  object-fit: cover;
+  border: 1px solid #2f2f2f;
+  background: #242424;
 }
 
 .task-comment-bubble {
@@ -722,6 +885,7 @@ onBeforeUnmount(() => {
   color: #d4d4d4;
   font-size: 13px;
   line-height: 1.5;
+  white-space: pre-wrap;
 }
 
 .task-comment-actions {
@@ -730,20 +894,6 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 9px;
   padding: 5px 2px 0;
-}
-
-.task-comment-actions button {
-  border: 0;
-  padding: 0;
-  color: #737373;
-  background: transparent;
-  font-size: 11.5px;
-  font-weight: 750;
-}
-
-.task-comment-actions button:hover,
-.task-comment-actions button.active {
-  color: #f1f1f1;
 }
 
 .task-comment-actions span {
@@ -805,6 +955,11 @@ onBeforeUnmount(() => {
   color: #737373;
 }
 
+.task-comment-input:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
 .task-comment-composer-actions {
   display: flex;
   align-items: center;
@@ -841,7 +996,8 @@ onBeforeUnmount(() => {
   font-weight: 800;
 }
 
-.send-comment-btn:disabled {
+.send-comment-btn:disabled,
+.task-comment-composer-actions button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
@@ -851,60 +1007,74 @@ onBeforeUnmount(() => {
   font-size: 12px;
   line-height: 1.2;
   border: 1px solid transparent;
+  font-weight: 650;
 }
 
-.status-pill-dot {
+.status-pill-dot,
+.priority-pill-dot {
   width: 6px;
   height: 6px;
   border-radius: 999px;
 }
 
 .status-todo {
-  color: #a3a3a3;
-  background: #171717;
-  border-color: #2f2f2f;
+  color: #bbf7d0;
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(74, 222, 128, 0.24);
 }
 
 .status-todo .status-pill-dot {
-  border: 1px solid #737373;
+  background: #4ade80;
 }
 
 .status-doing {
-  color: #f1f1f1;
-  background: #242424;
-  border-color: #404040;
+  color: #bfdbfe;
+  background: rgba(59, 130, 246, 0.13);
+  border-color: rgba(96, 165, 250, 0.26);
 }
 
 .status-doing .status-pill-dot {
-  background: #a3a3a3;
+  background: #60a5fa;
 }
 
 .status-done {
-  color: #f1f1f1;
-  background: #2a2a2a;
-  border-color: #4a4a4a;
+  color: #ddd6fe;
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(167, 139, 250, 0.24);
 }
 
 .status-done .status-pill-dot {
-  background: #f1f1f1;
+  background: #a78bfa;
 }
 
 .priority-high {
-  color: #f1f1f1;
-  background: #2a2a2a;
-  border-color: #4a4a4a;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(248, 113, 113, 0.28);
+}
+
+.priority-high .priority-pill-dot {
+  background: #f87171;
 }
 
 .priority-medium {
-  color: #d4d4d4;
-  background: #202020;
-  border-color: #3a3a3a;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(251, 191, 36, 0.28);
+}
+
+.priority-medium .priority-pill-dot {
+  background: #fbbf24;
 }
 
 .priority-low {
-  color: #a3a3a3;
-  background: #171717;
-  border-color: #2f2f2f;
+  color: #cbd5e1;
+  background: rgba(148, 163, 184, 0.11);
+  border-color: rgba(148, 163, 184, 0.22);
+}
+
+.priority-low .priority-pill-dot {
+  background: #94a3b8;
 }
 
 .task-detail-backdrop-enter-active,
@@ -936,12 +1106,26 @@ onBeforeUnmount(() => {
   transform: translateX(0);
 }
 
+@keyframes task-comment-skeleton {
+  0% {
+    background-position: 220% 0;
+  }
+
+  100% {
+    background-position: -220% 0;
+  }
+}
+
 @media (max-width: 575.98px) {
   .task-detail-drawer {
     width: 100vw;
   }
 
   .task-detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .task-assign-control {
     grid-template-columns: 1fr;
   }
 }
