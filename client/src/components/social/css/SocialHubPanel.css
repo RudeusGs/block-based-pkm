@@ -585,3 +585,42 @@
     justify-content: flex-end;
   }
 }
+
+.profile-cover {
+  position: relative;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.profile-cover img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  z-index: 0;
+}
+
+.profile-cover button {
+  z-index: 2;
+}
+
+.profile-main {
+  position: relative;
+  z-index: 3;
+  min-height: 82px;
+  align-items: flex-end;
+  margin-top: -38px;
+  padding: 0 16px 16px;
+}
+
+.profile-main img,
+.profile-avatar-fallback {
+  position: relative;
+  z-index: 4;
+  background: #202020;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.36);
+}
+
+.profile-main > div {
+  min-width: 0;
+  padding-bottom: 6px;
+}

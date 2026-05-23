@@ -17,7 +17,6 @@
 
         <aside
           class="messenger-shell"
-          :class="{ 'has-selected-conversation': selectedConversation }"
           @click.stop
           @keydown.esc="close"
         >
