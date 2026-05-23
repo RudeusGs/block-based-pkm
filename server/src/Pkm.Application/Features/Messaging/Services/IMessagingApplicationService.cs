@@ -1,5 +1,6 @@
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Messaging.Models;
+using Pkm.Application.Features.Workspaces.Models;
 
 namespace Pkm.Application.Features.Messaging.Services;
 
@@ -15,5 +16,12 @@ public interface IMessagingApplicationService
 
     Task<Result<MessageDto>> SendImageMessageAsync(Guid conversationId, string? caption, string fileName, string contentType, long sizeBytes, Stream content, CancellationToken cancellationToken = default);
 
+    Task<Result<MessageDto>> SendWorkspaceShareMessageAsync(Guid conversationId, Guid workspaceId, string role, CancellationToken cancellationToken = default);
+
+    Task<Result<WorkspaceDto>> AcceptWorkspaceShareAsync(Guid messageId, CancellationToken cancellationToken = default);
+
     Task<Result> MarkConversationReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
 }
+
+
+

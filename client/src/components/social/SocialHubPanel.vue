@@ -79,7 +79,7 @@
               </div>
 
               <p class="social-muted">
-                Nhập ít nhất 2 ký tự. Search giống Facebook mini nhưng vẫn nằm trong project workspace.
+                Nhập ít nhất 2 ký tự để tìm kiếm bạn bè.
               </p>
 
               <div

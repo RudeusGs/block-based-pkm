@@ -4,6 +4,7 @@
 
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
       <AppTopNav
+        :can-share-workspace="workspaceMembers.canManageMembers.value"
         @jump-to-tasks="scrollToTasks"
         @open-members="workspaceMembers.open"
         @open-activity-log="openActivityLog"
@@ -107,6 +108,7 @@
       :start-user-id="messengerStartUserId"
       @close="closeMessenger"
       @started="messengerStartUserId = null"
+      @workspace-opened="handleSharedWorkspaceOpened"
     />
   </div>
 </template>
@@ -129,6 +131,7 @@ import type { WorkspaceResponse } from '@/api/models/workspace.model'
 type SidebarLeftExpose = {
   handleWorkspaceDeleted?: (workspaceId: Guid) => void
   handleWorkspaceUpdated?: (workspace: WorkspaceResponse) => void
+  handleWorkspaceJoined?: (workspace: WorkspaceResponse) => void | Promise<void>
 }
 
 type WorkTasksSectionExpose = {
@@ -182,7 +185,6 @@ function handlePageCoverUploaded(payload: {
 }
 
 function handleWorkspaceDeleted(workspaceId: Guid) {
-  workspaceNavigation.closeWorkspacePageTabs(workspaceId)
   sidebarLeftRef.value?.handleWorkspaceDeleted?.(workspaceId)
   workspaceMembers.close()
   closeActivityLog()
@@ -225,6 +227,17 @@ function closeMessenger() {
   messengerStartUserId.value = null
 }
 
+function handleSharedWorkspaceOpened(workspace: WorkspaceResponse) {
+  workspaceNavigation.setWorkspace({
+    id: workspace.id,
+    name: workspace.name,
+  })
+
+  workspaceNavigation.setPage(null)
+  void sidebarLeftRef.value?.handleWorkspaceJoined?.(workspace)
+  closeMessenger()
+}
+
 function scrollToTasks() {
   taskSectionRef.value?.scrollIntoView?.({
     behavior: 'smooth',
@@ -236,3 +249,6 @@ function scrollToTasks() {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
+
+
+

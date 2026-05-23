@@ -201,18 +201,64 @@
                   class="message-bubble-row"
                   :class="{ mine: message.isMine }"
                 >
-                  <div class="message-bubble">
-                    <img
-                      v-if="message.imageUrl"
-                      class="message-image"
-                      :src="normalizeMessageImage(message.imageUrl)"
-                      alt="Message image"
-                      referrerpolicy="no-referrer"
-                    />
+                  <div
+                    class="message-bubble"
+                    :class="{ 'workspace-share-bubble': isWorkspaceShareMessage(message) }"
+                  >
+                    <template v-if="isWorkspaceShareMessage(message)">
+                      <div class="message-workspace-card">
+                        <span class="message-workspace-icon">
+                          {{ workspaceShareInitial(message) }}
+                        </span>
 
-                    <p v-if="message.body">
-                      {{ message.body }}
-                    </p>
+                        <div class="message-workspace-copy">
+                          <span class="message-workspace-kicker">Workspace</span>
+                          <strong>{{ workspaceSharePayload(message)?.workspaceName || 'Workspace' }}</strong>
+                          <p>
+                            {{ workspaceSharePayload(message)?.workspaceDescription || 'Workspace được chia sẻ qua Messenger.' }}
+                          </p>
+
+                          <div class="message-workspace-meta">
+                            <span>{{ workspaceShareVisibilityLabel(workspaceSharePayload(message)?.workspaceVisibility) }}</span>
+                            <span>·</span>
+                            <span>{{ workspaceShareRoleLabel(workspaceSharePayload(message)?.grantedRole) }}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        v-if="!message.isMine"
+                        type="button"
+                        class="message-workspace-action"
+                        :disabled="acceptingWorkspaceShareMessageId === message.id"
+                        @click="acceptWorkspaceShare(message)"
+                      >
+                        <span
+                          v-if="acceptingWorkspaceShareMessageId === message.id"
+                          class="message-workspace-action-spinner"
+                        ></span>
+                        <span v-else class="material-symbols-outlined">login</span>
+                        <span>{{ acceptingWorkspaceShareMessageId === message.id ? 'Đang mở...' : 'Mở workspace' }}</span>
+                      </button>
+
+                      <span v-else class="message-workspace-sent-note">
+                        Bạn đã share workspace này. Người nhận bấm card là vào được.
+                      </span>
+                    </template>
+
+                    <template v-else>
+                      <img
+                        v-if="message.imageUrl"
+                        class="message-image"
+                        :src="normalizeMessageImage(message.imageUrl)"
+                        alt="Message image"
+                        referrerpolicy="no-referrer"
+                      />
+
+                      <p v-if="message.body">
+                        {{ message.body }}
+                      </p>
+                    </template>
 
                     <time>
                       {{ formatMessageTime(message.createdDate) }}
@@ -304,7 +350,9 @@ import type { Guid } from '@/api/models/common.model'
 import type {
   ConversationResponse,
   MessageResponse,
+  WorkspaceShareMessagePayload,
 } from '@/api/models/messaging.model'
+import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import { realtimeClient } from '@/realtime/realtime.client'
 import type { RealtimeEnvelope } from '@/realtime/realtime.types'
 import { normalizeImageUrl } from '@/utils/image-url.util'
@@ -318,6 +366,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   started: []
+  'workspace-opened': [workspace: WorkspaceResponse]
 }>()
 
 const toast = useToast()
@@ -339,6 +388,7 @@ const messageError = ref<string | null>(null)
 
 const messageDraft = ref('')
 const selectedImageFile = ref<File | null>(null)
+const acceptingWorkspaceShareMessageId = ref<Guid | null>(null)
 
 const messageListRef = ref<HTMLElement | null>(null)
 const messageInputRef = ref<HTMLTextAreaElement | null>(null)
@@ -433,6 +483,79 @@ function initials(value: string) {
 
 function normalizeMessageImage(value: string) {
   return normalizeImageUrl(value) ?? value
+}
+
+function isWorkspaceShareMessage(message: MessageResponse) {
+  return message.type?.toString().toLowerCase() === 'workspaceshare' && Boolean(workspaceSharePayload(message))
+}
+
+function workspaceSharePayload(message: MessageResponse): WorkspaceShareMessagePayload | null {
+  if (!message.body) return null
+
+  try {
+    const parsed = JSON.parse(message.body) as Partial<WorkspaceShareMessagePayload>
+
+    if (!parsed.workspaceId || !parsed.workspaceName) return null
+
+    return {
+      workspaceId: String(parsed.workspaceId),
+      workspaceName: String(parsed.workspaceName),
+      workspaceDescription: parsed.workspaceDescription ?? null,
+      workspaceVisibility: String(parsed.workspaceVisibility ?? 'Private'),
+      grantedRole: String(parsed.grantedRole ?? 'Viewer'),
+      sharedByUserId: String(parsed.sharedByUserId ?? ''),
+      sharedByDisplayName: String(parsed.sharedByDisplayName ?? 'Một thành viên'),
+      sharedAtUtc: String(parsed.sharedAtUtc ?? message.createdDate),
+    }
+  } catch {
+    return null
+  }
+}
+
+function workspaceShareInitial(message: MessageResponse) {
+  return workspaceSharePayload(message)?.workspaceName.trim().charAt(0).toUpperCase() || 'W'
+}
+
+function workspaceShareVisibilityLabel(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase()
+  return normalized === 'public' ? 'Public' : 'Private'
+}
+
+function workspaceShareRoleLabel(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase()
+  return normalized === 'member' ? 'Join as Member' : 'View as Viewer'
+}
+
+async function acceptWorkspaceShare(message: MessageResponse) {
+  if (message.isMine || acceptingWorkspaceShareMessageId.value) return
+
+  acceptingWorkspaceShareMessageId.value = message.id
+
+  try {
+    const result = await messagingController.acceptWorkspaceShare(message.id)
+
+    if (!result.isSuccess || !result.data) {
+      toast.warning(
+        'Không mở được workspace',
+        getApiResultErrorMessage(result, 'Workspace share không còn hợp lệ.')
+      )
+      return
+    }
+
+    toast.success(
+      'Đã mở workspace',
+      `Workspace “${result.data.name}” đã được thêm vào sidebar.`
+    )
+
+    emit('workspace-opened', result.data)
+  } catch (error) {
+    toast.warning(
+      'Không mở được workspace',
+      getApiErrorMessage(error, 'Workspace share không còn hợp lệ.')
+    )
+  } finally {
+    acceptingWorkspaceShareMessageId.value = null
+  }
 }
 
 function sortConversations(items: ConversationResponse[]) {
@@ -916,3 +1039,6 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/MessengerPanel.css"></style>
+
+
+

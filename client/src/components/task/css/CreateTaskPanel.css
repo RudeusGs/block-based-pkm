@@ -637,3 +637,122 @@
     animation: none;
   }
 }
+
+/* Final Notion create-task drawer polish */
+.task-drawer-scrim {
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.task-drawer-panel,
+.task-drawer-shell,
+.task-drawer-topbar,
+.task-drawer-footer {
+  background: #191919;
+}
+
+.task-drawer-panel {
+  color: #ededeb;
+  border-right-color: #292929;
+  box-shadow: 18px 0 48px rgba(0, 0, 0, 0.34);
+}
+
+.task-drawer-topbar,
+.task-drawer-footer {
+  border-color: #292929;
+}
+
+.task-drawer-close,
+.task-btn {
+  border-radius: 5px;
+}
+
+.task-drawer-close:hover:not(:disabled),
+.task-btn-ghost:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.task-icon-tile,
+.task-preview-icon {
+  color: #ededeb;
+  background: #242424;
+}
+
+.task-eyebrow,
+.task-property-label,
+.task-preview-label,
+.task-keyboard-hint,
+.task-property-help,
+.task-assignee-option-main small {
+  color: #85837d;
+}
+
+.task-title-input {
+  color: #ededeb;
+}
+
+.task-properties {
+  border-color: #292929;
+}
+
+.task-property-input {
+  border-radius: 5px;
+  color: #d4d4d0;
+}
+
+.task-property-input:hover:not(:disabled),
+.task-property-input:focus:not(:disabled) {
+  background: rgba(255, 255, 255, 0.055);
+  box-shadow: inset 0 0 0 1px #33322f;
+}
+
+.task-assignee-option {
+  border-radius: 5px;
+  color: #d4d4d0;
+}
+
+.task-assignee-option:hover:not(:disabled),
+.task-assignee-option.selected {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.055);
+  border-color: #33322f;
+}
+
+.task-assignee-option.selected {
+  background: #2a2927;
+  border-color: #4a4944;
+  box-shadow: inset 2px 0 0 #8d8b84;
+}
+
+.task-assignee-option i {
+  color: #a8a8a3;
+}
+
+.task-assignee-loading,
+.task-assignee-empty,
+.task-preview-section,
+.task-drawer-error {
+  border-color: #33322f;
+  border-radius: 6px;
+  color: #85837d;
+  background: transparent;
+}
+
+.task-preview-card:hover {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.task-preview-badge {
+  color: #a8a8a3;
+  background: #242424;
+}
+
+.task-btn-primary {
+  color: #191919;
+  background: #ededeb;
+}
+
+.task-btn-primary:hover:not(:disabled) {
+  color: #111111;
+  background: #ffffff;
+}

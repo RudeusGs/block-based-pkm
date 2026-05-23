@@ -282,4 +282,78 @@ onBeforeUnmount(() => {
     transition: none;
   }
 }
+
+/* Final Notion menu polish */
+.lunar-page-menu-trigger {
+  width: 22px;
+  height: 22px;
+  margin-left: 2px;
+  border: 0;
+  border-radius: 4px;
+  color: #85837d;
+}
+
+.lunar-page-menu-trigger:hover,
+.lunar-page-actions.is-open .lunar-page-menu-trigger {
+  color: #ededeb;
+  border-color: transparent;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.lunar-page-menu-trigger i {
+  font-size: 13px;
+}
+
+.lunar-page-menu {
+  width: 226px;
+  top: calc(100% + 5px);
+  border-color: #30302d;
+  border-radius: 8px;
+  padding: 5px;
+  background: #202020;
+  box-shadow:
+    0 16px 38px rgba(0, 0, 0, 0.36),
+    0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.lunar-page-menu-item {
+  border-radius: 5px;
+  gap: 8px;
+  padding: 7px 8px;
+  color: #d4d4d0;
+}
+
+.lunar-page-menu-item:hover {
+  color: #f1f1ef;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.lunar-page-menu-item.danger {
+  color: #d9a1a1;
+}
+
+.lunar-page-menu-item.danger:hover {
+  color: #f0b8b8;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.lunar-page-menu-item i {
+  color: #8f8d86;
+  font-size: 13px;
+}
+
+.lunar-page-menu-item strong {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.lunar-page-menu-item small {
+  color: #8f8d86;
+}
+
+.lunar-page-menu-separator {
+  margin: 5px 4px;
+  background: #30302d;
+}
+
 </style>

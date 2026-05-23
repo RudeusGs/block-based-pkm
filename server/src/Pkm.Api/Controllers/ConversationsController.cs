@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Messaging;
 using Pkm.Api.Contracts.Responses.Messaging;
+using Pkm.Api.Contracts.Responses;
+using Pkm.Api.Contracts.Responses.Workspaces;
 using Pkm.Application.Abstractions.Authentication;
 using Pkm.Application.Features.Messaging.Services;
 
@@ -96,6 +98,45 @@ public sealed class ConversationsController : BaseController
         return HandleResult(result, x => x.ToResponse());
     }
 
+    [HttpPost("{conversationId:guid}/messages/workspace-share")]
+    [ProducesResponseType(typeof(ApiResult<MessageResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<MessageResponse>>> SendWorkspaceShareMessage(
+        [FromRoute] Guid conversationId,
+        [FromBody] SendWorkspaceShareMessageRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _messagingApplicationService.SendWorkspaceShareMessageAsync(
+            conversationId,
+            request.WorkspaceId,
+            request.Role ?? "viewer",
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpPost("messages/{messageId:guid}/workspace-share/accept")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<WorkspaceResponse>>> AcceptWorkspaceShare(
+        [FromRoute] Guid messageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _messagingApplicationService.AcceptWorkspaceShareAsync(
+            messageId,
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
     [HttpPost("{conversationId:guid}/messages/image")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(MaxRequestBodySizeBytes)]
@@ -167,3 +208,6 @@ public sealed class SendImageMessageFormRequest
     public IFormFile? File { get; init; }
     public string? Caption { get; init; }
 }
+
+
+

@@ -21,6 +21,8 @@ public interface IMessagingRepository
 
     Task<MessageDto?> GetMessageDtoAsync(Guid messageId, Guid viewerUserId, CancellationToken cancellationToken = default);
 
+    Task<Message?> GetMessageForRecipientAsync(Guid messageId, Guid recipientUserId, CancellationToken cancellationToken = default);
+
     Task<int> CountMessagesAsync(Guid conversationId, CancellationToken cancellationToken = default);
 
     Task<int> MarkConversationReadAsync(Guid conversationId, Guid readerUserId, DateTimeOffset readAtUtc, CancellationToken cancellationToken = default);
@@ -31,3 +33,6 @@ public interface IMessagingRepository
 
     void UpdateConversation(Conversation conversation);
 }
+
+
+

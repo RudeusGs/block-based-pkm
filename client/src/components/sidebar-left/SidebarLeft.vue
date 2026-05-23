@@ -431,13 +431,15 @@ async function confirmDeletePage() {
     return
   }
 
-  workspaceNavigation.closePageTab(deletedPage.id)
-
   toast.success('Đã xóa page', `Page "${deletedPage.title}" đã được xóa khỏi workspace.`)
 }
 
 function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
   workspaceTree.handleWorkspaceUpdated(workspace)
+}
+
+async function handleWorkspaceJoined(workspace: WorkspaceResponse) {
+  await workspaceTree.handleWorkspaceJoined(workspace)
 }
 
 function handleWorkspaceDeleted(workspaceId: Guid) {
@@ -447,6 +449,7 @@ function handleWorkspaceDeleted(workspaceId: Guid) {
 defineExpose({
   handleWorkspaceDeleted,
   handleWorkspaceUpdated,
+  handleWorkspaceJoined,
 })
 
 onMounted(() => {
@@ -565,5 +568,8 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
+
+
+
 
 

@@ -250,7 +250,10 @@
       <button
         class="app-icon-btn"
         type="button"
-        title="Share"
+        :title="shareButtonTitle"
+        aria-label="Share workspace"
+        :disabled="!canOpenWorkspaceShare"
+        @click="openWorkspaceShare"
       >
         <span class="material-symbols-outlined">share</span>
       </button>
@@ -387,6 +390,14 @@
       @updated="handleWorkspaceUpdated"
     />
 
+    <WorkspaceShareModal
+      :open="isWorkspaceShareOpen"
+      :workspace-id="currentWorkspaceId"
+      :workspace-name="workspaceNavigation.workspaceName.value"
+      :can-share="canShareWorkspace"
+      @close="isWorkspaceShareOpen = false"
+    />
+
     <ConfirmActionModal
       :open="deleteWorkspace.isDeleteWorkspaceConfirmOpen.value"
       title="Xóa workspace này?"
@@ -414,6 +425,16 @@ import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import InviteWorkspaceMemberModal from './InviteWorkspaceMemberModal.vue'
 import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
 import WorkspaceSettingsModal from '@/components/workspace/WorkspaceSettingsModal.vue'
+import WorkspaceShareModal from '@/components/workspace/WorkspaceShareModal.vue'
+
+const props = withDefaults(
+  defineProps<{
+    canShareWorkspace?: boolean
+  }>(),
+  {
+    canShareWorkspace: false,
+  }
+)
 
 const emit = defineEmits<{
   'jump-to-tasks': []
@@ -435,6 +456,7 @@ const isNotificationMenuOpen = ref(false)
 const isMoreMenuOpen = ref(false)
 const isInviteModalOpen = ref(false)
 const isWorkspaceSettingsOpen = ref(false)
+const isWorkspaceShareOpen = ref(false)
 
 const notificationMenuRef = ref<HTMLElement | null>(null)
 const moreMenuRef = ref<HTMLElement | null>(null)
@@ -445,6 +467,20 @@ const currentWorkspaceId = computed<Guid | null>(() => {
 
 const activePageId = computed<Guid | null>(() => {
   return workspaceNavigation.page.value?.id ?? null
+})
+
+const canShareWorkspace = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canShareWorkspace)
+})
+
+const canOpenWorkspaceShare = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canShareWorkspace)
+})
+
+const shareButtonTitle = computed(() => {
+  if (!currentWorkspaceId.value) return 'Chọn workspace trước khi share'
+  if (!props.canShareWorkspace) return 'Chỉ Owner hoặc Manager mới được share workspace'
+  return 'Share workspace qua Messenger'
 })
 
 const deleteWorkspaceConfirmMessage = computed(() => {
@@ -496,6 +532,23 @@ function openMessenger(userId?: Guid | null) {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
   emit('open-messenger', userId ?? null)
+}
+
+function openWorkspaceShare() {
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+
+  if (!currentWorkspaceId.value) {
+    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi share.')
+    return
+  }
+
+  if (!props.canShareWorkspace) {
+    toast.warning('Không có quyền share', 'Chỉ Owner hoặc Manager mới được share workspace.')
+    return
+  }
+
+  isWorkspaceShareOpen.value = true
 }
 
 function selectPageTab(pageId: Guid) {
@@ -655,6 +708,7 @@ function handleKeydown(event: KeyboardEvent) {
     isMoreMenuOpen.value = false
     isInviteModalOpen.value = false
     isWorkspaceSettingsOpen.value = false
+    isWorkspaceShareOpen.value = false
   }
 }
 
@@ -861,6 +915,18 @@ onBeforeUnmount(() => {
 .app-icon-btn:hover {
   color: #f1f1f1;
   background: #242424;
+}
+
+.app-task-jump:disabled,
+.app-icon-btn:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.app-task-jump:disabled:hover,
+.app-icon-btn:disabled:hover {
+  color: #a3a3a3;
+  background: transparent;
 }
 
 .app-task-jump .material-symbols-outlined,
@@ -1319,4 +1385,163 @@ onBeforeUnmount(() => {
     animation: none;
   }
 }
+
+/* Final Notion top-nav polish */
+.app-top-nav {
+  min-height: 46px;
+  gap: 12px;
+  padding: 0 12px;
+  background: rgba(15, 15, 15, 0.96);
+  border-bottom-color: #242424;
+}
+
+.app-page-tabs {
+  align-items: center;
+}
+
+.app-page-tab-strip {
+  align-items: center;
+  gap: 3px;
+  padding-top: 0;
+}
+
+.app-page-tab {
+  min-width: 126px;
+  max-width: 210px;
+  height: 30px;
+  border: 0;
+  border-radius: 6px;
+  flex-basis: 178px;
+  color: #a8a8a3;
+  background: transparent;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease,
+    opacity 140ms ease;
+}
+
+.app-page-tab:hover {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.app-page-tab.active {
+  color: #ededeb;
+  border-color: transparent;
+  background: #343330;
+  box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.09);
+}
+
+.app-page-tab-main {
+  gap: 6px;
+  padding: 0 6px 0 8px;
+}
+
+.app-page-tab-icon {
+  width: 17px;
+  flex-basis: 17px;
+  font-size: 13px;
+  opacity: 0.9;
+}
+
+.app-page-tab-title {
+  font-size: 12.5px;
+  font-weight: 500;
+}
+
+.app-page-tab-close {
+  width: 22px;
+  height: 22px;
+  margin-right: 3px;
+  border-radius: 4px;
+  color: #85837d;
+  opacity: 0;
+  transition:
+    opacity 140ms ease,
+    color 140ms ease,
+    background-color 140ms ease;
+}
+
+.app-page-tab:hover .app-page-tab-close,
+.app-page-tab.active .app-page-tab-close {
+  opacity: 1;
+}
+
+.app-page-tab-close:hover {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.app-task-jump,
+.app-icon-btn {
+  border-radius: 5px;
+  color: #a8a8a3;
+}
+
+.app-task-jump:hover,
+.app-icon-btn:hover {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.app-notification-badge {
+  color: #191919;
+  background: #d8d8d4;
+}
+
+.app-realtime-dot.connected {
+  background: #9a9a94;
+}
+
+.app-notification-menu,
+.app-more-menu {
+  border-color: #30302d;
+  border-radius: 8px;
+  background: #202020;
+  box-shadow:
+    0 18px 48px rgba(0, 0, 0, 0.38),
+    0 0 0 1px rgba(255, 255, 255, 0.025);
+}
+
+.app-more-menu {
+  width: min(286px, calc(100vw - 24px));
+}
+
+.app-more-item {
+  border-radius: 5px;
+  padding: 8px;
+  color: #d4d4d0;
+}
+
+.app-more-item:hover:not(:disabled) {
+  color: #f1f1ef;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.app-more-item.primary {
+  background: transparent;
+}
+
+.app-more-item.primary:hover {
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.app-more-item.danger {
+  color: #d9a1a1;
+}
+
+.app-more-item.danger:hover:not(:disabled) {
+  color: #f0b8b8;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.app-more-item > .material-symbols-outlined {
+  color: #8f8d86;
+}
+
+.app-more-separator {
+  margin: 5px 4px;
+  background: #30302d;
+}
+
 </style>

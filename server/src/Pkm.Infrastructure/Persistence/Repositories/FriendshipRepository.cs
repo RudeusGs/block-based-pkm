@@ -112,22 +112,22 @@ internal sealed class FriendshipRepository : IFriendshipRepository
             })
             .Join(
                 _context.Users.AsNoTracking(),
-                friendship => friendship.FriendUserId,
+                x => x.FriendUserId,
                 user => user.Id,
-                (friendship, user) => new
+                (x, user) => new
                 {
-                    UserId = user.Id,
+                    user.Id,
                     user.UserName,
                     user.FullName,
                     user.AvatarUrl,
-                    friendship.FriendsSinceUtc
+                    x.FriendsSinceUtc
                 })
             .OrderBy(x => x.FullName)
             .ThenBy(x => x.UserName)
             .Skip(skip)
             .Take(pageSize)
             .Select(x => new FriendDto(
-                x.UserId,
+                x.Id,
                 x.UserName,
                 x.FullName,
                 x.AvatarUrl,
@@ -194,3 +194,6 @@ internal sealed class FriendshipRepository : IFriendshipRepository
             .ToListAsync(cancellationToken);
     }
 }
+
+
+

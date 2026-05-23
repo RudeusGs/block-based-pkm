@@ -1,5 +1,6 @@
 import api from '../base.api'
 import type { ApiResult, Guid } from '../models/common.model'
+import type { WorkspaceResponse } from '../models/workspace.model'
 import type {
   ConversationPagedResultResponse,
   ConversationResponse,
@@ -9,6 +10,7 @@ import type {
   MessagePagedResultResponse,
   MessageResponse,
   SendTextMessageRequest,
+  SendWorkspaceShareMessageRequest,
 } from '../models/messaging.model'
 
 function appendImageFile(formData: FormData, file: File) {
@@ -44,6 +46,22 @@ export const messagingController = {
     )
   },
 
+  sendWorkspaceShareMessage(
+    conversationId: Guid,
+    payload: SendWorkspaceShareMessageRequest
+  ) {
+    return api.post<ApiResult<MessageResponse>>(
+      `conversations/${conversationId}/messages/workspace-share`,
+      payload
+    )
+  },
+
+  acceptWorkspaceShare(messageId: Guid) {
+    return api.post<ApiResult<WorkspaceResponse>>(
+      `conversations/messages/${messageId}/workspace-share/accept`
+    )
+  },
+
   sendImageMessage(conversationId: Guid, file: File, caption?: string | null) {
     const formData = new FormData()
     appendImageFile(formData, file)
@@ -62,3 +80,6 @@ export const messagingController = {
     return api.post<ApiResult>(`conversations/${conversationId}/read`)
   },
 }
+
+
+

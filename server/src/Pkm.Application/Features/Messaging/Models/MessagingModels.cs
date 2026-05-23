@@ -12,6 +12,17 @@ public sealed record ConversationDto(
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);
 
+
+public sealed record WorkspaceSharePayloadDto(
+    Guid WorkspaceId,
+    string WorkspaceName,
+    string? WorkspaceDescription,
+    string WorkspaceVisibility,
+    string GrantedRole,
+    Guid SharedByUserId,
+    string SharedByDisplayName,
+    DateTimeOffset SharedAtUtc);
+
 public sealed record MessageDto(
     Guid Id,
     Guid ConversationId,
@@ -39,3 +50,6 @@ public sealed record MessagePagedResultDto(
     int PageSize,
     int TotalCount,
     int TotalPages);
+
+
+

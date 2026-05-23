@@ -1356,6 +1356,355 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 }
+
+/* Final Notion task detail polish */
+.task-detail-backdrop {
+  background: rgba(0, 0, 0, 0.34);
+  backdrop-filter: none;
+}
+
+.task-detail-drawer {
+  width: min(540px, 100vw);
+  color: #ededeb;
+  background: #191919;
+  border-left-color: #292929;
+  box-shadow: -18px 0 52px rgba(0, 0, 0, 0.36);
+}
+
+.task-detail-header {
+  min-height: auto;
+  padding: 18px 20px 16px;
+  border-bottom-color: #292929;
+  background: #191919;
+}
+
+.task-detail-kicker {
+  color: #85837d;
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+}
+
+.task-detail-title {
+  color: #ededeb;
+  font-size: 21px;
+  font-weight: 680;
+  letter-spacing: -0.025em;
+}
+
+.task-detail-close {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 5px;
+  color: #a8a8a3;
+}
+
+.task-detail-close:hover {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.065);
+  border-color: transparent;
+  transform: none;
+}
+
+.task-detail-body {
+  padding: 18px 20px 24px;
+}
+
+.task-detail-status-row {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.task-status-option {
+  opacity: 1;
+}
+
+.status-pill,
+.priority-pill,
+.task-detail-overdue {
+  min-height: 24px;
+  border: 1px solid #33322f;
+  border-radius: 999px !important;
+  color: #cfcfca;
+  background: #242424;
+  font-size: 12px;
+  font-weight: 550;
+  letter-spacing: -0.005em;
+}
+
+.status-pill-dot,
+.priority-pill-dot {
+  width: 6px;
+  height: 6px;
+  background: #8d8b84 !important;
+  opacity: 0.9;
+}
+
+.task-status-option.active {
+  color: #ededeb;
+  border-color: #4a4944;
+  background: #33322f;
+}
+
+.task-status-option:hover:not(:disabled) {
+  color: #ededeb;
+  border-color: #45443f;
+  background: #2d2c2a;
+}
+
+.task-status-option.locked:not(.active) {
+  color: #85837d;
+  background: transparent;
+  filter: none;
+}
+
+.status-todo,
+.status-doing,
+.status-done,
+.priority-high,
+.priority-medium,
+.priority-low {
+  color: #cfcfca;
+  background: #242424;
+  border-color: #33322f;
+}
+
+.status-done,
+.priority-low {
+  color: #b8b8b2;
+  background: #222220;
+}
+
+.priority-high,
+.task-detail-value-danger,
+.task-detail-overdue {
+  color: #d6b7b7;
+}
+
+.task-detail-overdue {
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.task-status-policy,
+.task-detail-inline-error,
+.task-comment-error {
+  border-color: #33322f;
+  border-radius: 7px;
+  color: #c9c9c3;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.task-status-policy i,
+.task-detail-inline-error i,
+.task-comment-error i {
+  color: #a8a8a3;
+}
+
+.task-done-confirm-card {
+  margin-bottom: 14px;
+  padding: 12px;
+  border-color: #33322f;
+  border-radius: 8px;
+  background: #202020;
+  box-shadow: none;
+}
+
+.task-done-confirm-icon {
+  width: 32px;
+  height: 32px;
+  border-color: #3a3935;
+  border-radius: 7px;
+  color: #ededeb;
+  background: #2a2927;
+}
+
+.task-done-confirm-copy h3 {
+  color: #ededeb;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.task-done-confirm-copy p {
+  color: #a8a8a3;
+}
+
+.task-done-confirm-actions button {
+  min-height: 30px;
+  border-radius: 5px;
+  font-weight: 600;
+}
+
+.task-done-confirm-ghost {
+  border-color: transparent;
+  color: #a8a8a3;
+  background: transparent;
+}
+
+.task-done-confirm-ghost:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.task-done-confirm-primary {
+  border-color: transparent;
+  color: #191919;
+  background: #ededeb;
+}
+
+.task-done-confirm-primary:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.task-detail-grid {
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.task-detail-field {
+  padding: 11px;
+  border-color: #2f2f2c;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.task-detail-field-label,
+.task-detail-section-title {
+  color: #85837d;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.task-detail-value,
+.task-assignee-chip,
+.task-comment-bubble p {
+  color: #d4d4d0;
+}
+
+.task-detail-muted-line,
+.task-detail-description,
+.task-comment-empty,
+.task-comment-author-row span,
+.task-comment-actions span {
+  color: #85837d;
+}
+
+.task-assignee-chip {
+  border-color: #33322f;
+  background: #242424;
+  font-weight: 550;
+}
+
+.task-assignee-chip img,
+.task-comment-avatar {
+  border-color: #33322f;
+  background: #242424;
+}
+
+.task-assignee-chip button:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.task-assign-control select,
+.task-assign-control button {
+  border-color: #33322f;
+  border-radius: 5px;
+  color: #d4d4d0;
+  background: transparent;
+}
+
+.task-assign-control select:hover:not(:disabled),
+.task-assign-control select:focus:not(:disabled),
+.task-assign-control button:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.task-detail-section {
+  padding-top: 18px;
+  margin-top: 18px;
+  border-top-color: #292929;
+}
+
+.task-comment-count {
+  color: #cfcfca;
+  background: #242424;
+  border-color: #33322f;
+  font-weight: 550;
+}
+
+.task-comment-empty {
+  border-color: #33322f;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.task-comment-list {
+  gap: 13px;
+}
+
+.task-comment-bubble {
+  border-color: #2f2f2c;
+  border-radius: 8px;
+  border-top-left-radius: 4px;
+  background: #202020;
+}
+
+.task-comment-bubble.reply {
+  background: transparent;
+}
+
+.task-comment-author-row strong {
+  color: #ededeb;
+  font-weight: 600;
+}
+
+.task-comment-replies {
+  border-left-color: #30302d;
+}
+
+.task-detail-composer {
+  padding: 12px 14px 14px;
+  border-top-color: #292929;
+  background: #191919;
+}
+
+.task-comment-input-wrap {
+  border-color: #33322f;
+  border-radius: 8px;
+  background: #202020;
+}
+
+.task-comment-input {
+  color: #ededeb;
+}
+
+.task-comment-input::placeholder {
+  color: #85837d;
+}
+
+.task-comment-composer-actions button {
+  border-radius: 5px;
+  color: #85837d;
+}
+
+.task-comment-composer-actions button:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.send-comment-btn {
+  color: #191919 !important;
+  background: #ededeb !important;
+  font-weight: 600;
+}
+
+.send-comment-btn:hover:not(:disabled) {
+  background: #ffffff !important;
+}
+
 </style>
 
 <style>
@@ -1363,5 +1712,3 @@ onBeforeUnmount(() => {
   overflow: hidden;
 }
 </style>
-
-

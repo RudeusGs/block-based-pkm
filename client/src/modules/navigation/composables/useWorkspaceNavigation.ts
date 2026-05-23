@@ -30,52 +30,6 @@ const state = reactive<{
   pageTabs: [],
 })
 
-function normalizePage(page: PageResponse | WorkspaceNavigationPage) {
-  return {
-    id: page.id,
-    workspaceId: page.workspaceId,
-    title: page.title,
-    icon: 'icon' in page ? page.icon : null,
-    coverImage: 'coverImage' in page ? page.coverImage : null,
-    currentRevision: 'currentRevision' in page ? page.currentRevision : null,
-  }
-}
-
-function resolveWorkspaceName(workspaceId: Guid) {
-  if (state.workspace?.id === workspaceId) {
-    return state.workspace.name
-  }
-
-  const existingTab = state.pageTabs.find((tab) => tab.workspaceId === workspaceId)
-  return existingTab?.workspaceName ?? 'Workspace'
-}
-
-function upsertPageTab(page: WorkspaceNavigationPage) {
-  const tab: WorkspaceNavigationPageTab = {
-    ...page,
-    workspaceName: resolveWorkspaceName(page.workspaceId),
-  }
-
-  const existingIndex = state.pageTabs.findIndex((item) => item.id === page.id)
-
-  if (existingIndex >= 0) {
-    const existingTab = state.pageTabs[existingIndex]
-    if (!existingTab) return
-
-    state.pageTabs.splice(existingIndex, 1, {
-      ...existingTab,
-      ...tab,
-      workspaceName:
-        tab.workspaceName === 'Workspace'
-          ? existingTab.workspaceName
-          : tab.workspaceName,
-    })
-    return
-  }
-
-  state.pageTabs.push(tab)
-}
-
 function setWorkspace(workspace: WorkspaceNavigationWorkspace | null) {
   state.workspace = workspace
 
@@ -89,43 +43,49 @@ function setWorkspace(workspace: WorkspaceNavigationWorkspace | null) {
   }
 }
 
+function normalizePage(page: PageResponse | WorkspaceNavigationPage): WorkspaceNavigationPage {
+  return {
+    id: page.id,
+    workspaceId: page.workspaceId,
+    title: page.title,
+    icon: 'icon' in page ? page.icon : null,
+    coverImage: 'coverImage' in page ? page.coverImage : null,
+    currentRevision: 'currentRevision' in page ? page.currentRevision : null,
+  }
+}
+
+function upsertPageTab(page: WorkspaceNavigationPage) {
+  const workspaceName =
+    state.workspace?.id === page.workspaceId
+      ? state.workspace.name
+      : state.pageTabs.find((tab) => tab.workspaceId === page.workspaceId)?.workspaceName ??
+        'Workspace'
+
+  const tab: WorkspaceNavigationPageTab = {
+    ...page,
+    workspaceName,
+  }
+
+  const existingIndex = state.pageTabs.findIndex((item) => item.id === page.id)
+
+  if (existingIndex >= 0) {
+    state.pageTabs.splice(existingIndex, 1, tab)
+    return
+  }
+
+  state.pageTabs = [...state.pageTabs, tab].slice(-8)
+}
+
 function setPage(page: PageResponse | WorkspaceNavigationPage | null) {
   if (!page) {
     state.page = null
     return
   }
 
-  const nextPage = normalizePage(page)
+  const normalized = normalizePage(page)
 
-  state.page = nextPage
-  upsertPageTab(nextPage)
-}
-
-function setPageCoverImage(
-  pageId: Guid,
-  coverImage: string | null,
-  currentRevision?: number | null
-) {
-  if (!state.page || state.page.id !== pageId) return
-
-  state.page = {
-    ...state.page,
-    coverImage,
-    currentRevision: currentRevision ?? state.page.currentRevision ?? null,
-  }
-
-  const existingIndex = state.pageTabs.findIndex((tab) => tab.id === pageId)
-
-  if (existingIndex >= 0) {
-    const existingTab = state.pageTabs[existingIndex]
-    if (!existingTab) return
-
-    state.pageTabs.splice(existingIndex, 1, {
-      ...existingTab,
-      coverImage,
-      currentRevision: currentRevision ?? existingTab.currentRevision ?? null,
-    })
-  }
+  state.page = normalized
+  upsertPageTab(normalized)
 }
 
 function selectPageTab(pageId: Guid) {
@@ -148,40 +108,43 @@ function selectPageTab(pageId: Guid) {
 }
 
 function closePageTab(pageId: Guid) {
-  const closingIndex = state.pageTabs.findIndex((tab) => tab.id === pageId)
-  if (closingIndex < 0) return
+  const closingActivePage = state.page?.id === pageId
+  state.pageTabs = state.pageTabs.filter((tab) => tab.id !== pageId)
 
-  const isActiveTab = state.page?.id === pageId
-  const nextTabs = state.pageTabs.filter((tab) => tab.id !== pageId)
+  if (!closingActivePage) return
 
-  state.pageTabs = nextTabs
+  const fallback = state.pageTabs[state.pageTabs.length - 1] ?? null
 
-  if (!isActiveTab) return
-
-  const nextTab = nextTabs[closingIndex] ?? nextTabs[closingIndex - 1] ?? null
-
-  if (!nextTab) {
+  if (!fallback) {
     state.page = null
     return
   }
 
-  selectPageTab(nextTab.id)
+  selectPageTab(fallback.id)
 }
 
-function closeWorkspacePageTabs(workspaceId: Guid) {
-  const activePageBelongsToWorkspace = state.page?.workspaceId === workspaceId
-
-  state.pageTabs = state.pageTabs.filter((tab) => tab.workspaceId !== workspaceId)
-
-  if (activePageBelongsToWorkspace) {
-    const nextTab = state.pageTabs[0] ?? null
-
-    if (nextTab) {
-      selectPageTab(nextTab.id)
-    } else {
-      state.page = null
+function setPageCoverImage(
+  pageId: Guid,
+  coverImage: string | null,
+  currentRevision?: number | null
+) {
+  if (state.page && state.page.id === pageId) {
+    state.page = {
+      ...state.page,
+      coverImage,
+      currentRevision: currentRevision ?? state.page.currentRevision ?? null,
     }
   }
+
+  state.pageTabs = state.pageTabs.map((tab) => {
+    if (tab.id !== pageId) return tab
+
+    return {
+      ...tab,
+      coverImage,
+      currentRevision: currentRevision ?? tab.currentRevision ?? null,
+    }
+  })
 }
 
 function clearNavigation() {
@@ -204,12 +167,9 @@ export function useWorkspaceNavigation() {
 
     setWorkspace,
     setPage,
-    setPageCoverImage,
     selectPageTab,
     closePageTab,
-    closeWorkspacePageTabs,
+    setPageCoverImage,
     clearNavigation,
   }
 }
-
-

@@ -5,3 +5,10 @@ public sealed record CreateDirectConversationRequest(
 
 public sealed record SendTextMessageRequest(
     string Body);
+
+
+
+
+public sealed record SendWorkspaceShareMessageRequest(
+    Guid WorkspaceId,
+    string? Role);

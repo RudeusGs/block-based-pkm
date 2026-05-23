@@ -513,3 +513,148 @@
     animation: none;
   }
 }
+
+/* Final Notion task table polish */
+.work-tasks-section {
+  --task-bg: #0f0f0f;
+  --task-surface: #111111;
+  --task-surface-hover: rgba(255, 255, 255, 0.045);
+  --task-surface-active: #2a2927;
+  --task-border: #292929;
+  --task-border-soft: #242424;
+  --task-text: #ededeb;
+  --task-muted: #a8a8a3;
+  --task-faint: #85837d;
+  --task-chip-bg: #242424;
+  --task-chip-border: #33322f;
+}
+
+.task-section-toolbar {
+  background: rgba(15, 15, 15, 0.96);
+  border-bottom-color: #242424 !important;
+}
+
+.section-title {
+  font-size: 26px;
+  font-weight: 680;
+  letter-spacing: -0.035em;
+}
+
+.task-realtime-warning {
+  color: #b9a979;
+}
+
+.task-action-btn,
+.new-task-btn {
+  border-radius: 5px;
+}
+
+.new-task-btn {
+  color: #191919;
+  background: #ededeb;
+  border-color: transparent;
+  font-weight: 600;
+}
+
+.new-task-btn:hover:not(:disabled) {
+  color: #111111;
+  background: #ffffff;
+  border-color: transparent;
+}
+
+.task-action-btn:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.065);
+}
+
+.task-summary > span {
+  border-radius: 5px;
+  color: #a8a8a3;
+}
+
+.summary-todo,
+.summary-doing,
+.summary-done,
+.status-todo .status-pill-dot,
+.status-doing .status-pill-dot,
+.status-done .status-pill-dot,
+.priority-high .priority-pill-dot,
+.priority-medium .priority-pill-dot,
+.priority-low .priority-pill-dot {
+  background: #8d8b84;
+}
+
+.task-database {
+  border-color: #292929 !important;
+  border-radius: 6px !important;
+  background: #111111;
+}
+
+.task-table thead th {
+  height: 40px;
+  color: #85837d;
+  background: #151515;
+  border-bottom-color: #292929;
+  font-weight: 500 !important;
+}
+
+.task-table tbody td {
+  border-color: #242424;
+}
+
+.task-row:hover,
+.task-row-selected {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.status-pill,
+.priority-pill {
+  color: #cfcfca;
+  background: #242424;
+  border-color: #33322f;
+  font-weight: 550;
+}
+
+.status-todo,
+.status-doing,
+.status-done,
+.priority-high,
+.priority-medium,
+.priority-low {
+  color: #cfcfca;
+  background: #242424;
+  border-color: #33322f;
+}
+
+.status-done,
+.priority-low {
+  color: #b8b8b2;
+  background: #222220;
+}
+
+.priority-high,
+.date-overdue {
+  color: #d6b7b7;
+}
+
+.add-row-btn:hover:not(:disabled) {
+  color: #ededeb;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.task-empty-state .material-symbols-outlined,
+.task-error-state i {
+  color: #d4d4d0;
+  background: #202020;
+}
+
+.task-error-state button {
+  border-color: #33322f;
+  border-radius: 5px;
+  color: #ededeb;
+  background: transparent;
+}
+
+.task-error-state button:hover {
+  background: rgba(255, 255, 255, 0.065);
+}

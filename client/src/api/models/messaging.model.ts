@@ -1,7 +1,7 @@
 import type { DateTimeString, Guid, PagingParams } from './common.model'
 import type { UserSummaryResponse } from './social.model'
 
-export type MessageType = 'Text' | 'Image' | 'text' | 'image' | string
+export type MessageType = 'Text' | 'Image' | 'WorkspaceShare' | 'text' | 'image' | 'workspaceShare' | string
 
 export interface ConversationResponse {
   id: Guid
@@ -52,6 +52,27 @@ export interface SendTextMessageRequest {
   body: string
 }
 
+export type WorkspaceShareRoleRequest = 'viewer' | 'member'
+
+export interface SendWorkspaceShareMessageRequest {
+  workspaceId: Guid
+  role?: WorkspaceShareRoleRequest | null
+}
+
+export interface WorkspaceShareMessagePayload {
+  workspaceId: Guid
+  workspaceName: string
+  workspaceDescription: string | null
+  workspaceVisibility: string
+  grantedRole: string
+  sharedByUserId: Guid
+  sharedByDisplayName: string
+  sharedAtUtc: DateTimeString
+}
+
 export interface ListConversationsParams extends PagingParams {}
 
 export interface ListMessagesParams extends PagingParams {}
+
+
+

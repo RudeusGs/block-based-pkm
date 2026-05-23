@@ -547,3 +547,146 @@
     display: none;
   }
 }
+
+
+
+
+.message-bubble.workspace-share-bubble {
+  width: min(370px, 82vw);
+  max-width: min(370px, 82vw);
+  padding: 10px;
+  color: #ededed;
+  background: #202020;
+  border-color: #303030;
+}
+
+.message-bubble-row.mine .message-bubble.workspace-share-bubble {
+  color: #ededed;
+  background: #202020;
+  border-color: #303030;
+}
+
+.message-workspace-card {
+  display: flex;
+  gap: 11px;
+}
+
+.message-workspace-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #ededed;
+  background: #2a2a2a;
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.message-workspace-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.message-workspace-kicker {
+  display: block;
+  color: #858585;
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.message-workspace-copy strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: #ededed;
+  font-size: 14px;
+  font-weight: 760;
+  line-height: 1.25;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.message-workspace-copy p {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 5px 0 0;
+  color: #a3a3a3;
+  font-size: 12px;
+  line-height: 1.4;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.message-workspace-meta {
+  margin-top: 7px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #858585;
+  font-size: 11px;
+  font-weight: 620;
+}
+
+.message-workspace-action {
+  width: 100%;
+  min-height: 34px;
+  margin-top: 10px;
+  border: 0;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  color: #191919;
+  background: #ededed;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.message-workspace-action:hover:not(:disabled) {
+  background: #fff;
+}
+
+.message-workspace-action:disabled {
+  opacity: 0.72;
+  cursor: wait;
+}
+
+.message-workspace-action .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.message-workspace-action-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #bdbdbd;
+  border-top-color: #191919;
+  border-radius: 999px;
+  animation: messenger-workspace-spin 0.75s linear infinite;
+}
+
+.message-workspace-sent-note {
+  display: block;
+  margin-top: 9px;
+  border-top: 1px solid #303030;
+  padding-top: 8px;
+  color: #858585;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.message-bubble.workspace-share-bubble time,
+.message-bubble-row.mine .message-bubble.workspace-share-bubble time {
+  color: #858585;
+}
+
+@keyframes messenger-workspace-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -85,8 +85,12 @@ internal sealed class MessagingRepository : IMessagingRepository
             .Where(x => x.FirstUserId == userId || x.SecondUserId == userId)
             .Select(x => new
             {
-                Conversation = x,
+                ConversationId = x.Id,
                 OtherUserId = x.FirstUserId == userId ? x.SecondUserId : x.FirstUserId,
+                x.LastMessagePreview,
+                x.LastMessageAtUtc,
+                x.CreatedDate,
+                x.UpdatedDate,
                 UnreadCount = _context.Messages.Count(m =>
                     m.ConversationId == x.Id &&
                     m.RecipientUserId == userId &&
@@ -99,17 +103,17 @@ internal sealed class MessagingRepository : IMessagingRepository
                 u => u.Id,
                 (x, u) => new
                 {
-                    ConversationId = x.Conversation.Id,
+                    x.ConversationId,
                     OtherUserId = u.Id,
                     u.UserName,
                     u.FullName,
                     u.AvatarUrl,
-                    x.Conversation.LastMessagePreview,
-                    x.Conversation.LastMessageAtUtc,
+                    x.LastMessagePreview,
+                    x.LastMessageAtUtc,
                     x.UnreadCount,
-                    x.Conversation.CreatedDate,
-                    x.Conversation.UpdatedDate,
-                    SortDate = x.Conversation.LastMessageAtUtc ?? x.Conversation.CreatedDate
+                    x.CreatedDate,
+                    x.UpdatedDate,
+                    SortDate = x.LastMessageAtUtc ?? x.CreatedDate
                 })
             .OrderByDescending(x => x.SortDate)
             .Skip(skip)
@@ -194,6 +198,20 @@ internal sealed class MessagingRepository : IMessagingRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public Task<Message?> GetMessageForRecipientAsync(
+        Guid messageId,
+        Guid recipientUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Messages
+            .AsNoTracking()
+            .FirstOrDefaultAsync(x =>
+                x.Id == messageId &&
+                x.RecipientUserId == recipientUserId &&
+                !x.IsDeletedForEveryone,
+                cancellationToken);
+    }
+
     public Task<int> CountMessagesAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
         return _context.Messages
@@ -227,3 +245,6 @@ internal sealed class MessagingRepository : IMessagingRepository
 
     public void UpdateConversation(Conversation conversation) => _context.Conversations.Update(conversation);
 }
+
+
+

@@ -112,28 +112,6 @@ export function useSidebarWorkspaceTree() {
   )
 
   watch(
-    () => workspaceNavigation.page.value,
-    (page) => {
-      if (!page) {
-        selectedPageId.value = null
-        return
-      }
-
-      selectedWorkspaceId.value = page.workspaceId
-      selectedPageId.value = page.id
-      openWorkspaceBranch(page.workspaceId)
-
-      if (!(page.workspaceId in pageTreesByWorkspaceId.value)) {
-        void fetchWorkspacePages(page.workspaceId, {
-          preferredPageId: page.id,
-          syncSelection: false,
-        })
-      }
-    },
-    { immediate: true }
-  )
-
-  watch(
     workspaces,
     (list) => {
       if (!list.length) {
@@ -542,6 +520,22 @@ export function useSidebarWorkspaceTree() {
     }
   }
 
+  async function handleWorkspaceJoined(workspace: WorkspaceResponse) {
+    updateWorkspace(workspace)
+    isWorkspacesOpen.value = true
+    selectedWorkspaceId.value = workspace.id
+    selectedPageId.value = null
+
+    workspaceNavigation.setWorkspace({
+      id: workspace.id,
+      name: workspace.name,
+    })
+
+    workspaceNavigation.setPage(null)
+    openWorkspaceBranch(workspace.id)
+    await fetchWorkspacePages(workspace.id)
+  }
+
   function handleWorkspaceDeleted(workspaceId: Guid) {
     const isSelectedWorkspace = selectedWorkspaceId.value === workspaceId
 
@@ -635,6 +629,7 @@ export function useSidebarWorkspaceTree() {
     selectPage,
     handleWorkspaceCreated,
     handleWorkspaceUpdated,
+    handleWorkspaceJoined,
     handlePageCreated,
     requestDeletePage,
     closeDeletePageConfirm,
@@ -642,6 +637,9 @@ export function useSidebarWorkspaceTree() {
     handleWorkspaceDeleted,
   }
 }
+
+
+
 
 
 

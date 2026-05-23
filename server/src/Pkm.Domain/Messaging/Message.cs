@@ -53,6 +53,9 @@ public sealed class Message : EntityBase
 
         if (Type == MessageType.Image && string.IsNullOrWhiteSpace(ImageUrl))
             throw new DomainException("Tin nhắn ảnh phải có đường dẫn ảnh.");
+
+        if (Type == MessageType.WorkspaceShare && string.IsNullOrWhiteSpace(Body))
+            throw new DomainException("Tin nhắn chia sẻ workspace phải có dữ liệu workspace.");
     }
 
     public static Message CreateText(
@@ -75,10 +78,22 @@ public sealed class Message : EntityBase
         DateTimeOffset now)
         => new(id, conversationId, senderUserId, recipientUserId, MessageType.Image, caption, imageUrl, attachmentFileId, now);
 
+    public static Message CreateWorkspaceShare(
+        Guid id,
+        Guid conversationId,
+        Guid senderUserId,
+        Guid recipientUserId,
+        string payloadJson,
+        DateTimeOffset now)
+        => new(id, conversationId, senderUserId, recipientUserId, MessageType.WorkspaceShare, payloadJson, null, null, now);
+
     public string BuildPreview()
-        => Type == MessageType.Image
-            ? string.IsNullOrWhiteSpace(Body) ? "Đã gửi một ảnh" : Body!
-            : Body ?? string.Empty;
+        => Type switch
+        {
+            MessageType.Image => string.IsNullOrWhiteSpace(Body) ? "Đã gửi một ảnh" : Body!,
+            MessageType.WorkspaceShare => "Đã chia sẻ một workspace",
+            _ => Body ?? string.Empty
+        };
 
     public void MarkRead(DateTimeOffset now)
     {
@@ -99,3 +114,6 @@ public sealed class Message : EntityBase
         Touch(now);
     }
 }
+
+
+
