@@ -17,6 +17,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
 {
     private static readonly TimeSpan ListCacheTtl = TimeSpan.FromMinutes(1);
     private static readonly TimeSpan VersionTtl = TimeSpan.FromDays(7);
+    private static readonly TimeSpan MessageNotificationIdleThreshold = TimeSpan.FromHours(4);
 
     private readonly ICurrentUser _currentUser;
     private readonly IUserRepository _userRepository;
@@ -207,6 +208,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
             return Result.Failure<MessageDto>(MessagingErrors.FriendshipRequired);
 
         var now = _clock.UtcNow;
+        var previousMessageAtUtc = conversation.LastMessageAtUtc;
         Message message;
 
         try
@@ -232,13 +234,16 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
 
         await PublishConversationEventAsync(conversation.Id, currentUserId, recipientId, "MessageCreated", dto, cancellationToken);
 
-        await _notificationService.NotifyAsync(
-            recipientId,
-            NotificationTemplates.MessageReceived(
-                currentUserId,
-                _currentUser.UserName ?? "Có người",
-                conversation.Id),
-            cancellationToken);
+        if (ShouldNotifyMessageRecipient(previousMessageAtUtc, now))
+        {
+            await _notificationService.NotifyAsync(
+                recipientId,
+                NotificationTemplates.MessageReceived(
+                    currentUserId,
+                    _currentUser.UserName ?? "Có người",
+                    conversation.Id),
+                cancellationToken);
+        }
 
         return Result.Success(dto);
     }
@@ -265,4 +270,12 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
     private static int NormalizePage(int pageNumber) => pageNumber <= 0 ? 1 : pageNumber;
     private static int NormalizeSize(int pageSize) => pageSize <= 0 ? 30 : Math.Min(pageSize, 100);
     private static int CalculateTotalPages(int total, int size) => total <= 0 ? 0 : (int)Math.Ceiling(total / (double)size);
+
+    private static bool ShouldNotifyMessageRecipient(DateTimeOffset? previousMessageAtUtc, DateTimeOffset now)
+    {
+        if (!previousMessageAtUtc.HasValue)
+            return true;
+
+        return now - previousMessageAtUtc.Value >= MessageNotificationIdleThreshold;
+    }
 }

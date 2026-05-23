@@ -97,17 +97,31 @@ internal sealed class MessagingRepository : IMessagingRepository
                 _context.Users.AsNoTracking(),
                 x => x.OtherUserId,
                 u => u.Id,
-                (x, u) => new ConversationDto(
-                    x.Conversation.Id,
-                    new UserSummaryDto(u.Id, u.UserName, u.FullName, u.AvatarUrl),
+                (x, u) => new
+                {
+                    ConversationId = x.Conversation.Id,
+                    OtherUserId = u.Id,
+                    u.UserName,
+                    u.FullName,
+                    u.AvatarUrl,
                     x.Conversation.LastMessagePreview,
                     x.Conversation.LastMessageAtUtc,
                     x.UnreadCount,
                     x.Conversation.CreatedDate,
-                    x.Conversation.UpdatedDate))
-            .OrderByDescending(x => x.LastMessageAtUtc ?? x.CreatedDate)
+                    x.Conversation.UpdatedDate,
+                    SortDate = x.Conversation.LastMessageAtUtc ?? x.Conversation.CreatedDate
+                })
+            .OrderByDescending(x => x.SortDate)
             .Skip(skip)
             .Take(pageSize)
+            .Select(x => new ConversationDto(
+                x.ConversationId,
+                new UserSummaryDto(x.OtherUserId, x.UserName, x.FullName, x.AvatarUrl),
+                x.LastMessagePreview,
+                x.LastMessageAtUtc,
+                x.UnreadCount,
+                x.CreatedDate,
+                x.UpdatedDate))
             .ToListAsync(cancellationToken);
     }
 

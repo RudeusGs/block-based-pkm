@@ -431,6 +431,8 @@ async function confirmDeletePage() {
     return
   }
 
+  workspaceNavigation.closePageTab(deletedPage.id)
+
   toast.success('Đã xóa page', `Page "${deletedPage.title}" đã được xóa khỏi workspace.`)
 }
 

@@ -1,39 +1,58 @@
 <template>
   <header class="app-top-nav sticky-top">
     <nav
-      class="app-breadcrumb"
-      aria-label="Breadcrumb"
+      class="app-page-tabs"
+      aria-label="Open pages"
     >
-      <button
-        class="app-breadcrumb-pill"
-        type="button"
-        title="Workspace"
+      <div
+        v-if="workspaceNavigation.pageTabs.value.length"
+        class="app-page-tab-strip"
+        role="tablist"
       >
-        Workspace
-      </button>
+        <div
+          v-for="tab in workspaceNavigation.pageTabs.value"
+          :key="tab.id"
+          class="app-page-tab"
+          :class="{ active: tab.id === activePageId }"
+          :title="`${tab.workspaceName} / ${tab.title}`"
+          role="presentation"
+        >
+          <button
+            class="app-page-tab-main"
+            type="button"
+            role="tab"
+            :aria-selected="tab.id === activePageId"
+            @click="selectPageTab(tab.id)"
+          >
+            <span class="app-page-tab-icon">
+              {{ tab.icon || '📄' }}
+            </span>
 
-      <span>/</span>
+            <span class="app-page-tab-title">
+              {{ tab.title }}
+            </span>
+          </button>
 
-      <button
-        class="app-breadcrumb-pill app-breadcrumb-current-workspace"
-        type="button"
+          <button
+            class="app-page-tab-close"
+            type="button"
+            title="Close tab"
+            aria-label="Close page tab"
+            @click.stop="closePageTab(tab.id)"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        v-else
+        class="app-page-tabs-empty"
         :title="workspaceNavigation.workspaceName.value"
       >
-        {{ workspaceNavigation.workspaceName.value }}
-      </button>
-
-      <span>/</span>
-
-      <strong :title="workspaceNavigation.pageName.value">
-        <span
-          v-if="workspaceNavigation.page.value"
-          class="app-breadcrumb-page-icon"
-        >
-          {{ workspaceNavigation.pageIcon.value }}
-        </span>
-
-        {{ workspaceNavigation.pageName.value }}
-      </strong>
+        <span class="material-symbols-outlined">tab</span>
+        <span>{{ workspaceNavigation.workspaceName.value }}</span>
+      </div>
     </nav>
 
     <div class="app-top-actions">
@@ -424,6 +443,10 @@ const currentWorkspaceId = computed<Guid | null>(() => {
   return workspaceNavigation.workspace.value?.id ?? null
 })
 
+const activePageId = computed<Guid | null>(() => {
+  return workspaceNavigation.page.value?.id ?? null
+})
+
 const deleteWorkspaceConfirmMessage = computed(() => {
   const workspace = deleteWorkspace.workspaceToDelete.value
 
@@ -473,6 +496,20 @@ function openMessenger(userId?: Guid | null) {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
   emit('open-messenger', userId ?? null)
+}
+
+function selectPageTab(pageId: Guid) {
+  if (activePageId.value === pageId) return
+
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+  workspaceNavigation.selectPageTab(pageId)
+}
+
+function closePageTab(pageId: Guid) {
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+  workspaceNavigation.closePageTab(pageId)
 }
 
 function openWorkspaceSettings() {
@@ -653,55 +690,144 @@ onBeforeUnmount(() => {
   backdrop-filter: blur(18px);
 }
 
-.app-breadcrumb {
+.app-page-tabs {
+  min-width: 0;
+  flex: 1 1 auto;
+  align-self: stretch;
+  display: flex;
+  align-items: flex-end;
+}
+
+.app-page-tab-strip {
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  padding-top: 7px;
+  scrollbar-width: thin;
+  scrollbar-color: #3a3a3a transparent;
+}
+
+.app-page-tab-strip::-webkit-scrollbar {
+  height: 8px;
+}
+
+.app-page-tab-strip::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-page-tab-strip::-webkit-scrollbar-thumb {
+  border: 3px solid transparent;
+  border-radius: 999px;
+  background: #3a3a3a;
+  background-clip: content-box;
+}
+
+.app-page-tab {
+  min-width: 132px;
+  max-width: 224px;
+  height: 34px;
+  border: 1px solid #2d2d2d;
+  border-bottom: 0;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  align-items: center;
+  flex: 0 1 192px;
+  color: #a3a3a3;
+  background: #171717;
+}
+
+.app-page-tab:hover {
+  color: #f1f1f1;
+  background: #202020;
+}
+
+.app-page-tab.active {
+  color: #f1f1f1;
+  background: #262626;
+  border-color: #3a3a3a;
+}
+
+.app-page-tab-main {
+  min-width: 0;
+  height: 100%;
+  border: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex: 1 1 auto;
+  padding: 0 7px 0 10px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+}
+
+.app-page-tab-icon {
+  width: 18px;
+  flex: 0 0 18px;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1;
+  text-align: center;
+}
+
+.app-page-tab-title {
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12.5px;
+  font-weight: 620;
+  line-height: 1.2;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.app-page-tab-close {
+  width: 24px;
+  height: 24px;
+  margin-right: 4px;
+  border: 0;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 24px;
+  color: #858585;
+  background: transparent;
+}
+
+.app-page-tab-close:hover {
+  color: #f1f1f1;
+  background: #333;
+}
+
+.app-page-tab-close .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.app-page-tabs-empty {
   min-width: 0;
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 7px;
+  align-self: center;
   color: #8a8a8a;
   font-size: 13px;
   font-weight: 500;
 }
 
-.app-breadcrumb span {
-  color: #555;
-}
-
-.app-breadcrumb strong {
+.app-page-tabs-empty span:last-child {
   min-width: 0;
   overflow: hidden;
-  color: #e7e7e7;
-  font-size: 13px;
-  font-weight: 650;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
 
-.app-breadcrumb-page-icon {
-  margin-right: 5px;
-  color: inherit;
-  font-size: 13px;
-}
-
-.app-breadcrumb-pill {
-  border: 0;
-  border-radius: 6px;
-  padding: 4px 7px;
-  color: #a3a3a3;
-  background: transparent;
-  font: inherit;
-}
-
-.app-breadcrumb-pill:hover {
-  color: #f1f1f1;
-  background: #242424;
-}
-
-.app-breadcrumb-current-workspace {
-  max-width: 180px;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
+.app-page-tabs-empty .material-symbols-outlined {
+  font-size: 17px;
 }
 
 .app-top-actions {
@@ -1137,7 +1263,8 @@ onBeforeUnmount(() => {
 
 .app-task-jump:focus-visible,
 .app-icon-btn:focus-visible,
-.app-breadcrumb-pill:focus-visible,
+.app-page-tab-main:focus-visible,
+.app-page-tab-close:focus-visible,
 .app-notification-content:focus-visible,
 .app-notification-head-actions button:focus-visible,
 .app-notification-state button:focus-visible,
@@ -1161,13 +1288,9 @@ onBeforeUnmount(() => {
     padding: 0 10px;
   }
 
-  .app-breadcrumb-current-workspace {
-    max-width: 120px;
-  }
-
-  .app-breadcrumb button:nth-of-type(1),
-  .app-breadcrumb span:nth-of-type(1) {
-    display: none;
+  .app-page-tab {
+    min-width: 112px;
+    flex-basis: 156px;
   }
 
   .app-task-jump {

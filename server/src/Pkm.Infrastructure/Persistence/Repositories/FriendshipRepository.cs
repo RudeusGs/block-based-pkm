@@ -102,24 +102,36 @@ internal sealed class FriendshipRepository : IFriendshipRepository
         pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
         var skip = (pageNumber - 1) * pageSize;
 
-        var firstSide =
-            from friendship in _context.Friendships.AsNoTracking()
-            where friendship.FirstUserId == userId
-            join user in _context.Users.AsNoTracking() on friendship.SecondUserId equals user.Id
-            select new FriendDto(user.Id, user.UserName, user.FullName, user.AvatarUrl, friendship.CreatedDate);
-
-        var secondSide =
-            from friendship in _context.Friendships.AsNoTracking()
-            where friendship.SecondUserId == userId
-            join user in _context.Users.AsNoTracking() on friendship.FirstUserId equals user.Id
-            select new FriendDto(user.Id, user.UserName, user.FullName, user.AvatarUrl, friendship.CreatedDate);
-
-        return await firstSide
-            .Concat(secondSide)
+        return await _context.Friendships
+            .AsNoTracking()
+            .Where(x => x.FirstUserId == userId || x.SecondUserId == userId)
+            .Select(x => new
+            {
+                FriendUserId = x.FirstUserId == userId ? x.SecondUserId : x.FirstUserId,
+                FriendsSinceUtc = x.CreatedDate
+            })
+            .Join(
+                _context.Users.AsNoTracking(),
+                friendship => friendship.FriendUserId,
+                user => user.Id,
+                (friendship, user) => new
+                {
+                    UserId = user.Id,
+                    user.UserName,
+                    user.FullName,
+                    user.AvatarUrl,
+                    friendship.FriendsSinceUtc
+                })
             .OrderBy(x => x.FullName)
             .ThenBy(x => x.UserName)
             .Skip(skip)
             .Take(pageSize)
+            .Select(x => new FriendDto(
+                x.UserId,
+                x.UserName,
+                x.FullName,
+                x.AvatarUrl,
+                x.FriendsSinceUtc))
             .ToListAsync(cancellationToken);
     }
 

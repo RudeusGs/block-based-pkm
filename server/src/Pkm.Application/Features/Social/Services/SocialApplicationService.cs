@@ -354,7 +354,6 @@ public sealed class SocialApplicationService : ISocialApplicationService
         try
         {
             profile.Update(bio, coverImageUrl, _clock.UtcNow);
-            _profileRepository.Update(profile);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (DomainException ex)
@@ -383,9 +382,16 @@ public sealed class SocialApplicationService : ISocialApplicationService
             return Result.Failure<UserProfilePageDto>(uploadResult.Error);
 
         var profile = await EnsureProfileForUpdateAsync(currentUserId, cancellationToken);
-        profile.SetCoverImage(uploadResult.Value.PublicUrl, _clock.UtcNow);
-        _profileRepository.Update(profile);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            profile.SetCoverImage(uploadResult.Value.PublicUrl, _clock.UtcNow);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DomainException ex)
+        {
+            return Result.Failure<UserProfilePageDto>(new Error("Social.UploadProfileCoverFailed", ex.Message, ResultStatus.Unprocessable));
+        }
 
         return await GetProfileAsync(currentUserId, cancellationToken);
     }
@@ -440,3 +446,6 @@ public sealed class SocialApplicationService : ISocialApplicationService
     private static int NormalizePage(int pageNumber) => pageNumber <= 0 ? 1 : pageNumber;
     private static int NormalizeSize(int pageSize) => pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 }
+
+
+

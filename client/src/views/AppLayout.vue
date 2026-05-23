@@ -182,6 +182,7 @@ function handlePageCoverUploaded(payload: {
 }
 
 function handleWorkspaceDeleted(workspaceId: Guid) {
+  workspaceNavigation.closeWorkspacePageTabs(workspaceId)
   sidebarLeftRef.value?.handleWorkspaceDeleted?.(workspaceId)
   workspaceMembers.close()
   closeActivityLog()

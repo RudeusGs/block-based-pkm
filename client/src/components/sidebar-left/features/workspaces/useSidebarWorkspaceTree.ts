@@ -112,6 +112,28 @@ export function useSidebarWorkspaceTree() {
   )
 
   watch(
+    () => workspaceNavigation.page.value,
+    (page) => {
+      if (!page) {
+        selectedPageId.value = null
+        return
+      }
+
+      selectedWorkspaceId.value = page.workspaceId
+      selectedPageId.value = page.id
+      openWorkspaceBranch(page.workspaceId)
+
+      if (!(page.workspaceId in pageTreesByWorkspaceId.value)) {
+        void fetchWorkspacePages(page.workspaceId, {
+          preferredPageId: page.id,
+          syncSelection: false,
+        })
+      }
+    },
+    { immediate: true }
+  )
+
+  watch(
     workspaces,
     (list) => {
       if (!list.length) {
