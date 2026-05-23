@@ -324,11 +324,17 @@ import {
 } from '@/api/utils/api-error.util'
 import { normalizeImageUrl } from '@/utils/image-url.util'
 
-const props = defineProps<{
-  open: boolean
-  workspaceId: Guid | null
-  workspaceName?: string | null
-}>()
+const props = withDefaults(
+  defineProps<{
+    open: boolean
+    workspaceId: Guid | null
+    workspaceName?: string | null
+    canReadAudit?: boolean
+  }>(),
+  {
+    canReadAudit: false,
+  }
+)
 
 const emit = defineEmits<{
   close: []
@@ -498,7 +504,14 @@ watch(
   (open) => {
     if (open) {
       document.body.classList.add('activity-log-scroll-lock')
-      void refresh()
+
+      if (props.canReadAudit) {
+        void refresh()
+      } else {
+        resetList()
+        error.value = 'Bạn không có quyền xem activity log của workspace này.'
+      }
+
       window.addEventListener('keydown', handleKeydown)
       return
     }
@@ -510,11 +523,17 @@ watch(
 )
 
 watch(
-  () => props.workspaceId,
+  () => [props.workspaceId, props.canReadAudit] as const,
   () => {
-    if (props.open) {
-      void refresh()
+    if (!props.open) return
+
+    if (!props.canReadAudit) {
+      resetList()
+      error.value = 'Bạn không có quyền xem activity log của workspace này.'
+      return
     }
+
+    void refresh()
   }
 )
 
@@ -562,12 +581,23 @@ function clearFilters() {
   void refresh()
 }
 
+function resetList() {
+  items.value = []
+  totalCount.value = 0
+  pageNumber.value = 1
+  expandedActivityIds.value = new Set()
+}
+
 async function refresh() {
   if (!props.workspaceId) {
-    items.value = []
-    totalCount.value = 0
-    pageNumber.value = 1
+    resetList()
     error.value = null
+    return
+  }
+
+  if (!props.canReadAudit) {
+    resetList()
+    error.value = 'Bạn không có quyền xem activity log của workspace này.'
     return
   }
 
@@ -612,7 +642,14 @@ async function refresh() {
 }
 
 async function loadMore() {
-  if (!props.workspaceId || isLoadingMore.value || !hasMore.value) return
+  if (
+    !props.workspaceId ||
+    !props.canReadAudit ||
+    isLoadingMore.value ||
+    !hasMore.value
+  ) {
+    return
+  }
 
   isLoadingMore.value = true
   error.value = null
@@ -1612,3 +1649,6 @@ function formatFullDate(value: string) {
   }
 }
 </style>
+
+
+

@@ -269,8 +269,9 @@
       <button
         class="app-icon-btn"
         type="button"
-        title="Activity log"
+        :title="activityLogButtonTitle"
         aria-label="Activity log"
+        :disabled="!canOpenActivityLog"
         @click="openActivityLog"
       >
         <span class="material-symbols-outlined">history</span>
@@ -430,9 +431,11 @@ import WorkspaceShareModal from '@/components/workspace/WorkspaceShareModal.vue'
 const props = withDefaults(
   defineProps<{
     canShareWorkspace?: boolean
+    canViewActivityLog?: boolean
   }>(),
   {
     canShareWorkspace: false,
+    canViewActivityLog: false,
   }
 )
 
@@ -475,6 +478,16 @@ const canShareWorkspace = computed(() => {
 
 const canOpenWorkspaceShare = computed(() => {
   return Boolean(currentWorkspaceId.value && props.canShareWorkspace)
+})
+
+const canOpenActivityLog = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canViewActivityLog)
+})
+
+const activityLogButtonTitle = computed(() => {
+  if (!currentWorkspaceId.value) return 'Chọn workspace trước khi xem activity log'
+  if (!props.canViewActivityLog) return 'Chỉ Owner hoặc Manager mới xem được activity log'
+  return 'Activity log'
 })
 
 const shareButtonTitle = computed(() => {
@@ -592,6 +605,17 @@ function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
 function openActivityLog() {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
+
+  if (!currentWorkspaceId.value) {
+    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi xem activity log.')
+    return
+  }
+
+  if (!props.canViewActivityLog) {
+    toast.warning('Không có quyền xem activity log', 'Chỉ Owner hoặc Manager mới xem được activity log.')
+    return
+  }
+
   emit('open-activity-log')
 }
 
@@ -1545,3 +1569,6 @@ onBeforeUnmount(() => {
 }
 
 </style>
+
+
+

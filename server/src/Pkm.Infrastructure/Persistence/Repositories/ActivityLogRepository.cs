@@ -39,12 +39,63 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
             fromUtc,
             toUtc);
 
-        return await BuildReadModelQuery(query, search)
+        query = ApplySearchFilter(query, search);
+
+        // Keep the SQL query simple and stable: fetch the audit rows first, then
+        // hydrate user display data in a second query. This avoids EF/Npgsql
+        // translation issues caused by left join + DTO projection + ordering.
+        var logs = await query
             .OrderByDescending(x => x.OccurredAt)
             .ThenByDescending(x => x.CreatedDate)
             .Skip(skip)
             .Take(safePageSize)
             .ToListAsync(cancellationToken);
+
+        if (logs.Count == 0)
+        {
+            return [];
+        }
+
+        var userIds = logs
+            .Select(x => x.UserId)
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        var users = await _context.Users
+            .AsNoTracking()
+            .Where(x => userIds.Contains(x.Id))
+            .Select(x => new
+            {
+                x.Id,
+                x.UserName,
+                x.FullName,
+                x.AvatarUrl
+            })
+            .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        return logs
+            .Select(log =>
+            {
+                users.TryGetValue(log.UserId, out var user);
+
+                return new ActivityLogDto(
+                    log.Id,
+                    log.WorkspaceId,
+                    log.UserId,
+                    user?.UserName,
+                    user?.FullName,
+                    user?.AvatarUrl,
+                    log.Action,
+                    log.EntityType,
+                    log.EntityId,
+                    log.Description,
+                    log.MetadataJson,
+                    log.IpAddress,
+                    log.OccurredAt,
+                    log.CreatedDate);
+            })
+            .ToList();
     }
 
     public Task<int> CountByWorkspaceAsync(
@@ -66,7 +117,7 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
             fromUtc,
             toUtc);
 
-        return BuildReadModelQuery(query, search)
+        return ApplySearchFilter(query, search)
             .CountAsync(cancellationToken);
     }
 
@@ -114,54 +165,28 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
         return query;
     }
 
-    private IQueryable<ActivityLogDto> BuildReadModelQuery(
+    private IQueryable<ActivityLog> ApplySearchFilter(
         IQueryable<ActivityLog> query,
         string? search)
     {
-        var joined = query
-            .GroupJoin(
-                _context.Users.AsNoTracking(),
-                log => log.UserId,
-                user => user.Id,
-                (log, users) => new
-                {
-                    Log = log,
-                    Users = users
-                })
-            .SelectMany(
-                x => x.Users.DefaultIfEmpty(),
-                (x, user) => new
-                {
-                    x.Log,
-                    User = user
-                });
-
-        if (!string.IsNullOrWhiteSpace(search))
+        if (string.IsNullOrWhiteSpace(search))
         {
-            var pattern = $"%{EscapeLikePattern(search.Trim())}%";
-
-            joined = joined.Where(x =>
-                (x.Log.Description != null && EF.Functions.ILike(x.Log.Description, pattern)) ||
-                (x.User != null && EF.Functions.ILike(x.User.UserName, pattern)) ||
-                (x.User != null && EF.Functions.ILike(x.User.FullName, pattern)) ||
-                (x.User != null && EF.Functions.ILike(x.User.Email, pattern)));
+            return query;
         }
 
-        return joined.Select(x => new ActivityLogDto(
-            x.Log.Id,
-            x.Log.WorkspaceId,
-            x.Log.UserId,
-            x.User == null ? null : x.User.UserName,
-            x.User == null ? null : x.User.FullName,
-            x.User == null ? null : x.User.AvatarUrl,
-            x.Log.Action,
-            x.Log.EntityType,
-            x.Log.EntityId,
-            x.Log.Description,
-            x.Log.MetadataJson,
-            x.Log.IpAddress,
-            x.Log.OccurredAt,
-            x.Log.CreatedDate));
+        var pattern = $"%{EscapeLikePattern(search.Trim())}%";
+
+        var matchingUserIds = _context.Users
+            .AsNoTracking()
+            .Where(user =>
+                EF.Functions.ILike(user.UserName, pattern) ||
+                EF.Functions.ILike(user.FullName, pattern) ||
+                EF.Functions.ILike(user.Email, pattern))
+            .Select(user => user.Id);
+
+        return query.Where(log =>
+            (log.Description != null && EF.Functions.ILike(log.Description, pattern)) ||
+            matchingUserIds.Contains(log.UserId));
     }
 
     private static string EscapeLikePattern(string value)

@@ -5,6 +5,7 @@
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
       <AppTopNav
         :can-share-workspace="workspaceMembers.canManageMembers.value"
+        :can-view-activity-log="canViewActivityLog"
         @jump-to-tasks="scrollToTasks"
         @open-members="workspaceMembers.open"
         @open-activity-log="openActivityLog"
@@ -94,6 +95,7 @@
       :open="isActivityLogOpen"
       :workspace-id="currentWorkspaceId"
       :workspace-name="workspaceNavigation.workspaceName.value"
+      :can-read-audit="canViewActivityLog"
       @close="closeActivityLog"
     />
 
@@ -157,6 +159,10 @@ const currentPageId = computed(() => {
 
 const workspaceMembers = useWorkspaceMembersSidebar(currentWorkspaceId)
 
+const canViewActivityLog = computed(() => {
+  return Boolean(currentWorkspaceId.value && workspaceMembers.canManageMembers.value)
+})
+
 const subpages = [
   {
     id: 'sub-1',
@@ -202,6 +208,11 @@ function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
 }
 
 function openActivityLog() {
+  if (!canViewActivityLog.value) {
+    isActivityLogOpen.value = false
+    return
+  }
+
   isActivityLogOpen.value = true
 }
 
@@ -249,6 +260,9 @@ function scrollToTasks() {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
+
+
+
 
 
 
