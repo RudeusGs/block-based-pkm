@@ -125,6 +125,7 @@
       :open="isSocialHubOpen"
       @close="closeSocialHub"
       @open-chat="openMessenger"
+      @workspace-opened="handleSocialWorkspaceOpened"
     />
 
     <MessengerPanel
@@ -269,7 +270,7 @@ function closeMessenger() {
   messengerStartUserId.value = null
 }
 
-function handleSharedWorkspaceOpened(workspace: WorkspaceResponse) {
+function openWorkspaceFromExternalSource(workspace: WorkspaceResponse) {
   workspaceNavigation.setWorkspace({
     id: workspace.id,
     name: workspace.name,
@@ -277,7 +278,16 @@ function handleSharedWorkspaceOpened(workspace: WorkspaceResponse) {
 
   workspaceNavigation.setPage(null)
   void sidebarLeftRef.value?.handleWorkspaceJoined?.(workspace)
+}
+
+function handleSharedWorkspaceOpened(workspace: WorkspaceResponse) {
+  openWorkspaceFromExternalSource(workspace)
   closeMessenger()
+}
+
+function handleSocialWorkspaceOpened(workspace: WorkspaceResponse) {
+  openWorkspaceFromExternalSource(workspace)
+  closeSocialHub()
 }
 
 function scrollToTasks() {
@@ -309,9 +319,3 @@ onBeforeUnmount(() => {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
-
-
-
-
-
-

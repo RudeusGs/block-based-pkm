@@ -73,6 +73,7 @@ using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
+using Pkm.Application.Features.Workspaces.Commands.JoinPublicWorkspaceAsViewer;
 using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Policies;
@@ -140,6 +141,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<AcceptWorkspaceInvitationHandler>();
         services.AddScoped<ChangeWorkspaceMemberRoleHandler>();
         services.AddScoped<RemoveWorkspaceMemberHandler>();
+        services.AddScoped<JoinPublicWorkspaceAsViewerHandler>();
 
         services.AddScoped<GetWorkspaceByIdHandler>();
         services.AddScoped<ListMyWorkspacesHandler>();
@@ -219,5 +221,3 @@ public static class ApplicationServiceCollection
         return services;
     }
 }
-
-

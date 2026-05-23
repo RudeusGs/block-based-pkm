@@ -460,7 +460,10 @@
                 v-else
                 class="profile-card"
               >
-                <div class="profile-cover">
+                <div
+                  class="profile-cover"
+                  :class="{ 'is-empty': !coverUrl(selectedProfile.coverImageUrl) }"
+                >
                   <img
                     v-if="coverUrl(selectedProfile.coverImageUrl)"
                     :src="coverUrl(selectedProfile.coverImageUrl) || ''"
@@ -468,40 +471,66 @@
                     referrerpolicy="no-referrer"
                   />
 
-                  <button
-                    v-if="normalizeFriendship(selectedProfile.friendshipStatus) === 'self'"
-                    type="button"
-                    :disabled="isUploadingCover"
-                    @click="triggerCoverInput"
+                  <div
+                    v-else
+                    class="profile-cover-placeholder"
+                    aria-hidden="true"
                   >
-                    <span class="material-symbols-outlined">image</span>
-                    Cover
-                  </button>
+                    <span class="material-symbols-outlined">auto_awesome</span>
+                  </div>
 
                   <input
+                    id="social-profile-cover-input"
                     ref="coverFileInputRef"
                     type="file"
                     accept="image/*"
-                    class="d-none"
+                    class="profile-cover-input"
+                    :disabled="isUploadingCover"
                     @change="handleCoverSelected"
                   />
+
+                  <label
+                    v-if="normalizeFriendship(selectedProfile.friendshipStatus) === 'self'"
+                    class="profile-cover-upload"
+                    :class="{ 'is-disabled': isUploadingCover }"
+                    for="social-profile-cover-input"
+                    :aria-disabled="isUploadingCover"
+                    @click.stop
+                  >
+                    <span class="material-symbols-outlined">image</span>
+                    {{ isUploadingCover ? 'Uploading...' : 'Cover' }}
+                  </label>
                 </div>
 
                 <div class="profile-main">
-                  <img
-                    v-if="avatarUrl(selectedProfile.avatarUrl)"
-                    :src="avatarUrl(selectedProfile.avatarUrl) || ''"
-                    :alt="selectedProfile.fullName"
-                    referrerpolicy="no-referrer"
-                  />
+                  <div class="profile-avatar-shell">
+                    <img
+                      v-if="avatarUrl(selectedProfile.avatarUrl)"
+                      :src="avatarUrl(selectedProfile.avatarUrl) || ''"
+                      :alt="selectedProfile.fullName"
+                      referrerpolicy="no-referrer"
+                    />
 
-                  <span v-else class="profile-avatar-fallback">
-                    {{ initials(selectedProfile.fullName || selectedProfile.userName) }}
-                  </span>
+                    <span v-else class="profile-avatar-fallback">
+                      {{ initials(selectedProfile.fullName || selectedProfile.userName) }}
+                    </span>
+                  </div>
 
-                  <div>
+                  <div class="profile-identity">
                     <h3>{{ selectedProfile.fullName }}</h3>
-                    <p>@{{ selectedProfile.userName }} · {{ selectedProfile.friendCount }} friends</p>
+                    <p>@{{ selectedProfile.userName }}</p>
+
+                    <div class="profile-meta-row">
+                      <span>
+                        <span class="material-symbols-outlined">group</span>
+                        {{ selectedProfile.friendCount }} friends
+                      </span>
+
+                      <span>
+                        <span class="material-symbols-outlined">workspaces</span>
+                        {{ selectedProfile.workspaces.length }} workspaces
+                      </span>
+                    </div>
                   </div>
                 </div>
 
@@ -544,20 +573,34 @@
                     Chưa có workspace hiển thị ở trang cá nhân.
                   </div>
 
-                  <article
+                  <button
                     v-for="workspace in selectedProfile.workspaces"
                     :key="workspace.id"
+                    type="button"
                     class="profile-workspace-card"
+                    :class="{ 'is-joining': isJoiningProfileWorkspaceId === workspace.id }"
+                    :disabled="isJoiningProfileWorkspaceId === workspace.id"
+                    @click="joinProfileWorkspace(workspace)"
                   >
-                    <div>
+                    <span class="profile-workspace-icon">
+                      <span class="material-symbols-outlined">space_dashboard</span>
+                    </span>
+
+                    <span class="profile-workspace-copy">
                       <strong>{{ workspace.name }}</strong>
                       <p>{{ workspace.description || 'No description' }}</p>
-                    </div>
-
-                    <span :class="visibilityClass(workspace.visibility)">
-                      {{ workspace.visibility }}
                     </span>
-                  </article>
+
+                    <span class="profile-workspace-side">
+                      <span :class="visibilityClass(workspace.visibility)">
+                        {{ workspace.visibility }}
+                      </span>
+
+                      <small>
+                        {{ workspaceActionLabel(workspace) }}
+                      </small>
+                    </span>
+                  </button>
                 </section>
               </article>
             </section>
@@ -577,13 +620,16 @@ import {
   watch,
 } from 'vue'
 import { socialController } from '@/api/services/social.api'
+import { workspaceController } from '@/api/services/workspace.api'
 import { meController } from '@/api/services/me.api'
 import { getApiErrorMessage, getApiResultErrorMessage } from '@/api/utils/api-error.util'
 import type { Guid } from '@/api/models/common.model'
+import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import type {
   FriendRequestResponse,
   FriendResponse,
   FriendshipStatus,
+  ProfileWorkspaceResponse,
   UserProfilePageResponse,
   UserSearchResultResponse,
 } from '@/api/models/social.model'
@@ -600,6 +646,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   'open-chat': [userId: Guid]
+  'workspace-opened': [workspace: WorkspaceResponse]
 }>()
 
 const toast = useToast()
@@ -641,6 +688,7 @@ const isLoadingProfile = ref(false)
 const isSavingProfile = ref(false)
 const isUploadingCover = ref(false)
 const profileError = ref<string | null>(null)
+const isJoiningProfileWorkspaceId = ref<Guid | null>(null)
 
 let searchTimer: number | null = null
 const unsubscribeRealtimeHandlers: Array<() => void> = []
@@ -729,6 +777,54 @@ function friendshipActionLabel(status: FriendshipStatus) {
 
 function visibilityClass(value: string) {
   return value.trim().toLowerCase() === 'public' ? 'public' : 'private'
+}
+
+function workspaceActionLabel(workspace: ProfileWorkspaceResponse) {
+  if (isJoiningProfileWorkspaceId.value === workspace.id) return 'Đang mở...'
+
+  const isSelf = selectedProfile.value
+    ? normalizeFriendship(selectedProfile.value.friendshipStatus) === 'self'
+    : false
+
+  if (isSelf) return 'Open'
+
+  return workspace.visibility.trim().toLowerCase() === 'public'
+    ? 'Join as viewer'
+    : 'Open'
+}
+
+async function joinProfileWorkspace(workspace: ProfileWorkspaceResponse) {
+  if (isJoiningProfileWorkspaceId.value) return
+
+  isJoiningProfileWorkspaceId.value = workspace.id
+
+  try {
+    const result = await workspaceController.joinAsViewer(workspace.id)
+
+    if (!result.isSuccess || !result.data) {
+      toast.warning(
+        'Không mở được workspace',
+        getApiResultErrorMessage(result, 'Workspace này không còn public hoặc bạn chưa có quyền vào.')
+      )
+      return
+    }
+
+    const role = result.data.currentUserRole?.toString() || 'Viewer'
+
+    toast.success(
+      'Đã mở workspace',
+      `Bạn đang vào “${result.data.name}” với quyền ${role}.`
+    )
+
+    emit('workspace-opened', result.data)
+  } catch (error) {
+    toast.warning(
+      'Không mở được workspace',
+      getApiErrorMessage(error, 'Workspace này không còn public hoặc bạn chưa có quyền vào.')
+    )
+  } finally {
+    isJoiningProfileWorkspaceId.value = null
+  }
 }
 
 async function searchUsers() {
@@ -1020,10 +1116,6 @@ async function saveMyProfile() {
   } finally {
     isSavingProfile.value = false
   }
-}
-
-function triggerCoverInput() {
-  coverFileInputRef.value?.click()
 }
 
 async function handleCoverSelected(event: Event) {

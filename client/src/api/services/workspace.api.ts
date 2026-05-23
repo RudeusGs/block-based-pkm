@@ -30,6 +30,12 @@ export const workspaceController = {
     return api.get<ApiResult<WorkspaceResponse>>(`workspaces/${workspaceId}`)
   },
 
+  joinAsViewer(workspaceId: Guid) {
+    return api.post<ApiResult<WorkspaceResponse>>(
+      `workspaces/${workspaceId}/join-as-viewer`
+    )
+  },
+
   listMembers(workspaceId: Guid) {
     return api.get<ApiResult<WorkspaceMemberResponse[]>>(
       `workspaces/${workspaceId}/members`

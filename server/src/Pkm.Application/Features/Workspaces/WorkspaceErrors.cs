@@ -39,6 +39,11 @@ public static class WorkspaceErrors
         "Người dùng đã là thành viên của workspace.",
         ResultStatus.Conflict);
 
+    public static readonly Error PublicWorkspaceJoinOnly = new(
+        "Workspace.PublicWorkspaceJoinOnly",
+        "Chỉ có thể tự tham gia workspace đang để Public.",
+        ResultStatus.Forbidden);
+
     public static readonly Error TargetUserNotFound = new(
         "Workspace.TargetUserNotFound",
         "Không tìm thấy người dùng được chỉ định.",

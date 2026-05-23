@@ -12,6 +12,7 @@ using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
+using Pkm.Application.Features.Workspaces.Commands.JoinPublicWorkspaceAsViewer;
 using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
@@ -33,6 +34,7 @@ public sealed class WorkspacesController : BaseController
     private readonly AcceptWorkspaceInvitationHandler _acceptWorkspaceInvitationHandler;
     private readonly ChangeWorkspaceMemberRoleHandler _changeWorkspaceMemberRoleHandler;
     private readonly RemoveWorkspaceMemberHandler _removeWorkspaceMemberHandler;
+    private readonly JoinPublicWorkspaceAsViewerHandler _joinPublicWorkspaceAsViewerHandler;
 
     public WorkspacesController(
         ICurrentUser currentUser,
@@ -44,7 +46,8 @@ public sealed class WorkspacesController : BaseController
         AddWorkspaceMemberHandler addWorkspaceMemberHandler,
         AcceptWorkspaceInvitationHandler acceptWorkspaceInvitationHandler,
         ChangeWorkspaceMemberRoleHandler changeWorkspaceMemberRoleHandler,
-        RemoveWorkspaceMemberHandler removeWorkspaceMemberHandler)
+        RemoveWorkspaceMemberHandler removeWorkspaceMemberHandler,
+        JoinPublicWorkspaceAsViewerHandler joinPublicWorkspaceAsViewerHandler)
         : base(currentUser)
     {
         _createWorkspaceHandler = createWorkspaceHandler;
@@ -56,6 +59,7 @@ public sealed class WorkspacesController : BaseController
         _acceptWorkspaceInvitationHandler = acceptWorkspaceInvitationHandler;
         _changeWorkspaceMemberRoleHandler = changeWorkspaceMemberRoleHandler;
         _removeWorkspaceMemberHandler = removeWorkspaceMemberHandler;
+        _joinPublicWorkspaceAsViewerHandler = joinPublicWorkspaceAsViewerHandler;
     }
 
     [HttpPost]
@@ -190,6 +194,24 @@ public sealed class WorkspacesController : BaseController
             role);
 
         var result = await _addWorkspaceMemberHandler.HandleAsync(command, cancellationToken);
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+
+    [HttpPost("{workspaceId:guid}/join-as-viewer")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<WorkspaceResponse>>> JoinAsViewer(
+        [FromRoute] Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _joinPublicWorkspaceAsViewerHandler.HandleAsync(
+            new JoinPublicWorkspaceAsViewerCommand(workspaceId),
+            cancellationToken);
+
         return HandleResult(result, x => x.ToResponse());
     }
 
