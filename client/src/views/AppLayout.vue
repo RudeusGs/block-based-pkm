@@ -100,11 +100,12 @@
       @change-role="workspaceMembers.changeMemberRole"
       @remove-member="workspaceMembers.removeMember"
     />
-
+    
     <WorkspaceActivityLogPanel
       :open="isActivityLogOpen"
       :workspace-id="currentWorkspaceId"
       :workspace-name="workspaceNavigation.workspaceName.value"
+      :can-read-audit="workspaceMembers.canReadActivityLog.value"
       @close="closeActivityLog"
     />
 
