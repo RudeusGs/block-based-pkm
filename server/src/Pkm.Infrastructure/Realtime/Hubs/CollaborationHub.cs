@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 using Pkm.Application.Abstractions.Realtime;
+using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
@@ -20,6 +21,7 @@ public sealed class CollaborationHub : Hub
     private readonly IPagePresenceService _pagePresenceService;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
+    private readonly IMessagingRepository _messagingRepository;
     private readonly IClock _clock;
 
     public CollaborationHub(
@@ -30,6 +32,7 @@ public sealed class CollaborationHub : Hub
         IPagePresenceService pagePresenceService,
         IBlockEditLeaseService blockEditLeaseService,
         IDocumentRealtimePublisher realtimePublisher,
+        IMessagingRepository messagingRepository,
         IClock clock)
     {
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -39,7 +42,39 @@ public sealed class CollaborationHub : Hub
         _pagePresenceService = pagePresenceService;
         _blockEditLeaseService = blockEditLeaseService;
         _realtimePublisher = realtimePublisher;
+        _messagingRepository = messagingRepository;
         _clock = clock;
+    }
+
+    public async Task<ConversationJoinAck> JoinConversation(Guid conversationId)
+    {
+        if (conversationId == Guid.Empty)
+            throw new HubException("ConversationId không hợp lệ.");
+
+        var userId = GetRequiredUserId();
+
+        var conversation = await _messagingRepository.GetConversationForParticipantAsync(
+            conversationId,
+            userId,
+            Context.ConnectionAborted);
+
+        EnsureExists(conversation is not null, "Cuộc trò chuyện không tồn tại.");
+
+        var groupName = RealtimeGroupNames.Conversation(conversationId);
+        await Groups.AddToGroupAsync(Context.ConnectionId, groupName, Context.ConnectionAborted);
+
+        return new ConversationJoinAck(conversationId, groupName);
+    }
+
+    public async Task LeaveConversation(Guid conversationId)
+    {
+        if (conversationId == Guid.Empty)
+            return;
+
+        await Groups.RemoveFromGroupAsync(
+            Context.ConnectionId,
+            RealtimeGroupNames.Conversation(conversationId),
+            Context.ConnectionAborted);
     }
 
     public async Task<WorkspaceJoinAck> JoinWorkspace(Guid workspaceId)
@@ -745,4 +780,6 @@ public sealed class CollaborationHub : Hub
             : normalized[..maxLength];
     }
 }
+
+
 

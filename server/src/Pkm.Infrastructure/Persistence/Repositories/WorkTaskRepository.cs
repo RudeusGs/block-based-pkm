@@ -207,6 +207,8 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
     {
         var raw = await (
             from task in _context.WorkTasks.AsNoTracking()
+            join workspace in _context.Workspaces.AsNoTracking()
+                on task.WorkspaceId equals workspace.Id
             join member in _context.WorkspaceMembers.AsNoTracking().Where(x => x.UserId == userId)
                 on task.WorkspaceId equals member.WorkspaceId into memberGroup
             from member in memberGroup.DefaultIfEmpty()
@@ -217,6 +219,7 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
                 task.WorkspaceId,
                 task.CreatedById,
                 task.Status,
+                Visibility = workspace.Visibility,
                 Role = member != null ? (WorkspaceRole?)member.Role : null
             })
             .FirstOrDefaultAsync(cancellationToken);
@@ -229,6 +232,7 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
             raw.WorkspaceId,
             raw.CreatedById,
             raw.Role,
+            raw.Visibility,
             raw.Status);
     }
 
@@ -470,3 +474,4 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         return ApplyFilter(query, normalizedFilter);
     }
 }
+

@@ -20,7 +20,7 @@ public interface IBlockRepository
         Guid pageId,
         Guid? parentBlockId,
         CancellationToken cancellationToken = default);
-        
+
     Task<bool> IsDescendantOrSelfAsync(
         Guid blockId,
         Guid candidateParentBlockId,

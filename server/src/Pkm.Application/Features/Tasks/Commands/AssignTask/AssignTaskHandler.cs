@@ -30,7 +30,7 @@ public sealed class AssignTaskHandler
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock, 
+        IClock clock,
         INotificationService notificationService)
     {
         _currentUser = currentUser;

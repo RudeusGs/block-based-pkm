@@ -50,6 +50,8 @@ using Pkm.Application.Features.Recommendations.Commands.UpdateUserTaskPreference
 using Pkm.Application.Features.Recommendations.Queries.GetUserTaskPreference;
 using Pkm.Application.Features.Recommendations.Queries.ListTaskRecommendations;
 using Pkm.Application.Features.Recommendations.Services;
+using Pkm.Application.Features.Social.Services;
+using Pkm.Application.Features.Messaging.Services;
 using Pkm.Application.Features.Tasks.Commands.AssignTask;
 using Pkm.Application.Features.Tasks.Commands.ChangeWorkTaskStatus;
 using Pkm.Application.Features.Tasks.Commands.CreateTaskComment;
@@ -91,6 +93,8 @@ public static class ApplicationServiceCollection
         services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
+        services.AddScoped<ISocialApplicationService, SocialApplicationService>();
+        services.AddScoped<IMessagingApplicationService, MessagingApplicationService>();
 
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
 
@@ -215,3 +219,5 @@ public static class ApplicationServiceCollection
         return services;
     }
 }
+
+

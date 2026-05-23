@@ -216,6 +216,7 @@ import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import { useToast } from '@/components/composables/useToast'
 import type { Guid } from '@/api/models/common.model'
+import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import type { PageTreeItem } from './types/sidebar.types'
 
 import SidebarRail from './features/rail/SidebarRail.vue'
@@ -433,12 +434,17 @@ async function confirmDeletePage() {
   toast.success('Đã xóa page', `Page "${deletedPage.title}" đã được xóa khỏi workspace.`)
 }
 
+function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
+  workspaceTree.handleWorkspaceUpdated(workspace)
+}
+
 function handleWorkspaceDeleted(workspaceId: Guid) {
   workspaceTree.handleWorkspaceDeleted(workspaceId)
 }
 
 defineExpose({
   handleWorkspaceDeleted,
+  handleWorkspaceUpdated,
 })
 
 onMounted(() => {
@@ -557,3 +563,5 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
+
+

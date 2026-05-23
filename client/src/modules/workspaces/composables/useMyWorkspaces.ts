@@ -13,6 +13,7 @@ export interface WorkspaceSidebarItem {
   id: string
   name: string
   description: string | null
+  visibility: string
   ownerId: string
   currentUserRole: string | null
 }
@@ -24,6 +25,7 @@ function mapListItemToSidebarItem(
     id: item.id,
     name: item.name,
     description: item.description,
+    visibility: item.visibility,
     ownerId: item.ownerId,
     currentUserRole: item.currentUserRole,
   }
@@ -36,6 +38,7 @@ function mapWorkspaceToSidebarItem(
     id: workspace.id,
     name: workspace.name,
     description: workspace.description,
+    visibility: workspace.visibility,
     ownerId: workspace.ownerId,
     currentUserRole: workspace.currentUserRole,
   }
@@ -87,9 +90,28 @@ export function useMyWorkspaces() {
       (workspaceItem) => workspaceItem.id === item.id
     )
 
-    if (existed) return
+    if (existed) {
+      updateWorkspace(workspace)
+      return
+    }
 
     workspaces.value = [item, ...workspaces.value]
+  }
+
+  function updateWorkspace(workspace: WorkspaceResponse) {
+    const item = mapWorkspaceToSidebarItem(workspace)
+    let found = false
+
+    workspaces.value = workspaces.value.map((workspaceItem) => {
+      if (workspaceItem.id !== item.id) return workspaceItem
+
+      found = true
+      return item
+    })
+
+    if (!found) {
+      workspaces.value = [item, ...workspaces.value]
+    }
   }
 
   function removeWorkspace(workspaceId: string) {
@@ -109,9 +131,8 @@ export function useMyWorkspaces() {
     workspaceListError,
     fetchMyWorkspaces,
     prependWorkspace,
+    updateWorkspace,
     removeWorkspace,
     clearWorkspaceListError,
   }
 }
-
-

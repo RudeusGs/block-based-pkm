@@ -73,7 +73,8 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                         .AsNoTracking()
                         .Where(m => m.WorkspaceId == w.Id && m.UserId == userId)
                         .Select(m => (WorkspaceRole?)m.Role)
-                        .FirstOrDefault()))
+                        .FirstOrDefault(),
+                w.Visibility))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
@@ -88,6 +89,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 x.Id,
                 x.Name,
                 x.Description,
+                x.Visibility,
                 x.OwnerId,
                 x.LastModifiedBy,
                 x.CreatedDate,
@@ -124,6 +126,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 x.Workspace.Id,
                 x.Workspace.Name,
                 x.Workspace.Description,
+                x.Workspace.Visibility,
                 x.Workspace.OwnerId,
                 x.Workspace.CreatedDate,
                 x.Workspace.UpdatedDate,
@@ -140,6 +143,31 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
             .CountAsync(x => x.UserId == userId, cancellationToken);
     }
 
+    public async Task<IReadOnlyList<Pkm.Application.Features.Social.Models.ProfileWorkspaceDto>> ListProfileWorkspacesAsync(
+        Guid ownerUserId,
+        Guid viewerUserId,
+        bool includePrivate,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dataContext.Workspaces
+            .AsNoTracking()
+            .Where(x => x.OwnerId == ownerUserId)
+            .Where(x => includePrivate ||
+                x.Visibility == WorkspaceVisibility.Public ||
+                _dataContext.WorkspaceMembers.Any(m =>
+                    m.WorkspaceId == x.Id &&
+                    m.UserId == viewerUserId))
+            .OrderByDescending(x => x.UpdatedDate ?? x.CreatedDate)
+            .Select(x => new Pkm.Application.Features.Social.Models.ProfileWorkspaceDto(
+                x.Id,
+                x.Name,
+                x.Description,
+                x.Visibility,
+                x.CreatedDate,
+                x.UpdatedDate))
+            .ToListAsync(cancellationToken);
+    }
+
     public void Add(Workspace workspace)
     {
         _dataContext.Workspaces.Add(workspace);
@@ -150,3 +178,4 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
         _dataContext.Workspaces.Update(workspace);
     }
 }
+

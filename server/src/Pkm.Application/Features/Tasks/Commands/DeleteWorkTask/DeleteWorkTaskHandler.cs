@@ -19,7 +19,7 @@ public sealed class DeleteWorkTaskHandler
     private readonly IClock _clock;
     private readonly DeleteWorkTaskCommandValidator _validator;
     private readonly INotificationService _notificationService;
-    
+
     public DeleteWorkTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,

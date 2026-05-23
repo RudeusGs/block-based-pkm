@@ -8,4 +8,9 @@ export interface PageTreeItem extends PageResponse {
 export interface SidebarWorkspaceLike {
   id: Guid
   name: string
+  visibility?: string | null
+  currentUserRole?: string | null
 }
+
+
+

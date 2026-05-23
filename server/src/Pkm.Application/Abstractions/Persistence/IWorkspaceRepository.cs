@@ -1,3 +1,4 @@
+using Pkm.Application.Features.Social.Models;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Domain.Workspaces;
 
@@ -38,6 +39,12 @@ public interface IWorkspaceRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<ProfileWorkspaceDto>> ListProfileWorkspacesAsync(
+        Guid ownerUserId,
+        Guid viewerUserId,
+        bool includePrivate,
+        CancellationToken cancellationToken = default);
+
     Task<int> CountByUserAsync(
         Guid userId,
         CancellationToken cancellationToken = default);
@@ -46,3 +53,4 @@ public interface IWorkspaceRepository
 
     void Update(Workspace workspace);
 }
+

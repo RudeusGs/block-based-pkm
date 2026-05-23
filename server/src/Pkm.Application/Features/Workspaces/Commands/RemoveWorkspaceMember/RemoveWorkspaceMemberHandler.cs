@@ -119,7 +119,7 @@ public sealed class RemoveWorkspaceMemberHandler
             targetVersionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);
-        
+
         return Result.Success();
     }
 }

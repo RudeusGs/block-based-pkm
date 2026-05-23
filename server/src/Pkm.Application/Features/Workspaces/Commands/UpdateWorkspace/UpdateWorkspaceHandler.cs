@@ -91,7 +91,8 @@ public sealed class UpdateWorkspaceHandler
                 request.Name,
                 request.Description,
                 currentUserId,
-                _clock.UtcNow);
+                _clock.UtcNow,
+                request.Visibility);
 
             _workspaceRepository.Update(workspace);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -121,6 +122,7 @@ public sealed class UpdateWorkspaceHandler
                 workspace.Id,
                 workspace.Name,
                 workspace.Description,
+                workspace.Visibility,
                 workspace.OwnerId,
                 workspace.LastModifiedBy,
                 workspace.CreatedDate,
@@ -159,3 +161,5 @@ public sealed class UpdateWorkspaceHandler
         }
     }
 }
+
+

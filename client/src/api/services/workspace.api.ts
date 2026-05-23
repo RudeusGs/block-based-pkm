@@ -57,4 +57,11 @@ export const workspaceController = {
   removeMember(workspaceId: Guid, userId: Guid) {
     return api.delete<ApiResult>(`workspaces/${workspaceId}/members/${userId}`)
   },
+
+  acceptInvitation(token: string) {
+    return api.get<ApiResult<WorkspaceMemberResponse>>(
+      'workspace-invitations/accept',
+      { token }
+    )
+  },
 }

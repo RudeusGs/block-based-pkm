@@ -116,10 +116,10 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         request.UserId,
         cancellationToken);
 
-            if (targetUser is null)
-            {
-                return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.WorkspaceMemberNotFound);
-            }
+        if (targetUser is null)
+        {
+            return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.WorkspaceMemberNotFound);
+        }
         await _redisCache.RemoveAsync(
             WorkspaceCacheKeys.Members(_redisKeyFactory, request.WorkspaceId),
             cancellationToken);

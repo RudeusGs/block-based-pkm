@@ -14,8 +14,11 @@ export interface RealtimeEnvelope<TPayload = unknown> {
   pageId?: Guid | null
   taskId?: Guid | null
   blockId?: Guid | null
+  conversationId?: Guid | null
   userId?: Guid | null
   actorId?: Guid | null
+  senderUserId?: Guid | null
+  recipientUserId?: Guid | null
   occurredAtUtc?: string
   revision?: number | null
   payload?: TPayload
@@ -32,6 +35,11 @@ export interface RealtimeState {
   startedAtUtc: string | null
   lastConnectedAtUtc: string | null
   lastDisconnectedAtUtc: string | null
+}
+
+export interface ConversationJoinAck {
+  conversationId: Guid
+  groupName: string
 }
 
 export interface PageCursorRequest {

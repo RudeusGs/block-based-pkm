@@ -58,13 +58,14 @@ public sealed class DocumentAccessEvaluator : IDocumentAccessEvaluator
             isOwner,
             access.Role,
             access.IsPageArchived);
+        var isPublicReadOnlyVisitor = access.Visibility == WorkspaceVisibility.Public && access.Role is null && !isOwner;
 
         return new DocumentBlockAccessResult(
             Exists: true,
             WorkspaceId: access.WorkspaceId,
             PageId: access.PageId,
             IsPageArchived: access.IsPageArchived,
-            CanReadDocument: capabilities.CanReadDocument,
+            CanReadDocument: capabilities.CanReadDocument || isPublicReadOnlyVisitor,
             CanEditDocument: capabilities.CanEditDocument,
             CanReorderBlocks: capabilities.CanReorderBlocks,
             CanDeleteBlocks: capabilities.CanDeleteBlocks,
@@ -72,3 +73,4 @@ public sealed class DocumentAccessEvaluator : IDocumentAccessEvaluator
             CanManagePage: capabilities.CanManagePage);
     }
 }
+

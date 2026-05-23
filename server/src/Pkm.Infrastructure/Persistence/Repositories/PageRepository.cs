@@ -123,9 +123,11 @@ internal sealed class PageRepository : IPageRepository
                  page.WorkspaceId,
                  workspace.OwnerId,
                  membership != null ? membership.Role : null,
+                 workspace.Visibility,
                  page.IsArchived))
             .FirstOrDefaultAsync(cancellationToken);
     }
 
     public void Add(Page page) => _dataContext.Pages.Add(page);
 }
+

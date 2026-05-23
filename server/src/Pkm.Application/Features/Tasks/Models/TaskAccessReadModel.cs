@@ -8,4 +8,6 @@ public sealed record TaskAccessReadModel(
     Guid WorkspaceId,
     Guid CreatedById,
     WorkspaceRole? Role,
+    WorkspaceVisibility Visibility,
     StatusWorkTask Status);
+

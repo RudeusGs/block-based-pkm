@@ -64,20 +64,22 @@ public sealed class PageAccessEvaluator : IPageAccessEvaluator
             isOwner,
             access.Role,
             access.IsArchived);
+        var isPublicReadOnlyVisitor = access.Visibility == WorkspaceVisibility.Public && access.Role is null && !isOwner;
 
         return new PageAccessResult(
             Exists: true,
             WorkspaceId: access.WorkspaceId,
             IsArchived: access.IsArchived,
-            CanReadPage: capabilities.CanReadPage,
+            CanReadPage: capabilities.CanReadPage || isPublicReadOnlyVisitor,
             CanCreateSubPage: capabilities.CanCreateSubPage,
             CanEditPageMetadata: capabilities.CanEditPageMetadata,
             CanArchivePage: capabilities.CanArchivePage,
             CanManagePage: capabilities.CanManagePage,
-            CanReadDocument: capabilities.CanReadDocument,
+            CanReadDocument: capabilities.CanReadDocument || isPublicReadOnlyVisitor,
             CanEditDocument: capabilities.CanEditDocument,
             CanReorderBlocks: capabilities.CanReorderBlocks,
             CanDeleteBlocks: capabilities.CanDeleteBlocks,
             CanAcquireLease: capabilities.CanAcquireLease);
     }
 }
+

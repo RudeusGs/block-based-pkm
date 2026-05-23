@@ -69,7 +69,8 @@ public sealed class CreateWorkspaceHandler
                 request.Name,
                 currentUserId,
                 now,
-                request.Description);
+                request.Description,
+                request.Visibility);
 
             var ownerMember = WorkspaceMember.CreateOwner(workspace.Id, currentUserId, now);
 
@@ -96,6 +97,7 @@ public sealed class CreateWorkspaceHandler
                 workspace.Id,
                 workspace.Name,
                 workspace.Description,
+                workspace.Visibility,
                 workspace.OwnerId,
                 workspace.LastModifiedBy,
                 workspace.CreatedDate,
@@ -116,3 +118,5 @@ public sealed class CreateWorkspaceHandler
         }
     }
 }
+
+

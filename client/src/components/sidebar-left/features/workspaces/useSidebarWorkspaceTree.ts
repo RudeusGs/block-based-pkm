@@ -70,6 +70,7 @@ export function useSidebarWorkspaceTree() {
     workspaceListError,
     fetchMyWorkspaces,
     prependWorkspace,
+    updateWorkspace,
     removeWorkspace,
     clearWorkspaceListError,
   } = useMyWorkspaces()
@@ -507,6 +508,18 @@ export function useSidebarWorkspaceTree() {
     }
   }
 
+
+  function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
+    updateWorkspace(workspace)
+
+    if (selectedWorkspaceId.value === workspace.id) {
+      workspaceNavigation.setWorkspace({
+        id: workspace.id,
+        name: workspace.name,
+      })
+    }
+  }
+
   function handleWorkspaceDeleted(workspaceId: Guid) {
     const isSelectedWorkspace = selectedWorkspaceId.value === workspaceId
 
@@ -599,6 +612,7 @@ export function useSidebarWorkspaceTree() {
     refreshSidebarTree,
     selectPage,
     handleWorkspaceCreated,
+    handleWorkspaceUpdated,
     handlePageCreated,
     requestDeletePage,
     closeDeletePageConfirm,
@@ -606,3 +620,6 @@ export function useSidebarWorkspaceTree() {
     handleWorkspaceDeleted,
   }
 }
+
+
+

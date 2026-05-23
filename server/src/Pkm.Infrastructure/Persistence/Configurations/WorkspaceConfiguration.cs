@@ -19,6 +19,14 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
         builder.Property(x => x.Description)
             .HasMaxLength(500);
 
+        builder.Property(x => x.Visibility)
+            .IsRequired()
+            .HasConversion<string>()
+            .HasMaxLength(50);
+
+        builder.HasIndex(x => new { x.Visibility, x.CreatedDate })
+            .HasFilter("\"IsDeleted\" = false");
+
         builder.HasIndex(x => x.OwnerId)
             .HasFilter("\"IsDeleted\" = false");
 
@@ -29,3 +37,4 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
             .HasFilter("\"IsDeleted\" = false");
     }
 }
+

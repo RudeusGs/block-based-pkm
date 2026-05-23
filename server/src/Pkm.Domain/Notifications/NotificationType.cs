@@ -24,5 +24,9 @@ public enum NotificationType
     TaskCommentCreated = 16,
     TaskCommentReplied = 17,
 
-    RecommendationGenerated = 18
+    RecommendationGenerated = 18,
+
+    FriendRequestReceived = 19,
+    FriendRequestAccepted = 20,
+    MessageReceived = 21
 }

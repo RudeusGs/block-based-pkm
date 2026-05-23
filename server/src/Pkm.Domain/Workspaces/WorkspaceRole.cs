@@ -1,4 +1,5 @@
 ﻿namespace Pkm.Domain.Workspaces;
+
 public enum WorkspaceRole
 {
     // Các vai trò trong workspace, được sắp xếp theo thứ tự quyền hạn giảm dần

@@ -1,0 +1,337 @@
+.workspace-settings-layer,
+.workspace-settings-scrim {
+  position: fixed;
+  inset: 0;
+}
+
+.workspace-settings-layer {
+  z-index: 2100;
+}
+
+.workspace-settings-scrim {
+  border: 0;
+  background: rgba(0, 0, 0, 0.42);
+}
+
+.workspace-settings-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: min(460px, 100vw);
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  color: #ededed;
+  background: #191919;
+  border-left: 1px solid #2b2b2b;
+  box-shadow: -18px 0 48px rgba(0, 0, 0, 0.32);
+}
+
+.workspace-settings-header,
+.workspace-settings-footer {
+  flex-shrink: 0;
+  border-color: #292929;
+  background: #191919;
+}
+
+.workspace-settings-header {
+  min-height: 54px;
+  border-bottom: 1px solid #292929;
+  padding: 0 14px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.workspace-settings-header p {
+  margin: 0;
+  color: #858585;
+  font-size: 11px;
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.workspace-settings-header h2 {
+  margin: 0;
+  color: #ededed;
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.workspace-settings-header button,
+.settings-ghost-btn,
+.settings-save-btn {
+  border: 0;
+  border-radius: 6px;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.workspace-settings-header button {
+  width: 32px;
+  color: #a3a3a3;
+  background: transparent;
+}
+
+.workspace-settings-header button:hover:not(:disabled),
+.settings-ghost-btn:hover:not(:disabled) {
+  color: #ededed;
+  background: #242424;
+}
+
+.workspace-settings-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 24px 18px;
+}
+
+.workspace-settings-form {
+  display: grid;
+  gap: 18px;
+}
+
+.workspace-settings-field {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-settings-field > span {
+  color: #a3a3a3;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.workspace-settings-field input,
+.workspace-settings-field textarea {
+  width: 100%;
+  border: 1px solid #303030;
+  outline: 0;
+  border-radius: 8px;
+  color: #ededed;
+  background: #202020;
+  padding: 9px 10px;
+  font-size: 14px;
+}
+
+.workspace-settings-field textarea {
+  resize: vertical;
+  min-height: 118px;
+  line-height: 1.55;
+}
+
+.workspace-settings-field input:focus,
+.workspace-settings-field textarea:focus {
+  border-color: #555;
+  background: #242424;
+}
+
+.workspace-settings-field input:disabled,
+.workspace-settings-field textarea:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.workspace-settings-field small {
+  color: #858585;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.workspace-settings-field small.danger {
+  color: #d6d6d6;
+}
+
+.workspace-settings-visibility {
+  display: grid;
+  gap: 8px;
+}
+
+.workspace-settings-visibility button {
+  border: 1px solid #303030;
+  border-radius: 8px;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  color: #d8d8d8;
+  background: transparent;
+  text-align: left;
+}
+
+.workspace-settings-visibility button:hover:not(:disabled),
+.workspace-settings-visibility button.active {
+  border-color: #444;
+  background: #242424;
+}
+
+.workspace-settings-visibility button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.workspace-settings-visibility .material-symbols-outlined {
+  margin-top: 1px;
+  color: #ededed;
+  font-size: 20px;
+}
+
+.workspace-settings-visibility strong {
+  display: block;
+  color: #ededed;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.workspace-settings-visibility small {
+  display: block;
+  margin-top: 3px;
+  color: #858585;
+}
+
+.workspace-settings-note,
+.workspace-settings-error,
+.workspace-settings-state {
+  border: 1px solid #303030;
+  border-radius: 9px;
+  background: #202020;
+}
+
+.workspace-settings-note,
+.workspace-settings-error {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px;
+}
+
+.workspace-settings-note p {
+  margin: 0;
+}
+
+.workspace-settings-note strong,
+.workspace-settings-state strong {
+  display: block;
+  color: #ededed;
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.workspace-settings-note small,
+.workspace-settings-state p {
+  display: block;
+  margin-top: 3px;
+  color: #a3a3a3;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.workspace-settings-error {
+  color: #ededed;
+}
+
+.workspace-settings-state {
+  min-height: 240px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 24px;
+}
+
+.workspace-settings-state .material-symbols-outlined {
+  color: #858585;
+  font-size: 34px;
+}
+
+.workspace-settings-skeleton {
+  display: grid;
+  gap: 12px;
+}
+
+.workspace-settings-skeleton span {
+  height: 92px;
+  border-radius: 9px;
+  background: linear-gradient(90deg, #202020, #292929, #202020);
+  background-size: 200% 100%;
+  animation: settings-shimmer 1.2s ease-in-out infinite;
+}
+
+.workspace-settings-footer {
+  min-height: 56px;
+  border-top: 1px solid #292929;
+  padding: 11px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.settings-ghost-btn {
+  color: #a3a3a3;
+  background: transparent;
+  padding: 0 12px;
+}
+
+.settings-save-btn {
+  gap: 8px;
+  color: #191919;
+  background: #ededed;
+  padding: 0 12px;
+  font-weight: 650;
+}
+
+.settings-save-btn:hover:not(:disabled) {
+  background: #fff;
+}
+
+.settings-save-btn:disabled,
+.settings-ghost-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.settings-spinner {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(25, 25, 25, 0.24);
+  border-top-color: #191919;
+  border-radius: 999px;
+  animation: settings-spin 0.75s linear infinite;
+}
+
+.workspace-settings-fade-enter-active,
+.workspace-settings-fade-leave-active {
+  transition: opacity 0.16s ease;
+}
+
+.workspace-settings-fade-enter-from,
+.workspace-settings-fade-leave-to {
+  opacity: 0;
+}
+
+@keyframes settings-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes settings-shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .workspace-settings-panel {
+    width: 100vw;
+  }
+
+  .workspace-settings-body {
+    padding: 20px 18px 16px;
+  }
+}

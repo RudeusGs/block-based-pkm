@@ -2,4 +2,5 @@
 
 public sealed record CreateWorkspaceRequest(
     string Name,
-    string? Description);
+    string? Description,
+    string? Visibility = null);

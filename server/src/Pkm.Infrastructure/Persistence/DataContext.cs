@@ -4,9 +4,12 @@ using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.Common;
 using Pkm.Domain.Files;
+using Pkm.Domain.Messaging;
 using Pkm.Domain.Notifications;
 using Pkm.Domain.Pages;
+using Pkm.Domain.Profiles;
 using Pkm.Domain.Recommendations;
+using Pkm.Domain.Social;
 using Pkm.Domain.Tasks;
 using Pkm.Domain.Users;
 using Pkm.Domain.Workspaces;
@@ -25,6 +28,11 @@ public sealed class DataContext : DbContext
     public DbSet<Workspace> Workspaces => Set<Workspace>();
     public DbSet<WorkspaceMember> WorkspaceMembers => Set<WorkspaceMember>();
     public DbSet<WorkspaceInvitation> WorkspaceInvitations => Set<WorkspaceInvitation>();
+    public DbSet<UserProfilePage> UserProfilePages => Set<UserProfilePage>();
+    public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
+    public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
+    public DbSet<Message> Messages => Set<Message>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<PageRevision> PageRevisions => Set<PageRevision>();
     public DbSet<Block> Blocks => Set<Block>();
@@ -72,3 +80,5 @@ public sealed class DataContext : DbContext
         }
     }
 }
+
+

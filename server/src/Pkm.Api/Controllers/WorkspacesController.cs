@@ -67,9 +67,20 @@ public sealed class WorkspacesController : BaseController
         [FromBody] CreateWorkspaceRequest request,
         CancellationToken cancellationToken)
     {
+        if (!TryParseWorkspaceVisibility(request.Visibility, out var visibility))
+        {
+            return HandleResult<WorkspaceResponse>(
+                Result.Failure<WorkspaceResponse>(
+                    WorkspaceErrors.InvalidCreateRequest(new[]
+                    {
+                        "Visibility không hợp lệ. Giá trị hợp lệ: private, public."
+                    })));
+        }
+
         var command = new CreateWorkspaceCommand(
             request.Name,
-            request.Description);
+            request.Description,
+            visibility ?? WorkspaceVisibility.Private);
 
         var result = await _createWorkspaceHandler.HandleAsync(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -86,10 +97,21 @@ public sealed class WorkspacesController : BaseController
         [FromBody] UpdateWorkspaceRequest request,
         CancellationToken cancellationToken)
     {
+        if (!TryParseWorkspaceVisibility(request.Visibility, out var visibility))
+        {
+            return HandleResult<WorkspaceResponse>(
+                Result.Failure<WorkspaceResponse>(
+                    WorkspaceErrors.InvalidUpdateRequest(new[]
+                    {
+                        "Visibility không hợp lệ. Giá trị hợp lệ: private, public."
+                    })));
+        }
+
         var command = new UpdateWorkspaceCommand(
             workspaceId,
             request.Name,
-            request.Description);
+            request.Description,
+            visibility);
 
         var result = await _updateWorkspaceHandler.HandleAsync(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -260,6 +282,33 @@ public sealed class WorkspacesController : BaseController
 
             case "viewer":
                 role = WorkspaceRole.Viewer;
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    private static bool TryParseWorkspaceVisibility(
+        string? rawVisibility,
+        out WorkspaceVisibility? visibility)
+    {
+        visibility = null;
+
+        if (rawVisibility is null)
+            return true;
+
+        if (string.IsNullOrWhiteSpace(rawVisibility))
+            return false;
+
+        switch (rawVisibility.Trim().ToLowerInvariant())
+        {
+            case "private":
+                visibility = WorkspaceVisibility.Private;
+                return true;
+
+            case "public":
+                visibility = WorkspaceVisibility.Public;
                 return true;
 
             default:

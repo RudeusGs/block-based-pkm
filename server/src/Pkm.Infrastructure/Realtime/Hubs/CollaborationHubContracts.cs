@@ -8,6 +8,10 @@ public sealed record WorkspaceJoinAck(
     string GroupName,
     WorkspacePresenceDto Presence);
 
+public sealed record ConversationJoinAck(
+    Guid ConversationId,
+    string GroupName);
+
 public sealed record PageJoinAck(
     Guid WorkspaceId,
     Guid PageId,
@@ -44,3 +48,4 @@ public sealed record BlockEditingStateRequest(
     Guid BlockId,
     string EditorSessionId,
     bool IsEditing);
+

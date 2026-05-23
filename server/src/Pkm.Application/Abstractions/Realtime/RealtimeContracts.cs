@@ -73,6 +73,7 @@ public sealed record PageMousePointerDto(
     string? Color,
     bool IsLeaving,
     DateTimeOffset OccurredAtUtc);
+
 public sealed record BlockDraftDto(
     Guid WorkspaceId,
     Guid PageId,
@@ -98,3 +99,18 @@ public sealed record BlockEditingStateDto(
     string EditorSessionId,
     bool IsEditing,
     DateTimeOffset OccurredAtUtc);
+
+public sealed record SocialRealtimeEnvelope(
+    string EventName,
+    Guid UserId,
+    Guid? ActorId,
+    DateTimeOffset OccurredAtUtc,
+    object? Payload);
+
+public sealed record MessagingRealtimeEnvelope(
+    string EventName,
+    Guid ConversationId,
+    Guid SenderUserId,
+    Guid RecipientUserId,
+    DateTimeOffset OccurredAtUtc,
+    object? Payload);

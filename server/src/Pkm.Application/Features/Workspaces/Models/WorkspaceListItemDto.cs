@@ -6,7 +6,9 @@ public sealed record WorkspaceListItemDto(
     Guid Id,
     string Name,
     string? Description,
+    WorkspaceVisibility Visibility,
     Guid OwnerId,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate,
     WorkspaceRole CurrentUserRole);
+

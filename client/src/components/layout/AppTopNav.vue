@@ -47,6 +47,26 @@
         Tasks
       </button>
 
+      <button
+        class="app-icon-btn"
+        type="button"
+        title="Friends & profiles"
+        aria-label="Friends & profiles"
+        @click="openSocialHub"
+      >
+        <span class="material-symbols-outlined">group</span>
+      </button>
+
+      <button
+        class="app-icon-btn"
+        type="button"
+        title="Messages"
+        aria-label="Messages"
+        @click="openMessenger()"
+      >
+        <span class="material-symbols-outlined">chat_bubble</span>
+      </button>
+
       <div
         ref="notificationMenuRef"
         class="app-notification-wrap"
@@ -282,6 +302,7 @@
               type="button"
               class="app-more-item"
               role="menuitem"
+              @click="openWorkspaceSettings"
             >
               <span class="material-symbols-outlined">settings</span>
 
@@ -340,6 +361,13 @@
       @update:role="inviteMember.role.value = $event"
     />
 
+    <WorkspaceSettingsModal
+      :open="isWorkspaceSettingsOpen"
+      :workspace-id="currentWorkspaceId"
+      @close="isWorkspaceSettingsOpen = false"
+      @updated="handleWorkspaceUpdated"
+    />
+
     <ConfirmActionModal
       :open="deleteWorkspace.isDeleteWorkspaceConfirmOpen.value"
       title="Xóa workspace này?"
@@ -363,14 +391,19 @@ import { useNotificationCenter } from '@/modules/notifications/composables/useNo
 import { useInviteWorkspaceMember } from '@/modules/workspaces/composables/useInviteWorkspaceMember'
 import { useDeleteWorkspace } from '@/modules/workspaces/composables/useDeleteWorkspace'
 import type { Guid } from '@/api/models/common.model'
+import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import InviteWorkspaceMemberModal from './InviteWorkspaceMemberModal.vue'
 import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
+import WorkspaceSettingsModal from '@/components/workspace/WorkspaceSettingsModal.vue'
 
 const emit = defineEmits<{
   'jump-to-tasks': []
   'open-members': []
   'workspace-deleted': [workspaceId: Guid]
+  'workspace-updated': [workspace: WorkspaceResponse]
   'open-activity-log': []
+  'open-social': []
+  'open-messenger': [userId?: Guid | null]
 }>()
 
 const toast = useToast()
@@ -382,6 +415,7 @@ const deleteWorkspace = useDeleteWorkspace()
 const isNotificationMenuOpen = ref(false)
 const isMoreMenuOpen = ref(false)
 const isInviteModalOpen = ref(false)
+const isWorkspaceSettingsOpen = ref(false)
 
 const notificationMenuRef = ref<HTMLElement | null>(null)
 const moreMenuRef = ref<HTMLElement | null>(null)
@@ -427,6 +461,42 @@ function closeInviteModal() {
 function openWorkspaceMembers() {
   isMoreMenuOpen.value = false
   emit('open-members')
+}
+
+function openSocialHub() {
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+  emit('open-social')
+}
+
+function openMessenger(userId?: Guid | null) {
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+  emit('open-messenger', userId ?? null)
+}
+
+function openWorkspaceSettings() {
+  isMoreMenuOpen.value = false
+  isNotificationMenuOpen.value = false
+
+  if (!currentWorkspaceId.value) {
+    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi mở settings.')
+    return
+  }
+
+  isWorkspaceSettingsOpen.value = true
+}
+
+function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
+  isWorkspaceSettingsOpen.value = false
+
+  workspaceNavigation.setWorkspace({
+    id: workspace.id,
+    name: workspace.name,
+  })
+
+  toast.success('Đã cập nhật workspace', `Workspace "${workspace.name}" đã được lưu.`)
+  emit('workspace-updated', workspace)
 }
 
 function openActivityLog() {
@@ -547,6 +617,7 @@ function handleKeydown(event: KeyboardEvent) {
     isNotificationMenuOpen.value = false
     isMoreMenuOpen.value = false
     isInviteModalOpen.value = false
+    isWorkspaceSettingsOpen.value = false
   }
 }
 

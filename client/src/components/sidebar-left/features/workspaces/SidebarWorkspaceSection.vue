@@ -119,6 +119,14 @@
                 >
                   {{ workspace.currentUserRole }}
                 </span>
+
+                <span
+                  class="lunar-visibility-chip"
+                  :class="visibilityClass(workspace.visibility)"
+                  :title="visibilityLabel(workspace.visibility)"
+                >
+                  {{ visibilityShortLabel(workspace.visibility) }}
+                </span>
               </button>
 
               <button
@@ -222,4 +230,47 @@ const emit = defineEmits<{
   sharePage: [page: PageTreeItem]
   deletePage: [page: PageTreeItem]
 }>()
+
+function normalizeVisibility(value: string | null | undefined) {
+  return value?.trim().toLowerCase() === 'public' ? 'public' : 'private'
+}
+
+function visibilityLabel(value: string | null | undefined) {
+  return normalizeVisibility(value) === 'public'
+    ? 'Public workspace: người có tài khoản đều có thể xem'
+    : 'Private workspace: chỉ member trong workspace xem được'
+}
+
+function visibilityShortLabel(value: string | null | undefined) {
+  return normalizeVisibility(value) === 'public' ? 'Public' : 'Private'
+}
+
+function visibilityClass(value: string | null | undefined) {
+  return normalizeVisibility(value) === 'public' ? 'public' : 'private'
+}
 </script>
+
+<style scoped>
+.lunar-visibility-chip {
+  min-width: 0;
+  max-width: 54px;
+  overflow: hidden;
+  border-radius: 999px;
+  padding: 1px 5px;
+  color: #858585;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.lunar-visibility-chip.public {
+  color: #d6d6d6;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.lunar-visibility-chip.private {
+  color: #8f8f8f;
+}
+</style>

@@ -33,6 +33,9 @@ public static class PersistenceServiceCollection
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
+        services.AddScoped<IFriendshipRepository, FriendshipRepository>();
+        services.AddScoped<IUserProfileRepository, UserProfileRepository>();
+        services.AddScoped<IMessagingRepository, MessagingRepository>();
         services.AddScoped<IWorkspaceMemberRepository, WorkspaceMemberRepository>();
         services.AddScoped<IWorkspaceInvitationRepository, WorkspaceInvitationRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
@@ -52,3 +55,5 @@ public static class PersistenceServiceCollection
         return services;
     }
 }
+
+

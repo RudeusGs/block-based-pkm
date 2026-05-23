@@ -70,6 +70,49 @@
             <section class="workspace-properties mt-4">
               <div class="property-row">
                 <div class="property-label">
+                  <i class="bi bi-shield-lock"></i>
+                  <span>Visibility</span>
+                </div>
+
+                <div class="property-value">
+                  <div class="visibility-card-list">
+                    <button
+                      v-for="option in visibilityOptions"
+                      :key="option.value"
+                      type="button"
+                      class="visibility-card"
+                      :class="{ active: form.visibility === option.value }"
+                      :disabled="isCreatingWorkspace"
+                      @click="form.visibility = option.value"
+                    >
+                      <span class="visibility-icon">
+                        <i :class="option.icon"></i>
+                      </span>
+
+                      <span class="visibility-copy">
+                        <strong>{{ option.label }}</strong>
+                        <small>{{ option.description }}</small>
+                      </span>
+
+                      <i
+                        class="bi visibility-check"
+                        :class="
+                          form.visibility === option.value
+                            ? 'bi-check-circle-fill'
+                            : 'bi-circle'
+                        "
+                      ></i>
+                    </button>
+                  </div>
+
+                  <p class="inline-hint mt-2 mb-0">
+                    Public chỉ mở quyền đọc. Quyền tạo/sửa/xóa vẫn theo role workspace.
+                  </p>
+                </div>
+              </div>
+
+              <div class="property-row">
+                <div class="property-label">
                   <i class="bi bi-text-paragraph"></i>
                   <span>Description</span>
                 </div>
@@ -111,7 +154,7 @@
                   <i class="bi bi-grid-1x2-fill"></i>
                 </div>
 
-                <div class="min-w-0">
+                <div class="min-w-0 flex-grow-1">
                   <div class="preview-title text-truncate">
                     {{ previewName }}
                   </div>
@@ -120,6 +163,10 @@
                     {{ previewDescription }}
                   </div>
                 </div>
+
+                <span class="preview-visibility">
+                  {{ form.visibility === 'public' ? 'Public' : 'Private' }}
+                </span>
               </div>
             </section>
 
@@ -180,11 +227,15 @@ import {
   watch,
 } from 'vue'
 import { useCreateWorkspace } from '@/modules/workspaces/composables/useCreateWorkspace'
-import type { WorkspaceResponse } from '@/api/models/workspace.model'
+import type {
+  WorkspaceResponse,
+  WorkspaceVisibilityValue,
+} from '@/api/models/workspace.model'
 
 interface CreateWorkspaceForm {
   name: string
   description: string
+  visibility: WorkspaceVisibilityValue
 }
 
 const props = defineProps<{
@@ -203,11 +254,32 @@ const {
   clearCreateWorkspaceError,
 } = useCreateWorkspace()
 
+const visibilityOptions: Array<{
+  value: WorkspaceVisibilityValue
+  label: string
+  description: string
+  icon: string
+}> = [
+  {
+    value: 'private',
+    label: 'Private',
+    description: 'Chỉ member được xem nội dung workspace.',
+    icon: 'bi bi-lock-fill',
+  },
+  {
+    value: 'public',
+    label: 'Public',
+    description: 'User đăng nhập có thể xem, không tự có quyền sửa.',
+    icon: 'bi bi-globe2',
+  },
+]
+
 const nameInputRef = ref<HTMLInputElement | null>(null)
 
 const form = reactive<CreateWorkspaceForm>({
   name: '',
   description: '',
+  visibility: 'private',
 })
 
 const nameError = computed(() => {
@@ -258,6 +330,7 @@ watch(
 function resetForm() {
   form.name = ''
   form.description = ''
+  form.visibility = 'private'
 }
 
 function closeModal() {
@@ -276,6 +349,7 @@ async function handleSubmit() {
   const workspace = await createWorkspace({
     name: form.name.trim(),
     description: form.description.trim() || null,
+    visibility: form.visibility,
   })
 
   if (!workspace) return

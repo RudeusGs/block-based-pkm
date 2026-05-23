@@ -10,7 +10,7 @@ export interface ApiError {
 export interface ApiResult<T = void> {
   isSuccess: boolean
   message: string | null
-  data: T | null
+  data?: T | null
   error: ApiError | null
   statusCode: number
   traceId: string | null

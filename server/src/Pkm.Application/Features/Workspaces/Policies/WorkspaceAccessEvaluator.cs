@@ -79,12 +79,13 @@ public sealed class WorkspaceAccessEvaluator : IWorkspaceAccessEvaluator
         {
             var isOwner = access.OwnerId == userId || access.Role == WorkspaceRole.Owner;
             var capabilities = WorkspaceRoleCapabilityMatrix.ForWorkspace(isOwner, access.Role);
+            var isPublicReadOnlyVisitor = access.Visibility == WorkspaceVisibility.Public && access.Role is null && !isOwner;
 
             result = new WorkspaceAccessResult(
                 Exists: true,
                 WorkspaceId: access.WorkspaceId,
                 Role: isOwner ? WorkspaceRole.Owner : access.Role,
-                CanReadWorkspace: capabilities.CanReadWorkspace,
+                CanReadWorkspace: capabilities.CanReadWorkspace || isPublicReadOnlyVisitor,
                 CanUpdateWorkspace: capabilities.CanUpdateWorkspace,
                 CanDeleteWorkspace: capabilities.CanDeleteWorkspace,
                 CanManageMembers: capabilities.CanManageMembers,
@@ -99,3 +100,4 @@ public sealed class WorkspaceAccessEvaluator : IWorkspaceAccessEvaluator
         return result;
     }
 }
+

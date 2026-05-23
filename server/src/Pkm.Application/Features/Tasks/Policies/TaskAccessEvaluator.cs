@@ -38,13 +38,14 @@ public sealed class TaskAccessEvaluator : ITaskAccessEvaluator
         // unless they are promoted to workspace Owner or Manager.
         var isWorkspaceOwner = access.Role == WorkspaceRole.Owner;
         var capabilities = WorkspaceRoleCapabilityMatrix.ForTask(isWorkspaceOwner, access.Role);
+        var isPublicReadOnlyVisitor = access.Visibility == WorkspaceVisibility.Public && access.Role is null;
 
         return new TaskAccessResult(
             Exists: true,
             TaskId: access.TaskId,
             WorkspaceId: access.WorkspaceId,
             Role: access.Role,
-            CanReadTask: capabilities.CanReadTask,
+            CanReadTask: capabilities.CanReadTask || isPublicReadOnlyVisitor,
             CanEditTask: capabilities.CanEditTask,
             CanAssignTask: capabilities.CanAssignTask,
             CanCompleteTask: capabilities.CanCompleteTask,
@@ -65,3 +66,4 @@ public sealed class TaskAccessEvaluator : ITaskAccessEvaluator
             CanCommentTask: false,
             CanModerateComments: false);
 }
+

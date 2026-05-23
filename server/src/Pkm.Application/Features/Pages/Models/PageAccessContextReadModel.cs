@@ -7,4 +7,6 @@ public sealed record PageAccessContextReadModel(
     Guid WorkspaceId,
     Guid OwnerId,
     WorkspaceRole? Role,
+    WorkspaceVisibility Visibility,
     bool IsArchived);
+

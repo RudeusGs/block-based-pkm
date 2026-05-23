@@ -213,4 +213,45 @@ public static class NotificationTemplates
         WorkspaceId: workspaceId,
         ReferenceId: workspaceId,
         ReferenceType: NotificationReferenceTypes.Workspace);
+
+    public static NotificationDispatchRequest FriendRequestReceived(
+        Guid actorUserId,
+        string actorDisplayName,
+        Guid friendRequestId)
+        => new(
+            Type: NotificationType.FriendRequestReceived,
+            Title: "Bạn có lời mời kết bạn mới",
+            Message: $"{actorDisplayName} đã gửi cho bạn một lời mời kết bạn.",
+            ActorUserId: actorUserId,
+            WorkspaceId: null,
+            ReferenceId: friendRequestId,
+            ReferenceType: NotificationReferenceTypes.FriendRequest);
+
+    public static NotificationDispatchRequest FriendRequestAccepted(
+        Guid actorUserId,
+        string actorDisplayName,
+        Guid friendRequestId)
+        => new(
+            Type: NotificationType.FriendRequestAccepted,
+            Title: "Lời mời kết bạn đã được chấp nhận",
+            Message: $"{actorDisplayName} đã chấp nhận lời mời kết bạn của bạn.",
+            ActorUserId: actorUserId,
+            WorkspaceId: null,
+            ReferenceId: friendRequestId,
+            ReferenceType: NotificationReferenceTypes.FriendRequest);
+
+    public static NotificationDispatchRequest MessageReceived(
+        Guid actorUserId,
+        string actorDisplayName,
+        Guid conversationId)
+        => new(
+            Type: NotificationType.MessageReceived,
+            Title: "Bạn có tin nhắn mới",
+            Message: $"{actorDisplayName} đã gửi cho bạn một tin nhắn.",
+            ActorUserId: actorUserId,
+            WorkspaceId: null,
+            ReferenceId: conversationId,
+            ReferenceType: NotificationReferenceTypes.Conversation);
+
 }
+

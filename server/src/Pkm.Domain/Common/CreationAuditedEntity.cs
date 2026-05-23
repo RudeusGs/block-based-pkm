@@ -7,7 +7,7 @@ public abstract class CreationAuditedEntity
     public Guid Id { get; protected set; }
     public DateTimeOffset CreatedDate { get; private set; }
 
-    protected CreationAuditedEntity(){ }
+    protected CreationAuditedEntity() { }
 
     protected CreationAuditedEntity(Guid id, DateTimeOffset createdDate)
     {

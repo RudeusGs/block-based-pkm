@@ -9,6 +9,7 @@ import {
 import type {
   BlockDraftRequest,
   BlockEditingStateRequest,
+  ConversationJoinAck,
   PageCursorRequest,
   PageMousePointerRequest,
   RealtimeEnvelope,
@@ -54,6 +55,16 @@ const KNOWN_BACKEND_EVENTS = [
   'TaskCommentRestored',
   'NotificationCreated',
   'RecommendationCreated',
+  'FriendRequestReceived',
+  'FriendRequestSent',
+  'FriendRequestAccepted',
+  'FriendRequestRejected',
+  'FriendRequestCancelled',
+  'FriendshipChanged',
+  'FriendRemoved',
+  'ConversationUpserted',
+  'MessageCreated',
+  'ConversationRead',
 ] as const
 
 let connection: HubConnection | null = null
@@ -123,8 +134,11 @@ function normalizeEnvelope<TPayload>(
     pageId: normalizeNullableString(value.pageId ?? value.PageId),
     taskId: normalizeNullableString(value.taskId ?? value.TaskId),
     blockId: normalizeNullableString(value.blockId ?? value.BlockId),
+    conversationId: normalizeNullableString(value.conversationId ?? value.ConversationId),
     userId: normalizeNullableString(value.userId ?? value.UserId),
     actorId: normalizeNullableString(value.actorId ?? value.ActorId),
+    senderUserId: normalizeNullableString(value.senderUserId ?? value.SenderUserId),
+    recipientUserId: normalizeNullableString(value.recipientUserId ?? value.RecipientUserId),
     occurredAtUtc:
       normalizeNullableString(value.occurredAtUtc ?? value.OccurredAtUtc) ??
       new Date().toISOString(),
@@ -344,6 +358,14 @@ async function invoke<TResult = unknown>(
   return connection.invoke<TResult>(methodName, ...args)
 }
 
+function joinConversation(conversationId: string) {
+  return invoke<ConversationJoinAck>('JoinConversation', conversationId)
+}
+
+function leaveConversation(conversationId: string) {
+  return invoke('LeaveConversation', conversationId)
+}
+
 function joinWorkspace(workspaceId: string) {
   return invoke('JoinWorkspace', workspaceId)
 }
@@ -400,6 +422,9 @@ export const realtimeClient = {
   off,
   invoke,
 
+  joinConversation,
+  leaveConversation,
+
   joinWorkspace,
   leaveWorkspace,
   heartbeatWorkspace,
@@ -413,3 +438,6 @@ export const realtimeClient = {
   sendBlockDraft,
   sendBlockEditingState,
 }
+
+
+

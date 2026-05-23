@@ -99,6 +99,7 @@ internal sealed class BlockRepository : IBlockRepository
                  page.WorkspaceId,
                  workspace.OwnerId,
                  membership != null ? membership.Role : null,
+                 workspace.Visibility,
                  page.IsArchived))
             .FirstOrDefaultAsync(cancellationToken);
     }
@@ -117,3 +118,4 @@ internal sealed class BlockRepository : IBlockRepository
     }
     public void Add(Block block) => _dataContext.Blocks.Add(block);
 }
+

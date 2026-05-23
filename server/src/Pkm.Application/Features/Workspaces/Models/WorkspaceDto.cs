@@ -6,6 +6,7 @@ public sealed record WorkspaceDto(
     Guid Id,
     string Name,
     string? Description,
+    WorkspaceVisibility Visibility,
     Guid OwnerId,
     Guid? LastModifiedBy,
     DateTimeOffset CreatedDate,
@@ -14,3 +15,4 @@ public sealed record WorkspaceDto(
     bool CanRead,
     bool CanWrite,
     bool CanManageMembers);
+

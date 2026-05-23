@@ -123,6 +123,7 @@ public sealed class ListMyWorkspacesHandler
                 item.Id,
                 item.Name,
                 item.Description,
+                item.Visibility,
                 item.OwnerId,
                 item.CreatedDate,
                 item.UpdatedDate,
@@ -132,3 +133,4 @@ public sealed class ListMyWorkspacesHandler
         return result;
     }
 }
+

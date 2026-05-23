@@ -18,4 +18,4 @@ public static class BlockMappings
             block.LastModifiedBy,
             block.CreatedDate,
             block.UpdatedDate);
-}   
+}

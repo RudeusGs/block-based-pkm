@@ -1,15 +1,18 @@
 import type { DateTimeString, Guid } from './common.model'
 
 export type WorkspaceRoleValue = 'manager' | 'member' | 'viewer'
+export type WorkspaceVisibilityValue = 'private' | 'public'
 
 export interface CreateWorkspaceRequest {
   name: string
   description?: string | null
+  visibility?: WorkspaceVisibilityValue | null
 }
 
 export interface UpdateWorkspaceRequest {
   name: string
   description?: string | null
+  visibility?: WorkspaceVisibilityValue | null
 }
 
 export interface AddWorkspaceMemberRequest {
@@ -25,6 +28,7 @@ export interface WorkspaceResponse {
   id: Guid
   name: string
   description: string | null
+  visibility: string
   ownerId: Guid
   lastModifiedBy: Guid | null
   createdDate: DateTimeString
@@ -39,6 +43,7 @@ export interface WorkspaceListItemResponse {
   id: Guid
   name: string
   description: string | null
+  visibility: string
   ownerId: Guid
   createdDate: DateTimeString
   updatedDate: DateTimeString | null

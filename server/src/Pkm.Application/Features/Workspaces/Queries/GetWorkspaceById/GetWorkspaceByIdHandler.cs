@@ -84,6 +84,7 @@ public sealed class GetWorkspaceByIdHandler
             detail.Id,
             detail.Name,
             detail.Description,
+            detail.Visibility,
             detail.OwnerId,
             detail.LastModifiedBy,
             detail.CreatedDate,
@@ -96,3 +97,4 @@ public sealed class GetWorkspaceByIdHandler
         return Result.Success(dto);
     }
 }
+

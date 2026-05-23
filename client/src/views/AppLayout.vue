@@ -7,7 +7,10 @@
         @jump-to-tasks="scrollToTasks"
         @open-members="workspaceMembers.open"
         @open-activity-log="openActivityLog"
+        @open-social="openSocialHub"
+        @open-messenger="openMessenger"
         @workspace-deleted="handleWorkspaceDeleted"
+        @workspace-updated="handleWorkspaceUpdated"
       />
 
       <main class="page-scroll pb-5">
@@ -92,6 +95,19 @@
       :workspace-name="workspaceNavigation.workspaceName.value"
       @close="closeActivityLog"
     />
+
+    <SocialHubPanel
+      :open="isSocialHubOpen"
+      @close="closeSocialHub"
+      @open-chat="openMessenger"
+    />
+
+    <MessengerPanel
+      :open="isMessengerOpen"
+      :start-user-id="messengerStartUserId"
+      @close="closeMessenger"
+      @started="messengerStartUserId = null"
+    />
   </div>
 </template>
 
@@ -103,12 +119,16 @@ import WorkspaceMembersSidebar from '@/components/layout/WorkspaceMembersSidebar
 import PageEditor from '@/components/editor/PageEditor.vue'
 import WorkTasksSection from '@/components/task/WorkTasksSection.vue'
 import WorkspaceActivityLogPanel from '@/components/activity/WorkspaceActivityLogPanel.vue'
+import SocialHubPanel from '@/components/social/SocialHubPanel.vue'
+import MessengerPanel from '@/components/messaging/MessengerPanel.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import { useWorkspaceMembersSidebar } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 import type { Guid } from '@/api/models/common.model'
+import type { WorkspaceResponse } from '@/api/models/workspace.model'
 
 type SidebarLeftExpose = {
   handleWorkspaceDeleted?: (workspaceId: Guid) => void
+  handleWorkspaceUpdated?: (workspace: WorkspaceResponse) => void
 }
 
 type WorkTasksSectionExpose = {
@@ -118,6 +138,9 @@ type WorkTasksSectionExpose = {
 const taskSectionRef = ref<WorkTasksSectionExpose | null>(null)
 const sidebarLeftRef = ref<SidebarLeftExpose | null>(null)
 const isActivityLogOpen = ref(false)
+const isSocialHubOpen = ref(false)
+const isMessengerOpen = ref(false)
+const messengerStartUserId = ref<Guid | null>(null)
 
 const workspaceNavigation = useWorkspaceNavigation()
 
@@ -164,12 +187,41 @@ function handleWorkspaceDeleted(workspaceId: Guid) {
   closeActivityLog()
 }
 
+function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
+  sidebarLeftRef.value?.handleWorkspaceUpdated?.(workspace)
+
+  if (currentWorkspaceId.value === workspace.id) {
+    workspaceNavigation.setWorkspace({
+      id: workspace.id,
+      name: workspace.name,
+    })
+  }
+}
+
 function openActivityLog() {
   isActivityLogOpen.value = true
 }
 
 function closeActivityLog() {
   isActivityLogOpen.value = false
+}
+
+function openSocialHub() {
+  isSocialHubOpen.value = true
+}
+
+function closeSocialHub() {
+  isSocialHubOpen.value = false
+}
+
+function openMessenger(userId?: Guid | null) {
+  messengerStartUserId.value = userId ?? null
+  isMessengerOpen.value = true
+}
+
+function closeMessenger() {
+  isMessengerOpen.value = false
+  messengerStartUserId.value = null
 }
 
 function scrollToTasks() {
@@ -183,9 +235,3 @@ function scrollToTasks() {
 <style scoped>
 @import "@/views/css/AppLayout.css";
 </style>
-
-
-
-
-
-
