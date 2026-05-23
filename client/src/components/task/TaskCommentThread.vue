@@ -24,6 +24,7 @@
         <span>{{ comment.createdAt }}</span>
 
         <button
+          v-if="canReply"
           type="button"
           :disabled="isAddingComment"
           @click="toggleReplyComposer"
@@ -76,6 +77,7 @@
           :comment="reply"
           :depth="depth + 1"
           :is-adding-comment="isAddingComment"
+          :can-reply="canReply"
           @add-reply="forwardReply"
         />
       </div>
@@ -97,10 +99,12 @@ const props = withDefaults(
     comment: TaskCommentView
     depth?: number
     isAddingComment?: boolean
+    canReply?: boolean
   }>(),
   {
     depth: 0,
     isAddingComment: false,
+    canReply: true,
   }
 )
 
@@ -113,6 +117,8 @@ const replyDraft = ref('')
 const replyInputRef = ref<HTMLTextAreaElement | null>(null)
 
 async function toggleReplyComposer() {
+  if (!props.canReply) return
+
   isReplying.value = !isReplying.value
 
   if (isReplying.value) {
@@ -129,7 +135,7 @@ function closeReplyComposer() {
 function submitReply() {
   const content = replyDraft.value.trim()
 
-  if (!content || props.isAddingComment) return
+  if (!content || props.isAddingComment || !props.canReply) return
 
   emit('add-reply', content, props.comment.id)
   closeReplyComposer()

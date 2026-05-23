@@ -130,6 +130,7 @@
               </button>
 
               <button
+                v-if="canCreatePages(workspace)"
                 type="button"
                 class="lunar-row-action"
                 title="Tạo page"
@@ -169,7 +170,7 @@
                   v-else-if="!getWorkspacePages(workspace.id).length"
                   class="lunar-empty compact"
                 >
-                  Chưa có page.
+                  {{ canCreatePages(workspace) ? 'Chưa có page.' : 'Chưa có page để xem.' }}
                 </div>
 
                 <SidebarPageTree
@@ -177,6 +178,8 @@
                   :pages="getWorkspacePages(workspace.id)"
                   :selected-page-id="selectedPageId"
                   :opened-page-ids="openedPageIds"
+                  :can-create-child="canCreatePages(workspace)"
+                  :can-manage-pages="canManagePages(workspace)"
                   @select-page="emit('selectPage', $event)"
                   @create-child="emit('createPage', workspace, $event.id)"
                   @toggle-page="emit('togglePage', $event.id)"
@@ -230,6 +233,22 @@ const emit = defineEmits<{
   sharePage: [page: PageTreeItem]
   deletePage: [page: PageTreeItem]
 }>()
+
+function normalizeRole(workspace: WorkspaceSidebarItem) {
+  return workspace.currentUserRole?.trim().toLowerCase() ?? ''
+}
+
+function canCreatePages(workspace: WorkspaceSidebarItem) {
+  const role = normalizeRole(workspace)
+
+  return role === 'owner' || role === 'manager' || role === 'member'
+}
+
+function canManagePages(workspace: WorkspaceSidebarItem) {
+  const role = normalizeRole(workspace)
+
+  return role === 'owner' || role === 'manager'
+}
 
 function normalizeVisibility(value: string | null | undefined) {
   return value?.trim().toLowerCase() === 'public' ? 'public' : 'private'

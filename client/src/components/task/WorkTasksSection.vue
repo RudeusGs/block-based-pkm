@@ -256,6 +256,7 @@
       :members="members"
       :can-manage-assignees="canManageTaskAssignees"
       :can-change-status="selectedTaskCanChangeStatus"
+      :can-comment="canCommentTasks"
       :page-title="pageTitle"
       :is-loading-comments="isLoadingComments"
       :comments-error="commentsError"
@@ -309,6 +310,9 @@ const props = defineProps<{
   pageId: Guid | null
   workspaceName?: string | null
   pageTitle?: string | null
+  canManageTasks?: boolean
+  canManageAssignees?: boolean
+  canCommentTasks?: boolean
 }>()
 
 const sectionRef = ref<HTMLElement | null>(null)
@@ -346,16 +350,36 @@ const currentWorkspaceMember = computed(() => {
   return members.value.find((member) => member.isCurrentUser) ?? null
 })
 
-const canManageTaskAssignees = computed(() => {
+const currentWorkspaceRole = computed(() => {
   const currentMember = currentWorkspaceMember.value
-  if (!currentMember) return false
+  if (!currentMember) return ''
 
-  const role = currentMember.role.trim().toLowerCase()
-
-  return currentMember.isOwner || role === 'owner' || role === 'manager'
+  return currentMember.isOwner
+    ? 'owner'
+    : currentMember.role.trim().toLowerCase()
 })
 
-const canManageTasks = computed(() => canManageTaskAssignees.value)
+const inferredCanManageTasks = computed(() => {
+  const role = currentWorkspaceRole.value
+
+  return role === 'owner' || role === 'manager'
+})
+
+const canManageTasks = computed(() => {
+  return props.canManageTasks ?? inferredCanManageTasks.value
+})
+
+const canManageTaskAssignees = computed(() => {
+  return props.canManageAssignees ?? canManageTasks.value
+})
+
+const canCommentTasks = computed(() => {
+  if (props.canCommentTasks !== undefined) return props.canCommentTasks
+
+  const role = currentWorkspaceRole.value
+
+  return role === 'owner' || role === 'manager' || role === 'member'
+})
 
 const selectedTaskCanChangeStatus = computed(() => {
   return canChangeStatusForRawTask(selectedRawTask.value)
@@ -365,7 +389,10 @@ const taskPermissionLabel = computed(() => {
   if (isLoadingMembers.value) return 'Checking permissions...'
   if (membersError.value) return 'Permission unknown'
 
-  return canManageTasks.value ? 'Can edit' : 'View only'
+  if (canManageTasks.value) return 'Can edit'
+  if (canCommentTasks.value) return 'Can comment'
+
+  return 'View only'
 })
 
 const emptyTaskDescription = computed(() => {
@@ -373,7 +400,11 @@ const emptyTaskDescription = computed(() => {
     return 'Bấm New để tạo task đầu tiên, assign nhiều người ngay nếu cần.'
   }
 
-  return 'Bạn có thể xem task và comment. Việc tạo task mới chỉ dành cho owner hoặc manager.'
+  if (canCommentTasks.value) {
+    return 'Bạn có thể xem và comment task. Việc tạo task mới chỉ dành cho owner hoặc manager.'
+  }
+
+  return 'Bạn đang ở quyền Viewer nên chỉ có thể xem task.'
 })
 
 const assignableMembers = computed(() => {
@@ -1023,7 +1054,7 @@ function mapCommentsForTask(taskId: Guid) {
 }
 
 async function addTaskComment(content: string, parentId: Guid | null = null) {
-  if (!selectedTask.value || !content.trim() || isAddingComment.value) return
+  if (!selectedTask.value || !content.trim() || isAddingComment.value || !canCommentTasks.value) return
 
   const taskId = selectedTask.value.id
   isAddingComment.value = true

@@ -11,7 +11,7 @@
 
     <template v-else>
       <section
-        v-if="normalizedCoverImage || canEditDocument"
+        v-if="normalizedCoverImage || canEditPage"
         class="page-editor-cover"
         :class="{ 'page-editor-cover--empty': !normalizedCoverImage }"
       >
@@ -37,12 +37,12 @@
           class="page-editor-cover-input"
           type="file"
           accept="image/*"
-          :disabled="!canEditDocument || isUploadingCoverImage"
+          :disabled="!canEditPage || isUploadingCoverImage"
           @change="handleCoverFileChange"
         />
 
         <button
-          v-if="canEditDocument"
+          v-if="canEditPage"
           class="page-editor-cover-action"
           type="button"
           :disabled="isUploadingCoverImage"
@@ -80,7 +80,7 @@
       </header>
 
       <div
-        v-show="isTextToolbarVisible && canEditDocument"
+        v-show="isTextToolbarVisible && canEditPage"
         class="page-editor-word-toolbar"
         :style="textToolbarStyle"
         @mousedown.stop="keepTextToolbarOpen"
@@ -197,6 +197,14 @@
         </div>
 
         <div
+          v-if="!canEditPage && !isLoading"
+          class="page-editor-readonly-banner"
+        >
+          <i class="bi bi-eye"></i>
+          <span>Read-only mode · Bạn chỉ có quyền xem page này.</span>
+        </div>
+
+        <div
           v-if="isLoading"
           class="page-editor-loading"
         >
@@ -213,16 +221,18 @@
             :id="holderId"
             ref="holderRef"
             class="page-editor-holder"
-            :class="{ 'page-editor-holder--readonly': !canEditDocument }"
-            @focusin="handleEditorFocusIn"
-            @beforeinput.capture="handleEditorBeforeInput"
-            @keydown.capture="handleEditorKeydown"
-            @input="handleEditorInput"
-            @focusout="handleEditorFocusOut"
+            :class="{ 'page-editor-holder--readonly': !canEditPage }"
+            @focusin="handleEditorFocusInGuarded"
+            @beforeinput.capture="handleEditorBeforeInputGuarded"
+            @paste.capture="handleEditorPasteGuarded"
+            @drop.capture="handleEditorDropGuarded"
+            @keydown.capture="handleEditorKeydownGuarded"
+            @input="handleEditorInputGuarded"
+            @focusout="handleEditorFocusOutGuarded"
             @pointermove.passive="handleEditorPointerMove"
             @pointerleave.passive="handleEditorPointerLeave"
-            @mouseup="rememberTextSelection"
-            @keyup="rememberTextSelection"
+            @mouseup="rememberTextSelectionGuarded"
+            @keyup="rememberTextSelectionGuarded"
           ></div>
 
           <div
@@ -279,6 +289,7 @@ const props = defineProps<{
   pageCoverImage?: string | null
   pageRevision?: number | null
   workspaceName?: string | null
+  canEdit?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -318,7 +329,7 @@ async function handleCoverFileChange(event: Event) {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
 
-  if (!file || !props.pageId || isUploadingCoverImage.value) {
+  if (!file || !props.pageId || !canEditPage.value || isUploadingCoverImage.value) {
     if (input) input.value = ''
     return
   }
@@ -405,6 +416,78 @@ const {
   handleEditorPointerMove,
   handleEditorPointerLeave,
 } = usePageEditor(props)
+
+const canEditPage = computed(() => props.canEdit !== false && canEditDocument.value)
+
+function preventReadonlyMutation(event: Event) {
+  if (canEditPage.value) return false
+
+  event.preventDefault()
+  event.stopPropagation()
+
+  return true
+}
+
+function handleEditorFocusInGuarded(event: FocusEvent) {
+  if (!canEditPage.value) return
+
+  handleEditorFocusIn(event)
+}
+
+function handleEditorBeforeInputGuarded(event: InputEvent) {
+  if (preventReadonlyMutation(event)) return
+
+  handleEditorBeforeInput(event)
+}
+
+function handleEditorPasteGuarded(event: ClipboardEvent) {
+  preventReadonlyMutation(event)
+}
+
+function handleEditorDropGuarded(event: DragEvent) {
+  preventReadonlyMutation(event)
+}
+
+function isReadonlyEditKey(event: KeyboardEvent) {
+  if (event.ctrlKey || event.metaKey) {
+    return ['x', 'v', 'b', 'i', 'u', 'z', 'y'].includes(event.key.toLowerCase())
+  }
+
+  return (
+    event.key.length === 1 ||
+    event.key === 'Enter' ||
+    event.key === 'Backspace' ||
+    event.key === 'Delete' ||
+    event.key === 'Tab'
+  )
+}
+
+function handleEditorKeydownGuarded(event: KeyboardEvent) {
+  if (!canEditPage.value && isReadonlyEditKey(event)) {
+    preventReadonlyMutation(event)
+    return
+  }
+
+  if (!canEditPage.value) return
+
+  handleEditorKeydown(event)
+}
+
+function handleEditorInputGuarded(event: Event) {
+  if (!canEditPage.value) return
+
+  handleEditorInput(event)
+}
+
+function handleEditorFocusOutGuarded(event: FocusEvent) {
+  if (!canEditPage.value) return
+
+  handleEditorFocusOut(event)
+}
+
+function rememberTextSelectionGuarded() {
+  if (!canEditPage.value) return
+
+  rememberTextSelection()
+}
 </script>
-
-

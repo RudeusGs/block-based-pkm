@@ -5,8 +5,14 @@
     <section class="workspace-page-center flex-grow-1 min-vh-100 text-on-surface">
       <AppTopNav
         :can-share-workspace="workspaceMembers.canManageMembers.value"
-        :can-view-activity-log="canViewActivityLog"
+        :can-invite-members="workspaceMembers.canManageMembers.value"
+        :can-manage-workspace-settings="workspaceMembers.canUpdateWorkspace.value"
+        :can-delete-workspace="workspaceMembers.canDeleteWorkspace.value"
+        :can-read-activity-log="workspaceMembers.canReadActivityLog.value"
+        :ai-reminder-count="taskAiReminders.badgeCount.value"
+        :ai-reminder-label="taskAiReminders.badgeLabel.value"
         @jump-to-tasks="scrollToTasks"
+        @open-ai-reminders="openAiReminders"
         @open-members="workspaceMembers.open"
         @open-activity-log="openActivityLog"
         @open-social="openSocialHub"
@@ -19,6 +25,7 @@
         <div class="page-container container position-relative px-4 pt-4 pb-5">
           <PageEditor
             :page-id="currentPageId"
+            :can-edit="workspaceMembers.canEditDocument.value"
             :page-title="workspaceNavigation.pageName.value"
             :page-icon="workspaceNavigation.pageIcon.value"
             :page-cover-image="workspaceNavigation.pageCoverImage.value"
@@ -31,6 +38,9 @@
             ref="taskSectionRef"
             :workspace-id="currentWorkspaceId"
             :page-id="currentPageId"
+            :can-manage-tasks="workspaceMembers.canManageTasks.value"
+            :can-manage-assignees="workspaceMembers.canManageTasks.value"
+            :can-comment-tasks="workspaceMembers.canCommentTasks.value"
             :workspace-name="workspaceNavigation.workspaceName.value"
             :page-title="workspaceNavigation.pageName.value"
           />
@@ -95,8 +105,19 @@
       :open="isActivityLogOpen"
       :workspace-id="currentWorkspaceId"
       :workspace-name="workspaceNavigation.workspaceName.value"
-      :can-read-audit="canViewActivityLog"
       @close="closeActivityLog"
+    />
+
+    <TaskAiReminderPanel
+      :open="isAiReminderPanelOpen"
+      :reminders="taskAiReminders.reminders.value"
+      :summary="taskAiReminders.summary.value"
+      :is-loading="taskAiReminders.isLoading.value"
+      :error="taskAiReminders.error.value"
+      :generated-at="taskAiReminders.generatedAt.value"
+      @close="closeAiReminders"
+      @refresh="taskAiReminders.refresh"
+      @jump-to-tasks="scrollToTasks"
     />
 
     <SocialHubPanel
@@ -116,17 +137,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import SidebarLeft from '@/components/sidebar-left/SidebarLeft.vue'
 import AppTopNav from '@/components/layout/AppTopNav.vue'
 import WorkspaceMembersSidebar from '@/components/layout/WorkspaceMembersSidebar.vue'
 import PageEditor from '@/components/editor/PageEditor.vue'
 import WorkTasksSection from '@/components/task/WorkTasksSection.vue'
+import TaskAiReminderPanel from '@/components/task/TaskAiReminderPanel.vue'
 import WorkspaceActivityLogPanel from '@/components/activity/WorkspaceActivityLogPanel.vue'
 import SocialHubPanel from '@/components/social/SocialHubPanel.vue'
 import MessengerPanel from '@/components/messaging/MessengerPanel.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
 import { useWorkspaceMembersSidebar } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
+import { useTaskAiReminders } from '@/modules/task/composables/useTaskAiReminders'
 import type { Guid } from '@/api/models/common.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
 
@@ -143,6 +166,7 @@ type WorkTasksSectionExpose = {
 const taskSectionRef = ref<WorkTasksSectionExpose | null>(null)
 const sidebarLeftRef = ref<SidebarLeftExpose | null>(null)
 const isActivityLogOpen = ref(false)
+const isAiReminderPanelOpen = ref(false)
 const isSocialHubOpen = ref(false)
 const isMessengerOpen = ref(false)
 const messengerStartUserId = ref<Guid | null>(null)
@@ -158,10 +182,7 @@ const currentPageId = computed(() => {
 })
 
 const workspaceMembers = useWorkspaceMembersSidebar(currentWorkspaceId)
-
-const canViewActivityLog = computed(() => {
-  return Boolean(currentWorkspaceId.value && workspaceMembers.canManageMembers.value)
-})
+const taskAiReminders = useTaskAiReminders(currentWorkspaceId)
 
 const subpages = [
   {
@@ -194,6 +215,7 @@ function handleWorkspaceDeleted(workspaceId: Guid) {
   sidebarLeftRef.value?.handleWorkspaceDeleted?.(workspaceId)
   workspaceMembers.close()
   closeActivityLog()
+  closeAiReminders()
 }
 
 function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
@@ -208,7 +230,7 @@ function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
 }
 
 function openActivityLog() {
-  if (!canViewActivityLog.value) {
+  if (!workspaceMembers.canReadActivityLog.value) {
     isActivityLogOpen.value = false
     return
   }
@@ -218,6 +240,14 @@ function openActivityLog() {
 
 function closeActivityLog() {
   isActivityLogOpen.value = false
+}
+
+function openAiReminders() {
+  isAiReminderPanelOpen.value = true
+}
+
+function closeAiReminders() {
+  isAiReminderPanelOpen.value = false
 }
 
 function openSocialHub() {
@@ -255,6 +285,24 @@ function scrollToTasks() {
     block: 'start',
   })
 }
+
+
+watch(
+  workspaceMembers.canReadActivityLog,
+  (canRead) => {
+    if (!canRead) {
+      closeActivityLog()
+    }
+  }
+)
+
+onMounted(() => {
+  taskAiReminders.startAutoRefresh()
+})
+
+onBeforeUnmount(() => {
+  taskAiReminders.stopAutoRefresh()
+})
 </script>
 
 <style scoped>

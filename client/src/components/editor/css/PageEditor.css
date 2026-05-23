@@ -1718,8 +1718,38 @@ body .tc-popover__item--focused,
   pointer-events: none;
 }
 
+/* Permission/read-only polish */
+.page-editor-readonly-banner {
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 18px;
+  padding: 8px 11px;
+  border: 1px solid #30302d;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #9b9a94;
+  background: #171717;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
 
+.page-editor-readonly-banner i {
+  color: #85837d;
+  font-size: 13px;
+}
 
+.page-editor-holder--readonly {
+  cursor: text;
+}
 
+.page-editor-holder--readonly .ce-toolbar,
+.page-editor-holder--readonly .ce-popover,
+.page-editor-holder--readonly .ce-inline-toolbar {
+  display: none !important;
+}
 
-
+.page-editor-holder--readonly [contenteditable='true'] {
+  caret-color: transparent;
+}

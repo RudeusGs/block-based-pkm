@@ -35,25 +35,36 @@
 
         <section class="task-detail-body">
           <div class="task-detail-status-row">
-            <button
-              v-for="option in statusOptions"
-              :key="option.value"
-              class="status-pill task-status-option d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
-              :class="[
-                statusClass(option.value),
-                {
-                  active: task.status === option.value,
-                  locked: isStatusButtonDisabled(option.value),
-                },
-              ]"
-              type="button"
-              :aria-pressed="task.status === option.value"
-              :disabled="isStatusButtonDisabled(option.value)"
-              @click="handleStatusClick(option.value)"
+            <template v-if="canShowStatusActions">
+              <button
+                v-for="option in statusOptions"
+                :key="option.value"
+                class="status-pill task-status-option d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
+                :class="[
+                  statusClass(option.value),
+                  {
+                    active: task.status === option.value,
+                    locked: isStatusButtonDisabled(option.value),
+                  },
+                ]"
+                type="button"
+                :aria-pressed="task.status === option.value"
+                :disabled="isStatusButtonDisabled(option.value)"
+                @click="handleStatusClick(option.value)"
+              >
+                <span class="status-pill-dot"></span>
+                {{ option.label }}
+              </button>
+            </template>
+
+            <span
+              v-else
+              class="status-pill d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
+              :class="statusClass(task.status)"
             >
               <span class="status-pill-dot"></span>
-              {{ option.label }}
-            </button>
+              {{ statusLabel(task.status) }}
+            </span>
 
             <span
               class="priority-pill d-inline-flex align-items-center gap-2 rounded-pill px-2 py-1"
@@ -266,13 +277,17 @@
                 :key="comment.id"
                 :comment="comment"
                 :is-adding-comment="isAddingComment"
+                :can-reply="canComment"
                 @add-reply="submitReply"
               />
             </div>
           </section>
         </section>
 
-        <footer class="task-detail-composer">
+        <footer
+          v-if="canComment"
+          class="task-detail-composer"
+        >
           <img
             class="task-comment-avatar"
             :src="composerAvatarUrl"
@@ -317,6 +332,14 @@
             </div>
           </div>
         </footer>
+
+        <footer
+          v-else
+          class="task-detail-readonly-footer"
+        >
+          <span class="material-symbols-outlined">visibility</span>
+          <span>Viewer chỉ được xem task và comment, không thể bình luận hay đổi trạng thái.</span>
+        </footer>
       </aside>
     </Transition>
   </Teleport>
@@ -343,6 +366,7 @@ const props = withDefaults(
     members: TaskMemberOption[]
     canManageAssignees?: boolean
     canChangeStatus?: boolean
+    canComment?: boolean
     pageTitle?: string | null
     isLoadingComments?: boolean
     commentsError?: string | null
@@ -353,6 +377,7 @@ const props = withDefaults(
   {
     canManageAssignees: false,
     canChangeStatus: false,
+    canComment: false,
     pageTitle: '',
     isLoadingComments: false,
     commentsError: null,
@@ -406,6 +431,10 @@ const totalCommentCount = computed(() => {
 })
 
 const isDoneLocked = computed(() => props.task?.status === 'done')
+
+const canShowStatusActions = computed(() => {
+  return Boolean(props.task && props.canChangeStatus && !isDoneLocked.value)
+})
 
 const statusPolicyMessage = computed(() => {
   if (!props.task) return ''
@@ -489,14 +518,14 @@ function confirmDoneTask() {
 function submitComment() {
   const content = draftComment.value.trim()
 
-  if (!content || props.isAddingComment) return
+  if (!content || props.isAddingComment || !props.canComment) return
 
   emit('add-comment', content)
   draftComment.value = ''
 }
 
 function submitReply(content: string, parentId: Guid) {
-  if (!content.trim() || props.isAddingComment) return
+  if (!content.trim() || props.isAddingComment || !props.canComment) return
 
   emit('add-reply', content.trim(), parentId)
 }
@@ -1710,5 +1739,26 @@ onBeforeUnmount(() => {
 <style>
 .task-detail-lock-scroll {
   overflow: hidden;
+}
+</style>
+
+
+<style scoped>
+.task-detail-readonly-footer {
+  min-height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 14px 18px;
+  color: #9b9a94;
+  background: #101010;
+  border-top: 1px solid #242424;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.task-detail-readonly-footer .material-symbols-outlined {
+  color: #85837d;
+  font-size: 18px;
 }
 </style>

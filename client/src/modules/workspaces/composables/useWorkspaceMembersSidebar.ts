@@ -175,14 +175,62 @@ export function useWorkspaceMembersSidebar(
     return members.value.find((member) => member.isCurrentUser) ?? null
   })
 
-  const canManageMembers = computed(() => {
+  const currentWorkspaceRole = computed(() => {
     const currentMember = currentWorkspaceMember.value
 
-    if (!currentMember) return false
+    if (!currentMember) return ''
 
-    const role = currentMember.role?.trim().toLowerCase()
+    return currentMember.isOwner
+      ? 'owner'
+      : currentMember.role?.trim().toLowerCase() ?? ''
+  })
 
-    return currentMember.isOwner || role === 'owner' || role === 'manager'
+  const canReadWorkspace = computed(() => Boolean(currentWorkspaceMember.value))
+
+  const canManageMembers = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager'
+  })
+
+  const canUpdateWorkspace = computed(() => currentWorkspaceRole.value === 'owner')
+
+  const canDeleteWorkspace = computed(() => currentWorkspaceRole.value === 'owner')
+
+  const canCreatePages = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager' || role === 'member'
+  })
+
+  const canEditDocument = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager' || role === 'member'
+  })
+
+  const canManagePages = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager'
+  })
+
+  const canManageTasks = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager'
+  })
+
+  const canCommentTasks = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager' || role === 'member'
+  })
+
+  const canReadActivityLog = computed(() => {
+    const role = currentWorkspaceRole.value
+
+    return role === 'owner' || role === 'manager'
   })
 
   function memberAvailability(member: WorkspaceMemberResponse): WorkspaceMemberAvailability {
@@ -647,7 +695,18 @@ export function useWorkspaceMembersSidebar(
     isMutatingMember,
     mutatingMemberId,
     memberActionError,
+    currentWorkspaceMember,
+    currentWorkspaceRole,
+    canReadWorkspace,
     canManageMembers,
+    canUpdateWorkspace,
+    canDeleteWorkspace,
+    canCreatePages,
+    canEditDocument,
+    canManagePages,
+    canManageTasks,
+    canCommentTasks,
+    canReadActivityLog,
     memberCountLabel,
     open,
     close,
@@ -658,6 +717,3 @@ export function useWorkspaceMembersSidebar(
     removeMember,
   }
 }
-
-
-

@@ -1,5 +1,6 @@
 <template>
   <div
+    v-if="hasAnyAction"
     ref="menuRef"
     class="lunar-page-actions"
     :class="{ 'is-open': isOpen }"
@@ -24,6 +25,7 @@
         aria-label="Page actions"
       >
         <button
+          v-if="canSettings"
           type="button"
           class="lunar-page-menu-item"
           role="menuitem"
@@ -38,6 +40,7 @@
         </button>
 
         <button
+          v-if="canShare"
           type="button"
           class="lunar-page-menu-item"
           role="menuitem"
@@ -51,9 +54,13 @@
           </span>
         </button>
 
-        <div class="lunar-page-menu-separator"></div>
+        <div
+          v-if="canDelete && (canSettings || canShare)"
+          class="lunar-page-menu-separator"
+        ></div>
 
         <button
+          v-if="canDelete"
           type="button"
           class="lunar-page-menu-item danger"
           role="menuitem"
@@ -72,12 +79,22 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import type { PageTreeItem } from '@/components/sidebar-left/types/sidebar.types'
 
-const props = defineProps<{
-  page: PageTreeItem
-}>()
+const props = withDefaults(
+  defineProps<{
+    page: PageTreeItem
+    canSettings?: boolean
+    canShare?: boolean
+    canDelete?: boolean
+  }>(),
+  {
+    canSettings: true,
+    canShare: true,
+    canDelete: true,
+  }
+)
 
 const emit = defineEmits<{
   settings: [page: PageTreeItem]
@@ -87,6 +104,10 @@ const emit = defineEmits<{
 
 const menuRef = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
+
+const hasAnyAction = computed(() => {
+  return props.canSettings || props.canShare || props.canDelete
+})
 
 function toggleMenu() {
   isOpen.value = !isOpen.value
@@ -99,17 +120,19 @@ function closeMenu() {
 function selectAction(action: 'settings' | 'share' | 'delete') {
   closeMenu()
 
-  if (action === 'settings') {
+  if (action === 'settings' && props.canSettings) {
     emit('settings', props.page)
     return
   }
 
-  if (action === 'share') {
+  if (action === 'share' && props.canShare) {
     emit('share', props.page)
     return
   }
 
-  emit('delete', props.page)
+  if (action === 'delete' && props.canDelete) {
+    emit('delete', props.page)
+  }
 }
 
 function handleDocumentClick(event: MouseEvent) {

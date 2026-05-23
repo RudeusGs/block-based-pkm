@@ -35,6 +35,7 @@
         </span>
 
         <button
+          v-if="canCreateChild"
           type="button"
           class="lunar-page-action"
           title="Tạo subpage"
@@ -44,7 +45,11 @@
         </button>
 
         <PageActionMenu
+          v-if="canManagePages"
           :page="page"
+          :can-settings="canManagePages"
+          :can-share="canManagePages"
+          :can-delete="canManagePages"
           @settings="emit('pageSettings', $event)"
           @share="emit('sharePage', $event)"
           @delete="emit('deletePage', $event)"
@@ -59,6 +64,8 @@
         :opened-page-ids="openedPageIds"
         :depth="depth + 1"
         :max-visual-depth="maxVisualDepth"
+        :can-create-child="canCreateChild"
+        :can-manage-pages="canManagePages"
         @select-page="emit('selectPage', $event)"
         @create-child="emit('createChild', $event)"
         @toggle-page="emit('togglePage', $event)"
@@ -85,10 +92,14 @@ withDefaults(
     openedPageIds: Set<string>
     depth?: number
     maxVisualDepth?: number
+    canCreateChild?: boolean
+    canManagePages?: boolean
   }>(),
   {
     depth: 0,
     maxVisualDepth: 4,
+    canCreateChild: false,
+    canManagePages: false,
   }
 )
 
@@ -103,6 +114,3 @@ const emit = defineEmits<{
 </script>
 
 <style scoped src="./css/SidebarPageTree.css"></style>
-
-
-

@@ -152,10 +152,22 @@ export function useSidebarWorkspaceTree() {
     isCreateWorkspaceModalOpen.value = true
   }
 
+  function workspaceRole(workspace: SidebarWorkspaceLike | null | undefined) {
+    return workspace?.currentUserRole?.trim().toLowerCase() ?? ''
+  }
+
+  function canCreatePageInWorkspace(workspace: SidebarWorkspaceLike | null | undefined) {
+    const role = workspaceRole(workspace)
+
+    return role === 'owner' || role === 'manager' || role === 'member'
+  }
+
   function openCreatePageModal(
     workspace: SidebarWorkspaceLike,
     parentPageId: Guid | null = null
   ) {
+    if (!canCreatePageInWorkspace(workspace)) return
+
     selectedWorkspaceId.value = workspace.id
 
     workspaceNavigation.setWorkspace({
@@ -429,6 +441,11 @@ export function useSidebarWorkspaceTree() {
   }
 
   function requestDeletePage(page: PageTreeItem) {
+    const workspace = workspaces.value.find((item) => item.id === page.workspaceId)
+    const role = workspaceRole(workspace)
+
+    if (role !== 'owner' && role !== 'manager') return
+
     pageToDelete.value = page
     deletePageError.value = null
     isDeletePageConfirmOpen.value = true
@@ -637,9 +654,3 @@ export function useSidebarWorkspaceTree() {
     handleWorkspaceDeleted,
   }
 }
-
-
-
-
-
-

@@ -67,6 +67,24 @@
       </button>
 
       <button
+        class="app-ai-reminder-btn"
+        type="button"
+        :title="aiReminderTitle"
+        aria-label="AI reminders"
+        @click="openAiReminders"
+      >
+        <span class="material-symbols-outlined">auto_awesome</span>
+        Reminders
+
+        <span
+          v-if="aiReminderCount > 0"
+          class="app-ai-reminder-badge"
+        >
+          {{ aiReminderLabel || aiReminderCount }}
+        </span>
+      </button>
+
+      <button
         class="app-icon-btn"
         type="button"
         title="Friends & profiles"
@@ -248,11 +266,11 @@
       </div>
 
       <button
+        v-if="canOpenWorkspaceShare"
         class="app-icon-btn"
         type="button"
         :title="shareButtonTitle"
         aria-label="Share workspace"
-        :disabled="!canOpenWorkspaceShare"
         @click="openWorkspaceShare"
       >
         <span class="material-symbols-outlined">share</span>
@@ -267,11 +285,11 @@
       </button>
 
       <button
+        v-if="canReadActivityLog"
         class="app-icon-btn"
         type="button"
-        :title="activityLogButtonTitle"
+        title="Activity log"
         aria-label="Activity log"
-        :disabled="!canOpenActivityLog"
         @click="openActivityLog"
       >
         <span class="material-symbols-outlined">history</span>
@@ -306,6 +324,7 @@
             </div>
 
             <button
+              v-if="canInviteMembers"
               type="button"
               class="app-more-item primary"
               role="menuitem"
@@ -319,9 +338,13 @@
               </span>
             </button>
 
-            <div class="app-more-separator"></div>
+            <div
+              v-if="canInviteMembers && (canManageWorkspaceSettings || canDeleteWorkspace)"
+              class="app-more-separator"
+            ></div>
 
             <button
+              v-if="canManageWorkspaceSettings"
               type="button"
               class="app-more-item"
               role="menuitem"
@@ -349,9 +372,13 @@
               </span>
             </button>
 
-            <div class="app-more-separator"></div>
+            <div
+              v-if="canDeleteWorkspace"
+              class="app-more-separator"
+            ></div>
 
             <button
+              v-if="canDeleteWorkspace"
               type="button"
               class="app-more-item danger"
               role="menuitem"
@@ -371,6 +398,7 @@
     </div>
 
     <InviteWorkspaceMemberModal
+      v-if="canInviteMembers"
       :open="isInviteModalOpen"
       :workspace-name="workspaceNavigation.workspaceName.value"
       :email="inviteMember.email.value"
@@ -385,6 +413,7 @@
     />
 
     <WorkspaceSettingsModal
+      v-if="canManageWorkspaceSettings"
       :open="isWorkspaceSettingsOpen"
       :workspace-id="currentWorkspaceId"
       @close="isWorkspaceSettingsOpen = false"
@@ -400,6 +429,7 @@
     />
 
     <ConfirmActionModal
+      v-if="canDeleteWorkspace"
       :open="deleteWorkspace.isDeleteWorkspaceConfirmOpen.value"
       title="Xóa workspace này?"
       :message="deleteWorkspaceConfirmMessage"
@@ -431,16 +461,27 @@ import WorkspaceShareModal from '@/components/workspace/WorkspaceShareModal.vue'
 const props = withDefaults(
   defineProps<{
     canShareWorkspace?: boolean
-    canViewActivityLog?: boolean
+    canInviteMembers?: boolean
+    canManageWorkspaceSettings?: boolean
+    canDeleteWorkspace?: boolean
+    canReadActivityLog?: boolean
+    aiReminderCount?: number
+    aiReminderLabel?: string
   }>(),
   {
     canShareWorkspace: false,
-    canViewActivityLog: false,
+    canInviteMembers: false,
+    canManageWorkspaceSettings: false,
+    canDeleteWorkspace: false,
+    canReadActivityLog: false,
+    aiReminderCount: 0,
+    aiReminderLabel: '',
   }
 )
 
 const emit = defineEmits<{
   'jump-to-tasks': []
+  'open-ai-reminders': []
   'open-members': []
   'workspace-deleted': [workspaceId: Guid]
   'workspace-updated': [workspace: WorkspaceResponse]
@@ -480,20 +521,34 @@ const canOpenWorkspaceShare = computed(() => {
   return Boolean(currentWorkspaceId.value && props.canShareWorkspace)
 })
 
-const canOpenActivityLog = computed(() => {
-  return Boolean(currentWorkspaceId.value && props.canViewActivityLog)
+const canInviteMembers = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canInviteMembers)
 })
 
-const activityLogButtonTitle = computed(() => {
-  if (!currentWorkspaceId.value) return 'Chọn workspace trước khi xem activity log'
-  if (!props.canViewActivityLog) return 'Chỉ Owner hoặc Manager mới xem được activity log'
-  return 'Activity log'
+const canManageWorkspaceSettings = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canManageWorkspaceSettings)
+})
+
+const canDeleteWorkspace = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canDeleteWorkspace)
+})
+
+const canReadActivityLog = computed(() => {
+  return Boolean(currentWorkspaceId.value && props.canReadActivityLog)
 })
 
 const shareButtonTitle = computed(() => {
   if (!currentWorkspaceId.value) return 'Chọn workspace trước khi share'
   if (!props.canShareWorkspace) return 'Chỉ Owner hoặc Manager mới được share workspace'
   return 'Share workspace qua Messenger'
+})
+
+const aiReminderTitle = computed(() => {
+  if (props.aiReminderCount > 0) {
+    return `${props.aiReminderCount} AI reminder cần xem`
+  }
+
+  return 'AI Reminders: quá hạn, sắp tới hạn, priority cao'
 })
 
 const deleteWorkspaceConfirmMessage = computed(() => {
@@ -522,6 +577,9 @@ function toggleMoreMenu() {
 
 function openInviteModal() {
   isMoreMenuOpen.value = false
+
+  if (!canInviteMembers.value) return
+
   inviteMember.resetInviteForm()
   isInviteModalOpen.value = true
 }
@@ -545,6 +603,12 @@ function openMessenger(userId?: Guid | null) {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
   emit('open-messenger', userId ?? null)
+}
+
+function openAiReminders() {
+  isNotificationMenuOpen.value = false
+  isMoreMenuOpen.value = false
+  emit('open-ai-reminders')
 }
 
 function openWorkspaceShare() {
@@ -582,10 +646,7 @@ function openWorkspaceSettings() {
   isMoreMenuOpen.value = false
   isNotificationMenuOpen.value = false
 
-  if (!currentWorkspaceId.value) {
-    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi mở settings.')
-    return
-  }
+  if (!currentWorkspaceId.value || !canManageWorkspaceSettings.value) return
 
   isWorkspaceSettingsOpen.value = true
 }
@@ -606,15 +667,7 @@ function openActivityLog() {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
 
-  if (!currentWorkspaceId.value) {
-    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi xem activity log.')
-    return
-  }
-
-  if (!props.canViewActivityLog) {
-    toast.warning('Không có quyền xem activity log', 'Chỉ Owner hoặc Manager mới xem được activity log.')
-    return
-  }
+  if (!canReadActivityLog.value) return
 
   emit('open-activity-log')
 }
@@ -622,8 +675,7 @@ function openActivityLog() {
 function openDeleteWorkspaceConfirm() {
   const workspace = workspaceNavigation.workspace.value
 
-  if (!workspace) {
-    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi xóa.')
+  if (!workspace || !canDeleteWorkspace.value) {
     return
   }
 
@@ -916,6 +968,7 @@ onBeforeUnmount(() => {
 }
 
 .app-task-jump,
+.app-ai-reminder-btn,
 .app-icon-btn {
   border: 0;
   border-radius: 6px;
@@ -927,7 +980,8 @@ onBeforeUnmount(() => {
   font: inherit;
 }
 
-.app-task-jump {
+.app-task-jump,
+.app-ai-reminder-btn {
   min-height: 32px;
   gap: 6px;
   padding: 0 9px;
@@ -935,25 +989,34 @@ onBeforeUnmount(() => {
   font-weight: 600;
 }
 
+.app-ai-reminder-btn {
+  position: relative;
+  padding-right: 11px;
+}
+
 .app-task-jump:hover,
+.app-ai-reminder-btn:hover,
 .app-icon-btn:hover {
   color: #f1f1f1;
   background: #242424;
 }
 
 .app-task-jump:disabled,
+.app-ai-reminder-btn:disabled,
 .app-icon-btn:disabled {
   opacity: 0.38;
   cursor: not-allowed;
 }
 
 .app-task-jump:disabled:hover,
+.app-ai-reminder-btn:disabled:hover,
 .app-icon-btn:disabled:hover {
   color: #a3a3a3;
   background: transparent;
 }
 
 .app-task-jump .material-symbols-outlined,
+.app-ai-reminder-btn .material-symbols-outlined,
 .app-icon-btn .material-symbols-outlined {
   font-size: 18px;
 }
@@ -988,6 +1051,21 @@ onBeforeUnmount(() => {
   color: #111;
   background: #f1f1f1;
   font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.app-ai-reminder-badge {
+  min-width: 17px;
+  height: 17px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 5px;
+  color: #191919;
+  background: #d8d8d4;
+  font-size: 10px;
   font-weight: 800;
   line-height: 1;
 }
@@ -1352,6 +1430,7 @@ onBeforeUnmount(() => {
 }
 
 .app-task-jump:focus-visible,
+.app-ai-reminder-btn:focus-visible,
 .app-icon-btn:focus-visible,
 .app-page-tab-main:focus-visible,
 .app-page-tab-close:focus-visible,
@@ -1383,17 +1462,30 @@ onBeforeUnmount(() => {
     flex-basis: 156px;
   }
 
-  .app-task-jump {
+  .app-task-jump,
+  .app-ai-reminder-btn {
     width: 32px;
     padding: 0;
   }
 
-  .app-task-jump:not(:hover) {
+  .app-task-jump:not(:hover),
+  .app-ai-reminder-btn:not(:hover) {
     font-size: 0;
   }
 
-  .app-task-jump .material-symbols-outlined {
+  .app-task-jump .material-symbols-outlined,
+  .app-ai-reminder-btn .material-symbols-outlined {
     font-size: 18px;
+  }
+
+  .app-ai-reminder-badge {
+    position: absolute;
+    top: 2px;
+    right: -2px;
+    min-width: 15px;
+    height: 15px;
+    padding: 0 4px;
+    font-size: 9px;
   }
 
   .app-top-actions > .app-icon-btn:not(.app-notification-btn):nth-last-child(n + 3) {
@@ -1497,18 +1589,21 @@ onBeforeUnmount(() => {
 }
 
 .app-task-jump,
+.app-ai-reminder-btn,
 .app-icon-btn {
   border-radius: 5px;
   color: #a8a8a3;
 }
 
 .app-task-jump:hover,
+.app-ai-reminder-btn:hover,
 .app-icon-btn:hover {
   color: #ededeb;
   background: rgba(255, 255, 255, 0.065);
 }
 
-.app-notification-badge {
+.app-notification-badge,
+.app-ai-reminder-badge {
   color: #191919;
   background: #d8d8d4;
 }
