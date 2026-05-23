@@ -52,7 +52,7 @@
       >
 
         <div
-          v-if="quickAccessVisible"
+          v-show="quickAccessVisible"
           class="lunar-quick-groups"
         >
           <div
@@ -117,17 +117,15 @@
             </button>
           </section>
 
-          <section
-            v-if="archivedPages.length || trashError || isLoadingTrash"
-            class="lunar-quick-group"
-          >
+          <section class="lunar-quick-group lunar-trash-group">
             <div class="lunar-quick-title">
               <i class="bi bi-archive"></i>
               <span>Trash</span>
+              <small v-if="isLoadingTrash">Syncing…</small>
             </div>
 
             <div
-              v-if="isLoadingTrash"
+              v-if="isLoadingTrash && !archivedPages.length"
               class="lunar-empty compact"
             >
               Đang tải thùng rác…
@@ -138,6 +136,13 @@
               class="lunar-error compact"
             >
               <p>{{ trashError }}</p>
+            </div>
+
+            <div
+              v-else-if="!archivedPages.length"
+              class="lunar-empty compact lunar-trash-empty"
+            >
+              Trash đang trống. Page đã xóa sẽ nằm ở đây.
             </div>
 
             <template v-else>
@@ -210,7 +215,7 @@
               <button
                 type="button"
                 class="lunar-workspace-title"
-                @click.stop="emit('toggleWorkspace', workspace)"
+                @click.stop="emit('selectWorkspace', workspace)"
               >
                 <span class="lunar-workspace-orb">
                   {{ workspace.name.charAt(0).toUpperCase() || 'W' }}
@@ -344,6 +349,7 @@ const emit = defineEmits<{
   refreshTree: []
   retryWorkspaces: []
   toggleWorkspace: [workspace: WorkspaceSidebarItem]
+  selectWorkspace: [workspace: WorkspaceSidebarItem]
   createPage: [workspace: WorkspaceSidebarItem, parentPageId: Guid | null]
   retryPages: [workspaceId: Guid]
   selectPage: [page: PageResponse]
@@ -393,6 +399,8 @@ function visibilityClass(value: string | null | undefined) {
 
 const quickAccessVisible = computed(() => {
   return (
+    props.hasWorkspaces ||
+    Boolean(props.selectedWorkspaceId) ||
     props.isLoadingQuickAccess ||
     Boolean(props.quickAccessError) ||
     props.favoritePages.length > 0 ||
@@ -450,6 +458,24 @@ const quickAccessVisible = computed(() => {
   font-weight: 700;
   letter-spacing: 0.02em;
   text-transform: uppercase;
+}
+
+.lunar-quick-title small {
+  margin-left: auto;
+  color: #696969;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.lunar-trash-group {
+  min-height: 62px;
+}
+
+.lunar-trash-empty {
+  min-height: 30px;
+  display: flex;
+  align-items: center;
 }
 
 .lunar-quick-row {

@@ -44,40 +44,6 @@
             :workspace-name="workspaceNavigation.workspaceName.value"
             :page-title="workspaceNavigation.pageName.value"
           />
-
-          <section class="related-pages-section mt-5 pt-4 border-top border-soft">
-            <h3 class="related-title d-flex align-items-center gap-2 mb-3 text-on-surface-variant">
-              <span class="material-symbols-outlined">account_tree</span>
-              Related Pages
-            </h3>
-
-            <div class="row g-3">
-              <div
-                v-for="subpage in subpages"
-                :key="subpage.id"
-                class="col-12 col-md-6"
-              >
-                <a
-                  class="related-card d-flex align-items-center gap-3 p-3 rounded-3 border text-decoration-none"
-                  href="#"
-                >
-                  <span class="related-icon d-inline-flex align-items-center justify-content-center rounded-3">
-                    {{ subpage.icon }}
-                  </span>
-
-                  <span class="flex-grow-1 min-w-0">
-                    <span class="related-card-title d-block fw-semibold">
-                      {{ subpage.title }}
-                    </span>
-
-                    <span class="small text-outline d-block mt-1">
-                      Updated {{ subpage.updatedDate }}
-                    </span>
-                  </span>
-                </a>
-              </div>
-            </div>
-          </section>
         </div>
       </main>
     </section>

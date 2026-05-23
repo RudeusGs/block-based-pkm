@@ -16,14 +16,10 @@
       <h1>{{ title }}</h1>
       <p class="success-message">{{ message }}</p>
 
-      <div v-if="member" class="success-details">
+      <div v-if="member" class="success-details is-single">
         <div>
-          <span>Workspace</span>
-          <strong>{{ member.workspaceId }}</strong>
-        </div>
-        <div>
-          <span>Vai trò</span>
-          <strong>{{ member.role }}</strong>
+          <span>Vai trò trong workspace</span>
+          <strong>{{ formatRole(member.role) }}</strong>
         </div>
       </div>
 
@@ -245,6 +241,17 @@ function setError(
   message.value = errorMessage
   member.value = null
   errorAction.value = action
+}
+
+function formatRole(role: string | null | undefined) {
+  const normalizedRole = role?.trim().toLowerCase()
+
+  if (normalizedRole === 'owner') return 'Chủ sở hữu'
+  if (normalizedRole === 'manager') return 'Quản lý'
+  if (normalizedRole === 'member') return 'Thành viên'
+  if (normalizedRole === 'viewer') return 'Người xem'
+
+  return role?.trim() || 'Thành viên'
 }
 
 async function acceptInvitation() {
@@ -495,6 +502,13 @@ onMounted(() => {
   gap: 10px;
   margin-top: 24px;
   text-align: left;
+}
+
+.success-details.is-single {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 280px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .success-details div {
@@ -785,3 +799,6 @@ onMounted(() => {
   }
 }
 </style>
+
+
+

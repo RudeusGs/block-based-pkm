@@ -70,31 +70,38 @@
             </div>
           </div>
 
+          <div class="lunar-menu-section-label">Account</div>
+
           <button
             type="button"
             class="lunar-menu-row"
             @click="handleSettings"
           >
-            <i class="bi bi-person-gear"></i>
-            <span>Profile settings</span>
+            <span class="lunar-menu-icon">
+              <i class="bi bi-sliders2"></i>
+            </span>
+
+            <span class="lunar-menu-content">
+              <strong>Settings</strong>
+              <small>Profile, AI Prioritizer, security</small>
+            </span>
           </button>
 
-          <button
-            type="button"
-            class="lunar-menu-row"
-            @click="handleMyTasks"
-          >
-            <i class="bi bi-check2-square"></i>
-            <span>My Tasks</span>
-          </button>
+          <div class="lunar-menu-divider"></div>
 
           <button
             type="button"
             class="lunar-menu-row danger"
             @click="handleLogout"
           >
-            <i class="bi bi-box-arrow-right"></i>
-            <span>Logout</span>
+            <span class="lunar-menu-icon">
+              <i class="bi bi-box-arrow-right"></i>
+            </span>
+
+            <span class="lunar-menu-content">
+              <strong>Logout</strong>
+              <small>Đăng xuất khỏi phiên hiện tại</small>
+            </span>
           </button>
         </div>
       </Transition>
@@ -126,7 +133,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   collapse: []
   openSettings: []
-  openMyTasks: []
   logout: []
 }>()
 
@@ -155,11 +161,6 @@ function closeMenu() {
 function handleSettings() {
   closeMenu()
   emit('openSettings')
-}
-
-function handleMyTasks() {
-  closeMenu()
-  emit('openMyTasks')
 }
 
 function handleLogout() {

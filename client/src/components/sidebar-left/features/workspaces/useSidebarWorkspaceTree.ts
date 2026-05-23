@@ -23,6 +23,7 @@ import {
 interface FetchWorkspacePagesOptions {
   syncSelection?: boolean
   preferredPageId?: Guid | null
+  force?: boolean
 }
 
 export function useSidebarWorkspaceTree() {
@@ -43,6 +44,7 @@ export function useSidebarWorkspaceTree() {
   const openedWorkspaceIds = ref<Set<Guid>>(new Set())
   const openedPageIds = ref<Set<Guid>>(new Set())
   const loadingPageWorkspaceIds = ref<Set<Guid>>(new Set())
+  const loadedPageWorkspaceIds = ref<Set<Guid>>(new Set())
   const isRefreshingSidebarTree = ref(false)
 
   const pageTreesByWorkspaceId = ref<Record<Guid, PageTreeItem[]>>({})
@@ -51,10 +53,14 @@ export function useSidebarWorkspaceTree() {
   const favoritePages = ref<PageQuickAccessResponse[]>([])
   const recentPages = ref<PageQuickAccessResponse[]>([])
   const archivedPages = ref<PageResponse[]>([])
+  const trashPagesByWorkspaceId = ref<Record<Guid, PageResponse[]>>({})
   const isLoadingQuickAccess = ref(false)
   const isLoadingTrash = ref(false)
   const quickAccessError = ref<string | null>(null)
   const trashError = ref<string | null>(null)
+  const trashWorkspaceId = ref<Guid | null>(null)
+  let quickAccessRequestSerial = 0
+  let trashRequestSerial = 0
 
   const favoritePageIds = computed(() => {
     return new Set(favoritePages.value.map((page) => page.id))
@@ -224,7 +230,37 @@ export function useSidebarWorkspaceTree() {
     }
 
     openWorkspaceBranch(workspace.id)
-    void fetchWorkspacePages(workspace.id)
+
+    if (!loadedPageWorkspaceIds.value.has(workspace.id)) {
+      void fetchWorkspacePages(workspace.id)
+    }
+  }
+
+  async function selectWorkspace(workspace: SidebarWorkspaceLike) {
+    selectedWorkspaceId.value = workspace.id
+
+    workspaceNavigation.setWorkspace({
+      id: workspace.id,
+      name: workspace.name,
+    })
+
+    openWorkspaceBranch(workspace.id)
+
+    if (!loadedPageWorkspaceIds.value.has(workspace.id)) {
+      await fetchWorkspacePages(workspace.id)
+      return
+    }
+
+    const currentPages = pageTreesByWorkspaceId.value[workspace.id] || []
+    const selectedPageBelongsToWorkspace = Boolean(
+      selectedPageId.value && findPageInTree(currentPages, selectedPageId.value)
+    )
+
+    if (!selectedPageBelongsToWorkspace) {
+      const firstPage = findFirstPageInTree(currentPages)
+      selectedPageId.value = firstPage?.id ?? null
+      workspaceNavigation.setPage(firstPage)
+    }
   }
 
   function isPageBranchOpen(pageId: Guid) {
@@ -270,6 +306,21 @@ export function useSidebarWorkspaceTree() {
   ) {
     if (loadingPageWorkspaceIds.value.has(workspaceId)) return
 
+    if (!options.force && loadedPageWorkspaceIds.value.has(workspaceId)) {
+      if (options.syncSelection ?? false) {
+        const currentTree = pageTreesByWorkspaceId.value[workspaceId] || []
+        const preferredPage = options.preferredPageId
+          ? findPageInTree(currentTree, options.preferredPageId)
+          : null
+        const nextPage = preferredPage ?? findFirstPageInTree(currentTree)
+
+        selectedPageId.value = nextPage?.id ?? null
+        workspaceNavigation.setPage(nextPage)
+      }
+
+      return
+    }
+
     const loadingSet = new Set(loadingPageWorkspaceIds.value)
     loadingSet.add(workspaceId)
     loadingPageWorkspaceIds.value = loadingSet
@@ -302,6 +353,11 @@ export function useSidebarWorkspaceTree() {
         [workspaceId]: buildPageTree(result.data.items),
       }
 
+      loadedPageWorkspaceIds.value = new Set([
+        ...loadedPageWorkspaceIds.value,
+        workspaceId,
+      ])
+
       const shouldSyncSelection = options.syncSelection ?? true
 
       if (shouldSyncSelection) {
@@ -332,6 +388,8 @@ export function useSidebarWorkspaceTree() {
   async function fetchQuickAccessPages() {
     if (isLoadingQuickAccess.value) return
 
+    const requestSerial = ++quickAccessRequestSerial
+
     isLoadingQuickAccess.value = true
     quickAccessError.value = null
 
@@ -340,6 +398,8 @@ export function useSidebarWorkspaceTree() {
         pageController.listFavorites({ pageNumber: 1, pageSize: 12 }),
         pageController.listRecent({ pageNumber: 1, pageSize: 12 }),
       ])
+
+      if (requestSerial !== quickAccessRequestSerial) return
 
       if (favoritesResult.isSuccess && favoritesResult.data) {
         favoritePages.value = favoritesResult.data.items
@@ -359,18 +419,33 @@ export function useSidebarWorkspaceTree() {
         )
       }
     } catch (error) {
+      if (requestSerial !== quickAccessRequestSerial) return
+
       quickAccessError.value = getApiErrorMessage(
         error,
         'Không thể tải quick access pages.'
       )
     } finally {
-      isLoadingQuickAccess.value = false
+      if (requestSerial === quickAccessRequestSerial) {
+        isLoadingQuickAccess.value = false
+      }
     }
   }
 
   async function fetchTrashPages(workspaceId: Guid | null = selectedWorkspaceId.value) {
-    if (!workspaceId || isLoadingTrash.value) return
+    if (!workspaceId) {
+      archivedPages.value = []
+      trashWorkspaceId.value = null
+      trashError.value = null
+      isLoadingTrash.value = false
+      return
+    }
 
+    const requestSerial = ++trashRequestSerial
+    const cachedPages = trashPagesByWorkspaceId.value[workspaceId]
+
+    trashWorkspaceId.value = workspaceId
+    archivedPages.value = cachedPages ?? []
     isLoadingTrash.value = true
     trashError.value = null
 
@@ -380,6 +455,8 @@ export function useSidebarWorkspaceTree() {
         pageSize: 20,
       })
 
+      if (requestSerial !== trashRequestSerial || trashWorkspaceId.value !== workspaceId) return
+
       if (!result.isSuccess || !result.data) {
         trashError.value = getApiResultErrorMessage(
           result,
@@ -388,14 +465,22 @@ export function useSidebarWorkspaceTree() {
         return
       }
 
+      trashPagesByWorkspaceId.value = {
+        ...trashPagesByWorkspaceId.value,
+        [workspaceId]: result.data.items,
+      }
       archivedPages.value = result.data.items
     } catch (error) {
+      if (requestSerial !== trashRequestSerial || trashWorkspaceId.value !== workspaceId) return
+
       trashError.value = getApiErrorMessage(
         error,
         'Không thể tải thùng rác page.'
       )
     } finally {
-      isLoadingTrash.value = false
+      if (requestSerial === trashRequestSerial && trashWorkspaceId.value === workspaceId) {
+        isLoadingTrash.value = false
+      }
     }
   }
 
@@ -403,8 +488,19 @@ export function useSidebarWorkspaceTree() {
     return favoritePageIds.value.has(pageId)
   }
 
+  function findPageInTree(tree: PageTreeItem[], pageId: Guid): PageTreeItem | null {
+    for (const page of tree) {
+      if (page.id === pageId) return page
+
+      const child = findPageInTree(page.children, pageId)
+      if (child) return child
+    }
+
+    return null
+  }
+
   function retryLoadPages(workspaceId: Guid) {
-    void fetchWorkspacePages(workspaceId)
+    void fetchWorkspacePages(workspaceId, { force: true })
   }
 
   function retryLoadWorkspaces() {
@@ -478,6 +574,7 @@ export function useSidebarWorkspaceTree() {
                 ? previousSelectedPageId
                 : null,
             syncSelection: workspaceId === nextSelectedWorkspaceId,
+            force: true,
           })
         )
       )
@@ -521,18 +618,26 @@ export function useSidebarWorkspaceTree() {
     const isAlreadyFavorite = isFavoritePage(page.id)
 
     try {
-      const result = isAlreadyFavorite
-        ? await pageController.unfavorite(page.id)
-        : await pageController.favorite(page.id)
+      if (isAlreadyFavorite) {
+        const result = await pageController.unfavorite(page.id)
 
-      if (!result.isSuccess) {
-        quickAccessError.value = getApiResultErrorMessage(
-          result,
-          isAlreadyFavorite
-            ? 'Không thể bỏ favorite page.'
-            : 'Không thể favorite page.'
-        )
-        return null
+        if (!result.isSuccess) {
+          quickAccessError.value = getApiResultErrorMessage(
+            result,
+            'Không thể bỏ favorite page.'
+          )
+          return null
+        }
+      } else {
+        const result = await pageController.favorite(page.id)
+
+        if (!result.isSuccess) {
+          quickAccessError.value = getApiResultErrorMessage(
+            result,
+            'Không thể favorite page.'
+          )
+          return null
+        }
       }
 
       await fetchQuickAccessPages()
@@ -639,6 +744,11 @@ export function useSidebarWorkspaceTree() {
       ...pageTreesByWorkspaceId.value,
       [page.workspaceId]: insertPageIntoTree(currentTree, page),
     }
+
+    loadedPageWorkspaceIds.value = new Set([
+      ...loadedPageWorkspaceIds.value,
+      page.workspaceId,
+    ])
   }
 
   function requestDeletePage(page: PageTreeItem) {
@@ -754,7 +864,7 @@ export function useSidebarWorkspaceTree() {
 
     workspaceNavigation.setPage(null)
     openWorkspaceBranch(workspace.id)
-    await fetchWorkspacePages(workspace.id)
+    await fetchWorkspacePages(workspace.id, { force: true })
   }
 
   function handleWorkspaceDeleted(workspaceId: Guid) {
@@ -778,6 +888,28 @@ export function useSidebarWorkspaceTree() {
     const nextOpenedWorkspaceIds = new Set(openedWorkspaceIds.value)
     nextOpenedWorkspaceIds.delete(workspaceId)
     openedWorkspaceIds.value = nextOpenedWorkspaceIds
+
+    const nextLoadedWorkspaceIds = new Set(loadedPageWorkspaceIds.value)
+    nextLoadedWorkspaceIds.delete(workspaceId)
+    loadedPageWorkspaceIds.value = nextLoadedWorkspaceIds
+
+    favoritePages.value = favoritePages.value.filter(
+      (page) => page.workspaceId !== workspaceId
+    )
+    recentPages.value = recentPages.value.filter(
+      (page) => page.workspaceId !== workspaceId
+    )
+
+    const nextTrashPagesByWorkspaceId = { ...trashPagesByWorkspaceId.value }
+    delete nextTrashPagesByWorkspaceId[workspaceId]
+    trashPagesByWorkspaceId.value = nextTrashPagesByWorkspaceId
+
+    if (trashWorkspaceId.value === workspaceId) {
+      archivedPages.value = []
+      trashWorkspaceId.value = null
+      trashError.value = null
+      isLoadingTrash.value = false
+    }
 
     if (!isSelectedWorkspace) {
       return
@@ -848,6 +980,7 @@ export function useSidebarWorkspaceTree() {
     openCreateWorkspaceModal,
     openCreatePageModal,
     toggleWorkspaceBranch,
+    selectWorkspace,
     isWorkspaceBranchOpen,
     togglePageBranch,
     isLoadingPages,

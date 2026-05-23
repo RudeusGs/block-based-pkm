@@ -277,7 +277,6 @@
               <div class="social-section-head">
                 <div>
                   <strong>Friend requests</strong>
-                  <span>Realtime sẽ tự refresh khi có lời mời mới.</span>
                 </div>
 
                 <button

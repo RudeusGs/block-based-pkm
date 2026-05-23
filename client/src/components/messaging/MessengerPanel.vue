@@ -230,15 +230,19 @@
                         v-if="!message.isMine"
                         type="button"
                         class="message-workspace-action"
-                        :disabled="acceptingWorkspaceShareMessageId === message.id"
+                        :class="{ accepted: isWorkspaceShareAccepted(message) }"
+                        :disabled="isWorkspaceShareActionDisabled(message)"
+                        :title="workspaceShareActionTitle(message)"
                         @click="acceptWorkspaceShare(message)"
                       >
                         <span
                           v-if="acceptingWorkspaceShareMessageId === message.id"
                           class="message-workspace-action-spinner"
                         ></span>
-                        <span v-else class="material-symbols-outlined">login</span>
-                        <span>{{ acceptingWorkspaceShareMessageId === message.id ? 'Đang mở...' : 'Mở workspace' }}</span>
+                        <span v-else class="material-symbols-outlined">
+                          {{ workspaceShareActionIcon(message) }}
+                        </span>
+                        <span>{{ workspaceShareActionLabel(message) }}</span>
                       </button>
 
                       <span v-else class="message-workspace-sent-note">
@@ -401,6 +405,7 @@ const messageError = ref<string | null>(null)
 const messageDraft = ref('')
 const selectedImageFile = ref<File | null>(null)
 const acceptingWorkspaceShareMessageId = ref<Guid | null>(null)
+const joinedWorkspaceIds = ref<Set<Guid>>(new Set())
 const typingUsersByConversationId = ref<
   Record<Guid, { userName: string | null; isTyping: boolean }>
 >({})
@@ -460,6 +465,7 @@ watch(
     bindRealtime()
     await realtimeClient.start()
     await loadCurrentUser()
+    await loadJoinedWorkspaceIds()
     await loadConversations()
 
     if (props.startUserId) {
@@ -584,8 +590,32 @@ function workspaceShareRoleLabel(value: string | null | undefined) {
   return normalized === 'member' ? 'Join as Member' : 'View as Viewer'
 }
 
+function isWorkspaceShareAccepted(message: MessageResponse) {
+  const payload = workspaceSharePayload(message)
+  return Boolean(payload?.workspaceId && joinedWorkspaceIds.value.has(payload.workspaceId))
+}
+
+function isWorkspaceShareActionDisabled(message: MessageResponse) {
+  return acceptingWorkspaceShareMessageId.value === message.id || isWorkspaceShareAccepted(message)
+}
+
+function workspaceShareActionIcon(message: MessageResponse) {
+  return isWorkspaceShareAccepted(message) ? 'check_circle' : 'login'
+}
+
+function workspaceShareActionLabel(message: MessageResponse) {
+  if (acceptingWorkspaceShareMessageId.value === message.id) return 'Đang mở...'
+  return isWorkspaceShareAccepted(message) ? 'Đã tham gia' : 'Mở workspace'
+}
+
+function workspaceShareActionTitle(message: MessageResponse) {
+  return isWorkspaceShareAccepted(message)
+    ? 'Bạn đã ở trong workspace này rồi'
+    : 'Tham gia workspace từ lời mời Messenger'
+}
+
 async function acceptWorkspaceShare(message: MessageResponse) {
-  if (message.isMine || acceptingWorkspaceShareMessageId.value) return
+  if (message.isMine || acceptingWorkspaceShareMessageId.value || isWorkspaceShareAccepted(message)) return
 
   acceptingWorkspaceShareMessageId.value = message.id
 
@@ -599,6 +629,11 @@ async function acceptWorkspaceShare(message: MessageResponse) {
       )
       return
     }
+
+    joinedWorkspaceIds.value = new Set([
+      ...joinedWorkspaceIds.value,
+      result.data.id,
+    ])
 
     toast.success(
       'Đã mở workspace',
@@ -680,6 +715,24 @@ async function loadCurrentUser() {
     }
   } catch {
     // Chat still works without this, but read/mine rendering is more accurate when it is available.
+  }
+}
+
+async function loadJoinedWorkspaceIds() {
+  try {
+    const result = await meController.listMyWorkspaces({
+      pageNumber: 1,
+      pageSize: 200,
+    })
+
+    if (result.isSuccess && result.data) {
+      joinedWorkspaceIds.value = new Set(
+        result.data.items.map((workspace) => workspace.id)
+      )
+    }
+  } catch {
+    // Workspace share cards still call backend for final authorization.
+    // This cache is only to disable duplicate joins in the UI.
   }
 }
 

@@ -45,6 +45,107 @@ function isPendingRecommendation(item: TaskRecommendationResponse) {
   return normalizeStatus(item.status) === 'pending'
 }
 
+function taskSemanticKey(value: string | null | undefined) {
+  const normalized = String(value ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'd')
+    .toLowerCase()
+    .replace(/([a-z])([0-9])/g, '$1 $2')
+    .replace(/([0-9])([a-z])/g, '$1 $2')
+    .replace(/[^a-z0-9#+]+/g, ' ')
+    .trim()
+
+  if (!normalized) return ''
+
+  const stopWords = new Set([
+    'task',
+    'todo',
+    'viec',
+    'cong',
+    'can',
+    'phai',
+    'nhe',
+    'nha',
+    'nua',
+    'lai',
+    'lan',
+    'buoi',
+    'hom',
+    'nay',
+    'mai',
+    'mot',
+    'cai',
+    'phan',
+    'part',
+    'phase',
+    'step',
+    'v',
+    'version',
+  ])
+
+  const synonyms = new Map([
+    ['on', 'hoc'],
+    ['onlai', 'hoc'],
+    ['review', 'hoc'],
+    ['study', 'hoc'],
+    ['learn', 'hoc'],
+    ['lam', 'xu_ly'],
+    ['xu', 'xu_ly'],
+    ['xuly', 'xu_ly'],
+    ['fix', 'sua'],
+    ['bug', 'loi'],
+    ['deadline', 'han'],
+    ['due', 'han'],
+  ])
+
+  return Array.from(
+    new Set(
+      normalized
+        .split(/\s+/)
+        .map((token) => token.trim().replace(/^v[0-9]+$/i, ''))
+        .map((token) => synonyms.get(token) ?? token)
+        .filter((token) => token && !stopWords.has(token))
+        .filter((token) => !/^[0-9]+[a-z]?$/.test(token))
+    )
+  )
+    .sort((a, b) => a.localeCompare(b))
+    .join(' ')
+}
+
+function dedupeRecommendationItems(items: TaskRecommendationResponse[]) {
+  const byKey = new Map<string, TaskRecommendationResponse>()
+  const unique: TaskRecommendationResponse[] = []
+
+  for (const item of items) {
+    const key = taskSemanticKey(item.taskTitle)
+
+    if (!key) {
+      unique.push(item)
+      continue
+    }
+
+    const existing = byKey.get(key)
+
+    if (!existing) {
+      byKey.set(key, item)
+      continue
+    }
+
+    const currentScore = Number(item.score ?? 0)
+    const existingScore = Number(existing.score ?? 0)
+    const currentCreated = new Date(item.createdDate).getTime()
+    const existingCreated = new Date(existing.createdDate).getTime()
+
+    if (currentScore > existingScore || (currentScore === existingScore && currentCreated > existingCreated)) {
+      byKey.set(key, item)
+    }
+  }
+
+  return [...unique, ...byKey.values()]
+}
+
 function sortRecommendations(items: TaskRecommendationViewModel[]) {
   return [...items].sort((a, b) => {
     const scoreDiff = (b.score ?? 0) - (a.score ?? 0)
@@ -127,7 +228,7 @@ async function toViewModel(
 }
 
 async function hydrateRecommendations(items: TaskRecommendationResponse[]) {
-  const pendingItems = items.filter(isPendingRecommendation)
+  const pendingItems = dedupeRecommendationItems(items.filter(isPendingRecommendation))
   const viewModels = await Promise.all(pendingItems.map(toViewModel))
 
   taskRecommendations.value = sortRecommendations(viewModels)
@@ -145,6 +246,26 @@ async function upsertRecommendation(item: TaskRecommendationResponse) {
   if (index >= 0) {
     const nextItems = [...taskRecommendations.value]
     nextItems[index] = hydrated
+    taskRecommendations.value = sortRecommendations(nextItems)
+    return
+  }
+
+  const itemKey = taskSemanticKey(hydrated.taskTitle)
+  const similarIndex = itemKey
+    ? taskRecommendations.value.findIndex(
+        (x) => taskSemanticKey(x.taskTitle) === itemKey
+      )
+    : -1
+
+  if (similarIndex >= 0) {
+    const existing = taskRecommendations.value[similarIndex]
+
+    if (existing && Number(existing.score ?? 0) >= Number(hydrated.score ?? 0)) {
+      return
+    }
+
+    const nextItems = [...taskRecommendations.value]
+    nextItems[similarIndex] = hydrated
     taskRecommendations.value = sortRecommendations(nextItems)
     return
   }
@@ -439,3 +560,6 @@ export function useSidebarRecommendations() {
     stopRecommendationRealtime,
   }
 }
+
+
+

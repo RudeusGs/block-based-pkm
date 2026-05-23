@@ -24,8 +24,8 @@
             </div>
 
             <div class="notion-ai-title-content">
-              <span>AI Suggestions</span>
-              <h2>Việc nên làm tiếp theo</h2>
+              <span>AI Prioritizer</span>
+              <h2>Task nên ưu tiên</h2>
             </div>
           </div>
 
@@ -33,7 +33,7 @@
             type="button"
             class="notion-ai-icon-btn"
             title="Đóng"
-            aria-label="Đóng AI Suggestions"
+            aria-label="Đóng AI Prioritizer"
             @click="emit('close')"
           >
             <i class="bi bi-x-lg"></i>
@@ -45,16 +45,16 @@
             <div class="notion-ai-meta-item">
               <i class="bi bi-grid-1x2"></i>
               <div>
-                <span>Nguồn gợi ý</span>
-                <strong>Tất cả workspace</strong>
+                <span>Bộ lọc thông minh</span>
+                <strong>Gộp task trùng nội dung</strong>
               </div>
             </div>
 
             <div class="notion-ai-meta-item">
               <i class="bi bi-broadcast-pin"></i>
               <div>
-                <span>Cập nhật</span>
-                <strong>Realtime theo user</strong>
+                <span>Cách xếp hạng</span>
+                <strong>Deadline · assignee · priority</strong>
               </div>
             </div>
           </section>
@@ -69,10 +69,9 @@
 
           <section class="notion-ai-command-box">
             <div>
-              <h3>Gợi ý task bằng AI</h3>
+              <h3>Cố vấn ưu tiên công việc</h3>
               <p>
-                AI tổng hợp task pending của bạn trên toàn bộ workspace.
-                Mỗi gợi ý sẽ tự hiển thị nó thuộc workspace/page nào.
+                AI lọc task đang mở, gộp các việc trùng nội dung như “học bài” và “học bài 1”, rồi chỉ đề xuất việc đáng làm nhất.
               </p>
             </div>
 
@@ -92,14 +91,14 @@
                 class="bi bi-magic"
               ></i>
 
-              {{ isGenerating ? 'Đang tạo' : 'Tạo gợi ý' }}
+              {{ isGenerating ? 'Đang phân tích' : 'Phân tích task' }}
             </button>
           </section>
 
           <section class="notion-ai-list-head">
             <div>
               <strong>{{ recommendations.length }}</strong>
-              <span>gợi ý pending</span>
+              <span>task ưu tiên</span>
             </div>
 
             <button
@@ -160,10 +159,9 @@
                 <i class="bi bi-lightbulb"></i>
               </div>
 
-              <h3>Chưa có gợi ý</h3>
+              <h3>Chưa có task nên ưu tiên</h3>
               <p>
-                Chưa có gợi ý pending nào. Khi backend tạo gợi ý mới,
-                panel này sẽ tự cập nhật qua realtime.
+                AI chưa thấy task nào đủ tín hiệu để đề xuất. Hãy thêm deadline, priority hoặc assignee để gợi ý chính xác hơn.
               </p>
             </div>
 
@@ -185,7 +183,7 @@
                   </span>
 
                   <span class="notion-ai-score">
-                    Score {{ scoreLabel(recommendation.score) }}
+                    Độ ưu tiên {{ scoreLabel(recommendation.score) }}
                   </span>
                 </div>
 
@@ -225,7 +223,7 @@
                     @click="emit('accept', recommendation.id)"
                   >
                     <i class="bi bi-check2"></i>
-                    Tạo task
+                    Bắt đầu làm
                   </button>
 
                   <button
@@ -935,3 +933,6 @@ function scoreLabel(score: number) {
   }
 }
 </style>
+
+
+

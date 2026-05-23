@@ -31,7 +31,6 @@
           :is-loading="account.isLoadingProfile.value"
           @collapse="shell.collapseSidebar"
           @open-settings="openSettingsModal"
-          @open-my-tasks="openPanel('myTasks')"
           @logout="account.logout"
         />
 
@@ -189,6 +188,8 @@
       @upload-avatar-image="uploadAvatarImage"
       @change-password="settings.changePassword"
       @toggle-preferred-day="settings.togglePreferredDay"
+      @apply-ai-preset="settings.applyTaskPreferencePreset"
+      @reset-task-preference="settings.resetTaskPreferenceToDefault"
       @save-task-preference="saveTaskPreference"
     />
 
@@ -623,3 +624,6 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
+
+
+

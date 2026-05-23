@@ -182,9 +182,11 @@ public sealed class GenerateTaskRecommendationsHandler
                 request.WorkspaceId,
                 cancellationToken);
 
-        candidates = candidates
-            .Where(x => !previouslyRecommendedTaskIds.Contains(x.TaskId))
-            .ToArray();
+        candidates = await RemovePreviouslyRecommendedSemanticDuplicatesAsync(
+            candidates,
+            previouslyRecommendedTaskIds,
+            currentUserId,
+            cancellationToken);
 
         if (candidates.Count == 0)
         {
@@ -254,7 +256,7 @@ public sealed class GenerateTaskRecommendationsHandler
                         recommendationIds = dto.Select(x => x.Id).ToArray(),
                         taskIds = dto.Select(x => x.TaskId).ToArray(),
                         pageId = request.PageId,
-                        mode = isPersonalWorkspace ? "personal_habit" : "team_operational",
+                        mode = isPersonalWorkspace ? "semantic_personal_prioritizer" : "semantic_team_prioritizer",
                         count = dto.Length
                     })),
                 cancellationToken);
@@ -282,6 +284,50 @@ public sealed class GenerateTaskRecommendationsHandler
             return Result.Failure<IReadOnlyList<TaskRecommendationDto>>(
                 RecommendationErrors.OperationFailed(ex.Message));
         }
+    }
+
+    private async Task<IReadOnlyList<RecommendationCandidateReadModel>> RemovePreviouslyRecommendedSemanticDuplicatesAsync(
+        IReadOnlyList<RecommendationCandidateReadModel> candidates,
+        IReadOnlySet<Guid> previouslyRecommendedTaskIds,
+        Guid currentUserId,
+        CancellationToken cancellationToken)
+    {
+        if (candidates.Count == 0 || previouslyRecommendedTaskIds.Count == 0)
+            return candidates;
+
+        var previouslyRecommendedTaskDetails =
+            await _workTaskRepository.ListRecommendationTaskDetailsByIdsAsync(
+                currentUserId,
+                previouslyRecommendedTaskIds,
+                cancellationToken);
+
+        var previouslyRecommendedKeys = previouslyRecommendedTaskDetails.Values
+            .Select(TaskSemanticKeyBuilder.BuildTitleKey)
+            .Where(x => !string.IsNullOrWhiteSpace(x))
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (previouslyRecommendedKeys.Count == 0)
+        {
+            return candidates
+                .Where(x => !previouslyRecommendedTaskIds.Contains(x.TaskId))
+                .ToArray();
+        }
+
+        return candidates
+            .Where(candidate =>
+            {
+                if (previouslyRecommendedTaskIds.Contains(candidate.TaskId))
+                    return false;
+
+                var candidateKey = TaskSemanticKeyBuilder.BuildTitleKey(candidate);
+
+                if (string.IsNullOrWhiteSpace(candidateKey))
+                    return true;
+
+                return !previouslyRecommendedKeys.Any(previousKey =>
+                    TaskSemanticKeyBuilder.IsSimilar(previousKey, candidateKey));
+            })
+            .ToArray();
     }
 
     private async Task<bool> IsPersonalWorkspaceAsync(
@@ -483,7 +529,7 @@ public sealed class GenerateTaskRecommendationsHandler
                     {
                         workspaceId,
                         pageId,
-                        mode = isPersonalWorkspace ? "personal_habit" : "team_operational",
+                        mode = isPersonalWorkspace ? "semantic_personal_prioritizer" : "semantic_team_prioritizer",
                         recommendations
                     }),
                 cancellationToken);
@@ -507,8 +553,8 @@ public sealed class GenerateTaskRecommendationsHandler
         try
         {
             var message = isPersonalWorkspace
-                ? $"Hệ thống vừa gợi ý {recommendations.Count} task dựa trên thói quen làm việc cá nhân của bạn."
-                : $"Hệ thống vừa gợi ý {recommendations.Count} task theo tình trạng hiện tại của workspace.";
+                ? $"AI vừa chọn {recommendations.Count} task ưu tiên, đã lọc các task trùng nội dung và cân nhắc deadline/thói quen làm việc của bạn."
+                : $"AI vừa chọn {recommendations.Count} task ưu tiên, đã lọc các task trùng nội dung và cân nhắc deadline/người phụ trách trong workspace.";
 
             await _notificationService.NotifyAsync(
                 currentUserId,
@@ -531,3 +577,6 @@ public sealed class GenerateTaskRecommendationsHandler
         }
     }
 }
+
+
+

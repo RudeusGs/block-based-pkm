@@ -777,7 +777,9 @@ function cleanDescription(description: string, activity: ActivityLogResponse) {
 
   if (!value) return ''
 
-  return value.replace(actor, '').trim() || value
+  const withoutActor = value.replace(actor, '').trim() || value
+
+  return removeUserFacingIds(withoutActor)
 }
 
 function toggleExpanded(activityId: Guid) {
@@ -796,7 +798,13 @@ function isExpanded(activityId: Guid) {
   return expandedActivityIds.value.has(activityId)
 }
 
-function metadataEntries(activity: ActivityLogResponse) {
+type MetadataEntry = {
+  key: string
+  label: string
+  value: string
+}
+
+function metadataEntries(activity: ActivityLogResponse): MetadataEntry[] {
   const metadata = parseMetadata(activity.metadataJson)
 
   if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
@@ -804,12 +812,26 @@ function metadataEntries(activity: ActivityLogResponse) {
   }
 
   return Object.entries(metadata)
-    .filter(([, value]) => value !== null && value !== undefined && value !== '')
-    .map(([key, value]) => ({
-      key,
-      label: metadataLabel(key),
-      value: metadataValue(value),
-    }))
+    .filter(([key, value]) => {
+      return (
+        !isIdentifierMetadataKey(key) &&
+        value !== null &&
+        value !== undefined &&
+        value !== ''
+      )
+    })
+    .map(([key, value]) => {
+      const displayValue = metadataDisplayValue(value)
+
+      if (!displayValue) return null
+
+      return {
+        key,
+        label: metadataLabel(key),
+        value: displayValue,
+      }
+    })
+    .filter((entry): entry is MetadataEntry => entry !== null)
 }
 
 function parseMetadata(metadataJson: string | null) {
@@ -820,6 +842,79 @@ function parseMetadata(metadataJson: string | null) {
   } catch {
     return null
   }
+}
+
+const userFacingGuidRegex =
+  /\b[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\b/gi
+
+function isIdentifierMetadataKey(key: string) {
+  const normalizedKey = key.replace(/[^a-z0-9]/gi, '').toLowerCase()
+
+  return (
+    normalizedKey === 'id' ||
+    normalizedKey === 'guid' ||
+    normalizedKey === 'uuid' ||
+    normalizedKey.endsWith('id') ||
+    normalizedKey.endsWith('ids') ||
+    normalizedKey.includes('guid') ||
+    normalizedKey.includes('uuid')
+  )
+}
+
+function metadataDisplayValue(value: unknown): string | null {
+  const sanitizedValue = sanitizeMetadataValue(value)
+
+  if (
+    sanitizedValue === null ||
+    sanitizedValue === undefined ||
+    sanitizedValue === ''
+  ) {
+    return null
+  }
+
+  const formattedValue = metadataValue(sanitizedValue)
+  const cleanedValue = removeUserFacingIds(formattedValue)
+
+  return cleanedValue || null
+}
+
+function sanitizeMetadataValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    const sanitizedItems = value
+      .map((item) => sanitizeMetadataValue(item))
+      .filter((item) => item !== null && item !== undefined && item !== '')
+
+    return sanitizedItems.length ? sanitizedItems : null
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    const sanitizedEntries = Object.entries(value as Record<string, unknown>)
+      .filter(([key]) => !isIdentifierMetadataKey(key))
+      .map(([key, item]) => [key, sanitizeMetadataValue(item)] as const)
+      .filter(([, item]) => item !== null && item !== undefined && item !== '')
+
+    return sanitizedEntries.length ? Object.fromEntries(sanitizedEntries) : null
+  }
+
+  if (typeof value === 'string') {
+    const cleanedValue = removeUserFacingIds(value)
+
+    return cleanedValue || null
+  }
+
+  return value
+}
+
+function removeUserFacingIds(value: string) {
+  return value
+    .replace(userFacingGuidRegex, '')
+    .replace(/\b(?:id|guid|uuid)\s*[:=#-]?\s*(?=[,.;)\]}]|$)/gi, '')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([,.;:])/g, '$1')
+    .replace(/([([{])\s+([)\]}])/g, '$1$2')
+    .replace(/\(\s*\)/g, '')
+    .replace(/\[\s*\]/g, '')
+    .trim()
 }
 
 function metadataLabel(key: string) {
@@ -1649,3 +1744,6 @@ function formatFullDate(value: string) {
   }
 }
 </style>
+
+
+

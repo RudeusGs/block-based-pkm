@@ -15,19 +15,80 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
     {
         var minPriority = preference.MinPriorityForRecommendation;
 
-        return candidates
+        var scoredCandidates = candidates
             .Where(x => x.Status != StatusWorkTask.Done)
             .Where(x => x.Priority >= minPriority)
             .Select(candidate => isPersonalWorkspace
                 ? ScorePersonalWorkspace(candidate, preference, historyStats, now)
                 : ScoreTeamWorkspace(candidate, preference, historyStats, now))
             .Where(x => x.Score >= preference.RecommendationSensitivity)
+            .ToArray();
+
+        return DeduplicateSemanticCandidates(scoredCandidates)
             .OrderByDescending(x => x.Score)
             .ThenBy(x => x.Candidate.DueDate ?? DateTimeOffset.MaxValue)
             .ThenByDescending(x => x.Candidate.Priority)
             .ThenByDescending(x => x.Candidate.UpdatedDate ?? x.Candidate.CreatedDate)
             .Take(preference.MaxRecommendationsPerSession)
             .ToArray();
+    }
+
+    private static IReadOnlyList<ScoredRecommendationCandidate> DeduplicateSemanticCandidates(
+        IReadOnlyList<ScoredRecommendationCandidate> scoredCandidates)
+    {
+        var groups = new Dictionary<string, List<ScoredRecommendationCandidate>>(StringComparer.OrdinalIgnoreCase);
+        var unique = new List<ScoredRecommendationCandidate>();
+
+        foreach (var candidate in scoredCandidates)
+        {
+            var key = TaskSemanticKeyBuilder.BuildTitleKey(candidate.Candidate);
+
+            if (string.IsNullOrWhiteSpace(key))
+            {
+                unique.Add(candidate);
+                continue;
+            }
+
+            if (!groups.TryGetValue(key, out var group))
+            {
+                group = new List<ScoredRecommendationCandidate>();
+                groups[key] = group;
+            }
+
+            group.Add(candidate);
+        }
+
+        foreach (var group in groups.Values)
+        {
+            var best = group
+                .OrderByDescending(x => x.Score)
+                .ThenBy(x => x.Candidate.DueDate ?? DateTimeOffset.MaxValue)
+                .ThenByDescending(x => x.Candidate.Priority)
+                .ThenByDescending(x => x.Candidate.UpdatedDate ?? x.Candidate.CreatedDate)
+                .First();
+
+            unique.Add(group.Count <= 1
+                ? best
+                : best with
+                {
+                    Reason = AppendReason(
+                        best.Reason,
+                        $"Đã gộp {group.Count} task có nội dung tương tự để tránh gợi ý trùng lặp.")
+                });
+        }
+
+        return unique;
+    }
+
+    private static string AppendReason(string reason, string extra)
+    {
+        if (string.IsNullOrWhiteSpace(reason))
+            return extra;
+
+        if (reason.Contains(extra, StringComparison.OrdinalIgnoreCase))
+            return reason;
+
+        return $"{reason} {extra}";
     }
 
     private static ScoredRecommendationCandidate ScorePersonalWorkspace(
@@ -68,13 +129,16 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
             reasons.Add("Task này do bạn tạo.");
         }
 
+        score += LowSignalPenalty(candidate, reasons);
+        score += TitleQualityPenalty(candidate, reasons);
+
         if (historyStats.HasEnoughPersonalSignal)
         {
             score += PersonalHabitScore(candidate, historyStats, now, reasons);
         }
         else
         {
-            reasons.Add("Chưa có nhiều dữ liệu thói quen, hệ thống ưu tiên theo deadline và mức độ quan trọng.");
+            reasons.Add("Chưa đủ dữ liệu thói quen, hệ thống ưu tiên deadline, mức độ quan trọng và trách nhiệm được giao.");
         }
 
         score += FreshnessScore(candidate.CreatedDate, now, reasons);
@@ -118,6 +182,9 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
             reasons.Add("Task này đang trong trạng thái đang làm.");
         }
 
+        score += LowSignalPenalty(candidate, reasons);
+        score += TitleQualityPenalty(candidate, reasons);
+
         score += TeamFreshnessScore(candidate.CreatedDate, candidate.UpdatedDate, now, reasons);
 
         score = Math.Clamp(score, 0m, 100m);
@@ -126,6 +193,43 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
             candidate,
             score,
             BuildReason(reasons, isPersonalWorkspace: false));
+    }
+
+    private static decimal LowSignalPenalty(
+        RecommendationCandidateReadModel candidate,
+        List<string> reasons)
+    {
+        if (candidate.DueDate.HasValue || candidate.IsAssignedToCurrentUser || candidate.Status == StatusWorkTask.Doing)
+            return 0m;
+
+        if (candidate.Priority == PriorityWorkTask.High)
+            return 0m;
+
+        reasons.Add("Task thiếu deadline/người phụ trách nên AI giảm độ ưu tiên để tránh gợi ý mơ hồ.");
+        return -14m;
+    }
+
+    private static decimal TitleQualityPenalty(
+        RecommendationCandidateReadModel candidate,
+        List<string> reasons)
+    {
+        var semanticKey = TaskSemanticKeyBuilder.BuildTitleKey(candidate);
+
+        if (string.IsNullOrWhiteSpace(semanticKey))
+        {
+            reasons.Add("Tiêu đề task chưa đủ rõ để AI hiểu mục tiêu công việc.");
+            return -18m;
+        }
+
+        var tokenCount = semanticKey.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length;
+
+        if (tokenCount <= 1 && !candidate.DueDate.HasValue && candidate.Priority != PriorityWorkTask.High)
+        {
+            reasons.Add("Tiêu đề task khá chung chung, nên thêm ngữ cảnh hoặc deadline để AI gợi ý chuẩn hơn.");
+            return -10m;
+        }
+
+        return 0m;
     }
 
     private static decimal PriorityScore(PriorityWorkTask priority)
@@ -164,7 +268,7 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
     {
         if (!dueDate.HasValue)
         {
-            reasons.Add("Task này chưa có hạn rõ ràng.");
+            reasons.Add("Task chưa có deadline nên chỉ được ưu tiên khi có tín hiệu quan trọng khác.");
             return 2m;
         }
 
@@ -172,7 +276,7 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
 
         if (due < now)
         {
-            reasons.Add("Task này đã quá hạn.");
+            reasons.Add("Task đã quá hạn, nên xử lý hoặc cập nhật trạng thái sớm.");
             return 30m;
         }
 
@@ -180,19 +284,19 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
 
         if (hours <= 4)
         {
-            reasons.Add("Task này sắp tới hạn.");
+            reasons.Add("Task sắp tới hạn trong vài giờ tới.");
             return 28m;
         }
 
         if (hours <= 24)
         {
-            reasons.Add("Task này cần xử lý trong hôm nay.");
+            reasons.Add("Task cần xử lý trong hôm nay.");
             return 22m;
         }
 
         if (hours <= 72)
         {
-            reasons.Add("Task này cần chú ý trong vài ngày tới.");
+            reasons.Add("Task có deadline gần trong vài ngày tới.");
             return 12m;
         }
 
@@ -211,7 +315,7 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
         {
             var boost = Math.Min(12m, completedCount * 4m);
             score += boost;
-            reasons.Add("Bạn từng hoàn thành task tương tự trước đây.");
+            reasons.Add("Bạn từng hoàn thành task này trước đây nên có tín hiệu lịch sử tích cực.");
         }
 
         if (historyStats.SkippedOrAbandonedByTaskId.TryGetValue(candidate.TaskId, out var skippedCount))
@@ -311,8 +415,8 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
         bool isPersonalWorkspace)
     {
         var prefix = isPersonalWorkspace
-            ? "Gợi ý theo thói quen làm việc cá nhân: "
-            : "Gợi ý theo tình trạng task trong workspace: ";
+            ? "AI ưu tiên theo deadline, trách nhiệm và thói quen làm việc: "
+            : "AI ưu tiên theo deadline, người phụ trách và độ quan trọng trong workspace: ";
 
         var cleanReasons = reasons
             .Where(x => !string.IsNullOrWhiteSpace(x))
@@ -323,10 +427,13 @@ public sealed class RecommendationScoringService : IRecommendationScoringService
         if (cleanReasons.Length == 0)
         {
             return isPersonalWorkspace
-                ? "Gợi ý dựa trên thói quen làm việc cá nhân của bạn."
-                : "Gợi ý dựa trên trạng thái và mức độ ưu tiên của task.";
+                ? "AI chọn task này dựa trên deadline, trách nhiệm và thói quen làm việc của bạn."
+                : "AI chọn task này dựa trên deadline, người phụ trách và mức độ ưu tiên của task.";
         }
 
         return prefix + string.Join(" ", cleanReasons);
     }
 }
+
+
+
