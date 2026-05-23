@@ -4,8 +4,10 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 
 namespace Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
@@ -22,6 +24,7 @@ public sealed class DeleteTaskCommentHandler
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
     private readonly DeleteTaskCommentCommandValidator _validator;
+    private readonly IActivityLogService _activityLogService;
 
     public DeleteTaskCommentHandler(
         ICurrentUser currentUser,
@@ -33,7 +36,8 @@ public sealed class DeleteTaskCommentHandler
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         IClock clock,
-        DeleteTaskCommentCommandValidator validator)
+        DeleteTaskCommentCommandValidator validator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -45,6 +49,7 @@ public sealed class DeleteTaskCommentHandler
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<TaskCommentDto>> HandleAsync(
@@ -87,6 +92,7 @@ public sealed class DeleteTaskCommentHandler
         {
             var now = _clock.UtcNow;
             var isOwnerDelete = comment.UserId == currentUserId;
+            var oldContent = comment.Content;
 
             if (isOwnerDelete)
             {
@@ -106,6 +112,26 @@ public sealed class DeleteTaskCommentHandler
             await InvalidateCommentListCacheAsync(comment.TaskId, cancellationToken);
 
             var dto = comment.ToDto();
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    task.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Delete,
+                    ActivityEntityType.TaskComment,
+                    comment.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã xóa bình luận trong task \"{task.Title}\".",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        taskId = task.Id,
+                        taskTitle = task.Title,
+                        pageId = task.PageId,
+                        commentId = comment.Id,
+                        commentOwnerUserId = comment.UserId,
+                        deletedByModeration = !isOwnerDelete,
+                        contentPreview = Preview(oldContent)
+                    })),
+                cancellationToken);
 
             await _taskRealtimePublisher.PublishToPageAsync(
                 new TaskRealtimeEnvelope(
@@ -141,5 +167,14 @@ public sealed class DeleteTaskCommentHandler
             versionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);
+    }
+
+    private static string Preview(string value)
+    {
+        var normalized = value.Trim();
+
+        return normalized.Length <= 160
+            ? normalized
+            : $"{normalized[..160]}...";
     }
 }

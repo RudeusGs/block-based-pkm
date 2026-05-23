@@ -22,6 +22,7 @@ export type ActivityLogEntityType =
   | 'WorkTask'
   | 'TaskComment'
   | 'TaskAssignee'
+  | 'Block'
   | 'User'
   | 'UserPreference'
   | 'RealtimeSession'
@@ -55,4 +56,8 @@ export interface ActivityLogPagedResultResponse {
 export interface ListWorkspaceActivityLogsParams extends PagingParams {
   action?: string | null
   entityType?: string | null
+  userId?: Guid | null
+  fromUtc?: DateTimeString | null
+  toUtc?: DateTimeString | null
+  search?: string | null
 }

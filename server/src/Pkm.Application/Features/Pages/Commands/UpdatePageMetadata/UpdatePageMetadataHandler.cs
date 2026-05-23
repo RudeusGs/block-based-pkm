@@ -4,11 +4,13 @@ using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Documents.Services;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Domain.Common;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
@@ -23,6 +25,7 @@ public sealed class UpdatePageMetadataHandler
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
+    private readonly IActivityLogService _activityLogService;
 
     public UpdatePageMetadataHandler(
         ICurrentUser currentUser,
@@ -32,7 +35,8 @@ public sealed class UpdatePageMetadataHandler
         IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService,
-        IDocumentRealtimePublisher realtimePublisher)
+        IDocumentRealtimePublisher realtimePublisher,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
@@ -42,6 +46,7 @@ public sealed class UpdatePageMetadataHandler
         _clock = clock;
         _notificationService = notificationService;
         _realtimePublisher = realtimePublisher;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<PageDto>> HandleAsync(
@@ -110,6 +115,27 @@ public sealed class UpdatePageMetadataHandler
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var dto = page.ToDto();
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    page.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Update,
+                    ActivityEntityType.Page,
+                    page.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật page \"{page.Title}\".",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        pageId = page.Id,
+                        oldTitle,
+                        newTitle = page.Title,
+                        oldIcon,
+                        newIcon = page.Icon,
+                        oldCoverImage,
+                        newCoverImage = page.CoverImage,
+                        revision = appliedRevision
+                    })),
+                cancellationToken);
 
             await _realtimePublisher.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(

@@ -31,6 +31,10 @@ public sealed class ActivityLogsController : BaseController
         [FromRoute] Guid workspaceId,
         [FromQuery] string? action = null,
         [FromQuery] string? entityType = null,
+        [FromQuery] Guid? userId = null,
+        [FromQuery] DateTimeOffset? fromUtc = null,
+        [FromQuery] DateTimeOffset? toUtc = null,
+        [FromQuery] string? search = null,
         [FromQuery] int pageNumber = 1,
         [FromQuery] int pageSize = 30,
         CancellationToken cancellationToken = default)
@@ -40,6 +44,10 @@ public sealed class ActivityLogsController : BaseController
                 workspaceId,
                 action,
                 entityType,
+                userId,
+                fromUtc,
+                toUtc,
+                search,
                 pageNumber,
                 pageSize),
             cancellationToken);

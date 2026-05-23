@@ -2,9 +2,11 @@
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Pages.Commands.DeletePage;
 
@@ -16,13 +18,15 @@ public sealed class DeletePageHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
     public DeletePageHandler(
         ICurrentUser currentUser,
         IPageRepository pageRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IUnitOfWork unitOfWork,
         IClock clock,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
@@ -30,6 +34,7 @@ public sealed class DeletePageHandler
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
         _clock = clock;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result> HandleAsync(
@@ -59,6 +64,23 @@ public sealed class DeletePageHandler
 
         page.SoftDelete(_clock.UtcNow);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                page.WorkspaceId,
+                currentUserId,
+                ActivityAction.Delete,
+                ActivityEntityType.Page,
+                page.Id,
+                $"{_currentUser.UserName ?? "Có người"} đã xóa page \"{page.Title}\".",
+                ActivityLogMetadata.Serialize(new
+                {
+                    pageId = page.Id,
+                    title = page.Title,
+                    parentPageId = page.ParentPageId
+                })),
+            cancellationToken);
+
         await _notificationService.NotifyWorkspaceAsync(
             page.WorkspaceId,
             NotificationTemplates.PageDeleted(

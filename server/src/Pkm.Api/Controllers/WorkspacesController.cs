@@ -197,6 +197,7 @@ public sealed class WorkspacesController : BaseController
     [HttpGet("/api/v1/workspace-invitations/accept")]
     [ProducesResponseType(typeof(ApiResult<WorkspaceMemberResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
     [ProducesResponseType(typeof(ApiResult), 404)]
     [ProducesResponseType(typeof(ApiResult), 409)]
     [ProducesResponseType(typeof(ApiResult), 422)]

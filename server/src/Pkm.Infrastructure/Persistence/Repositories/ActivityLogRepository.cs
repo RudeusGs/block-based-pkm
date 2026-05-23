@@ -18,6 +18,10 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
         Guid workspaceId,
         ActivityAction? action,
         ActivityEntityType? entityType,
+        Guid? userId,
+        DateTimeOffset? fromUtc,
+        DateTimeOffset? toUtc,
+        string? search,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default)
@@ -30,30 +34,14 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
             _context.ActivityLogs.AsNoTracking(),
             workspaceId,
             action,
-            entityType);
+            entityType,
+            userId,
+            fromUtc,
+            toUtc);
 
-        return await query
+        return await BuildReadModelQuery(query, search)
             .OrderByDescending(x => x.OccurredAt)
-            .ThenByDescending(x => x.Id)
-            .Join(
-                _context.Users.AsNoTracking(),
-                log => log.UserId,
-                user => user.Id,
-                (log, user) => new ActivityLogDto(
-                    log.Id,
-                    log.WorkspaceId,
-                    log.UserId,
-                    user.UserName,
-                    user.FullName,
-                    user.AvatarUrl,
-                    log.Action,
-                    log.EntityType,
-                    log.EntityId,
-                    log.Description,
-                    log.MetadataJson,
-                    log.IpAddress,
-                    log.OccurredAt,
-                    log.CreatedDate))
+            .ThenByDescending(x => x.CreatedDate)
             .Skip(skip)
             .Take(safePageSize)
             .ToListAsync(cancellationToken);
@@ -63,13 +51,22 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
         Guid workspaceId,
         ActivityAction? action,
         ActivityEntityType? entityType,
+        Guid? userId,
+        DateTimeOffset? fromUtc,
+        DateTimeOffset? toUtc,
+        string? search,
         CancellationToken cancellationToken = default)
     {
-        return ApplyFilter(
-                _context.ActivityLogs.AsNoTracking(),
-                workspaceId,
-                action,
-                entityType)
+        var query = ApplyFilter(
+            _context.ActivityLogs.AsNoTracking(),
+            workspaceId,
+            action,
+            entityType,
+            userId,
+            fromUtc,
+            toUtc);
+
+        return BuildReadModelQuery(query, search)
             .CountAsync(cancellationToken);
     }
 
@@ -82,7 +79,10 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
         IQueryable<ActivityLog> query,
         Guid workspaceId,
         ActivityAction? action,
-        ActivityEntityType? entityType)
+        ActivityEntityType? entityType,
+        Guid? userId,
+        DateTimeOffset? fromUtc,
+        DateTimeOffset? toUtc)
     {
         query = query.Where(x => x.WorkspaceId == workspaceId);
 
@@ -96,6 +96,79 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
             query = query.Where(x => x.EntityType == entityType.Value);
         }
 
+        if (userId.HasValue)
+        {
+            query = query.Where(x => x.UserId == userId.Value);
+        }
+
+        if (fromUtc.HasValue)
+        {
+            query = query.Where(x => x.OccurredAt >= fromUtc.Value);
+        }
+
+        if (toUtc.HasValue)
+        {
+            query = query.Where(x => x.OccurredAt <= toUtc.Value);
+        }
+
         return query;
+    }
+
+    private IQueryable<ActivityLogDto> BuildReadModelQuery(
+        IQueryable<ActivityLog> query,
+        string? search)
+    {
+        var joined = query
+            .GroupJoin(
+                _context.Users.AsNoTracking(),
+                log => log.UserId,
+                user => user.Id,
+                (log, users) => new
+                {
+                    Log = log,
+                    Users = users
+                })
+            .SelectMany(
+                x => x.Users.DefaultIfEmpty(),
+                (x, user) => new
+                {
+                    x.Log,
+                    User = user
+                });
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var pattern = $"%{EscapeLikePattern(search.Trim())}%";
+
+            joined = joined.Where(x =>
+                (x.Log.Description != null && EF.Functions.ILike(x.Log.Description, pattern)) ||
+                (x.User != null && EF.Functions.ILike(x.User.UserName, pattern)) ||
+                (x.User != null && EF.Functions.ILike(x.User.FullName, pattern)) ||
+                (x.User != null && EF.Functions.ILike(x.User.Email, pattern)));
+        }
+
+        return joined.Select(x => new ActivityLogDto(
+            x.Log.Id,
+            x.Log.WorkspaceId,
+            x.Log.UserId,
+            x.User == null ? null : x.User.UserName,
+            x.User == null ? null : x.User.FullName,
+            x.User == null ? null : x.User.AvatarUrl,
+            x.Log.Action,
+            x.Log.EntityType,
+            x.Log.EntityId,
+            x.Log.Description,
+            x.Log.MetadataJson,
+            x.Log.IpAddress,
+            x.Log.OccurredAt,
+            x.Log.CreatedDate));
+    }
+
+    private static string EscapeLikePattern(string value)
+    {
+        return value
+            .Replace(@"\", @"\\", StringComparison.Ordinal)
+            .Replace("%", @"\%", StringComparison.Ordinal)
+            .Replace("_", @"\_", StringComparison.Ordinal);
     }
 }

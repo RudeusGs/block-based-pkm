@@ -77,6 +77,10 @@ public sealed class ListWorkspaceActivityLogsHandler
             request.WorkspaceId,
             action,
             entityType,
+            NormalizeUserId(request.UserId),
+            request.FromUtc,
+            request.ToUtc,
+            NormalizeSearch(request.Search),
             safePageNumber,
             safePageSize,
             cancellationToken);
@@ -85,6 +89,10 @@ public sealed class ListWorkspaceActivityLogsHandler
             request.WorkspaceId,
             action,
             entityType,
+            NormalizeUserId(request.UserId),
+            request.FromUtc,
+            request.ToUtc,
+            NormalizeSearch(request.Search),
             cancellationToken);
 
         var totalPages = totalCount == 0
@@ -118,6 +126,24 @@ public sealed class ListWorkspaceActivityLogsHandler
             errors.Add($"PageSize phải nằm trong khoảng 1 - {MaxPageSize}.");
         }
 
+        if (request.UserId == Guid.Empty)
+        {
+            errors.Add("UserId không hợp lệ.");
+        }
+
+        if (request.FromUtc.HasValue &&
+            request.ToUtc.HasValue &&
+            request.FromUtc.Value > request.ToUtc.Value)
+        {
+            errors.Add("FromUtc phải nhỏ hơn hoặc bằng ToUtc.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.Search) &&
+            request.Search.Trim().Length > 100)
+        {
+            errors.Add("Từ khóa tìm kiếm tối đa 100 ký tự.");
+        }
+
         if (!string.IsNullOrWhiteSpace(request.Action) && ParseActivityAction(request.Action) is null)
         {
             errors.Add("Action không hợp lệ.");
@@ -143,5 +169,19 @@ public sealed class ListWorkspaceActivityLogsHandler
         return Enum.TryParse<ActivityEntityType>(raw.Trim(), ignoreCase: true, out var entityType)
             ? entityType
             : null;
+    }
+
+    private static Guid? NormalizeUserId(Guid? userId)
+        => userId.HasValue && userId.Value != Guid.Empty
+            ? userId
+            : null;
+
+    private static string? NormalizeSearch(string? search)
+    {
+        var value = search?.Trim();
+
+        return string.IsNullOrWhiteSpace(value)
+            ? null
+            : value;
     }
 }

@@ -17,6 +17,7 @@
 
         <aside
           class="messenger-shell"
+          :class="{ 'has-selected-conversation': selectedConversation }"
           @click.stop
           @keydown.esc="close"
         >
@@ -1039,6 +1040,5 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/MessengerPanel.css"></style>
-
 
 

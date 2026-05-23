@@ -4,10 +4,12 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 using Pkm.Domain.Tasks;
 
@@ -26,6 +28,7 @@ public sealed class CreateTaskCommentHandler
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
     private readonly CreateTaskCommentCommandValidator _validator;
+    private readonly IActivityLogService _activityLogService;
 
     public CreateTaskCommentHandler(
         ICurrentUser currentUser,
@@ -38,7 +41,8 @@ public sealed class CreateTaskCommentHandler
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         IClock clock,
-        CreateTaskCommentCommandValidator validator)
+        CreateTaskCommentCommandValidator validator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -51,6 +55,7 @@ public sealed class CreateTaskCommentHandler
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<TaskCommentDto>> HandleAsync(
@@ -136,6 +141,27 @@ public sealed class CreateTaskCommentHandler
 
             var dto = comment.ToDto();
 
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    task.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.TaskComment,
+                    comment.Id,
+                    request.ParentId.HasValue
+                        ? $"{_currentUser.UserName ?? "Có người"} đã phản hồi trong task \"{task.Title}\"."
+                        : $"{_currentUser.UserName ?? "Có người"} đã bình luận trong task \"{task.Title}\".",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        taskId = task.Id,
+                        taskTitle = task.Title,
+                        pageId = task.PageId,
+                        commentId = comment.Id,
+                        parentCommentId = request.ParentId,
+                        contentPreview = Preview(request.Content)
+                    })),
+                cancellationToken);
+
             await _taskRealtimePublisher.PublishToPageAsync(
                 new TaskRealtimeEnvelope(
                     EventName: "TaskCommentCreated",
@@ -197,5 +223,14 @@ public sealed class CreateTaskCommentHandler
             versionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);
+    }
+
+    private static string Preview(string value)
+    {
+        var normalized = value.Trim();
+
+        return normalized.Length <= 160
+            ? normalized
+            : $"{normalized[..160]}...";
     }
 }

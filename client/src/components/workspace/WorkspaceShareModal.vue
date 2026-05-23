@@ -126,7 +126,13 @@
                 :key="target.key"
                 type="button"
                 class="workspace-share-person"
-                :disabled="sharingTargetKey === target.key"
+                :class="{ 'already-member': target.isWorkspaceMember }"
+                :disabled="target.isWorkspaceMember || sharingTargetKey === target.key"
+                :title="
+                  target.isWorkspaceMember
+                    ? 'Người này đã ở trong workspace'
+                    : 'Gửi workspace qua Messenger'
+                "
                 @click="shareToTarget(target)"
               >
                 <img
@@ -143,7 +149,12 @@
                 <span class="workspace-share-person-copy">
                   <strong>{{ target.fullName || target.userName }}</strong>
                   <small>
-                    {{ target.kind === 'conversation' ? 'Conversation' : 'Friend' }} · @{{ target.userName }}
+                    <template v-if="target.isWorkspaceMember">
+                      Đã ở trong workspace · @{{ target.userName }}
+                    </template>
+                    <template v-else>
+                      {{ target.kind === 'conversation' ? 'Conversation' : 'Friend' }} · @{{ target.userName }}
+                    </template>
                   </small>
                 </span>
 
@@ -152,6 +163,10 @@
                     v-if="sharingTargetKey === target.key"
                     class="workspace-share-spinner"
                   ></span>
+                  <span
+                    v-else-if="target.isWorkspaceMember"
+                    class="material-symbols-outlined"
+                  >person_check</span>
                   <span v-else class="material-symbols-outlined">send</span>
                 </span>
               </button>
@@ -167,6 +182,7 @@
 import { computed, ref, watch } from 'vue'
 import { messagingController } from '@/api/services/messaging.api'
 import { socialController } from '@/api/services/social.api'
+import { workspaceController } from '@/api/services/workspace.api'
 import {
   getApiErrorMessage,
   getApiResultErrorMessage,
@@ -174,6 +190,7 @@ import {
 import type { Guid } from '@/api/models/common.model'
 import type { ConversationResponse } from '@/api/models/messaging.model'
 import type { FriendResponse } from '@/api/models/social.model'
+import type { WorkspaceMemberResponse } from '@/api/models/workspace.model'
 import type { WorkspaceShareRoleRequest } from '@/api/models/messaging.model'
 import { normalizeImageUrl } from '@/utils/image-url.util'
 import { useToast } from '@/components/composables/useToast'
@@ -186,6 +203,7 @@ interface ShareTarget {
   fullName: string
   avatarUrl: string | null
   conversationId?: Guid | null
+  isWorkspaceMember: boolean
 }
 
 const props = defineProps<{
@@ -207,12 +225,17 @@ const keyword = ref('')
 const shareRole = ref<WorkspaceShareRoleRequest>('viewer')
 const conversations = ref<ConversationResponse[]>([])
 const friends = ref<FriendResponse[]>([])
+const workspaceMembers = ref<WorkspaceMemberResponse[]>([])
 const isLoading = ref(false)
 const error = ref<string | null>(null)
 const sharingTargetKey = ref<string | null>(null)
 
 const workspaceInitial = computed(() => {
   return props.workspaceName.trim().charAt(0).toUpperCase() || 'W'
+})
+
+const workspaceMemberUserIds = computed(() => {
+  return new Set(workspaceMembers.value.map((member) => member.userId))
 })
 
 const conversationTargets = computed<ShareTarget[]>(() => {
@@ -224,6 +247,7 @@ const conversationTargets = computed<ShareTarget[]>(() => {
     fullName: conversation.otherUser.fullName,
     avatarUrl: conversation.otherUser.avatarUrl,
     conversationId: conversation.id,
+    isWorkspaceMember: workspaceMemberUserIds.value.has(conversation.otherUser.id),
   }))
 })
 
@@ -246,6 +270,7 @@ const friendTargets = computed<ShareTarget[]>(() => {
         fullName: friend.fullName,
         avatarUrl: friend.avatarUrl,
         conversationId: existingConversation?.conversationId ?? null,
+        isWorkspaceMember: workspaceMemberUserIds.value.has(friend.userId),
       }
     })
     .filter(
@@ -297,15 +322,16 @@ function initials(value: string) {
 }
 
 async function loadData() {
-  if (!props.canShare) return
+  if (!props.canShare || !props.workspaceId) return
 
   isLoading.value = true
   error.value = null
 
   try {
-    const [conversationResult, friendResult] = await Promise.all([
+    const [conversationResult, friendResult, membersResult] = await Promise.all([
       messagingController.listConversations({ pageNumber: 1, pageSize: 50 }),
       socialController.listFriends(1, 100),
+      workspaceController.listMembers(props.workspaceId),
     ])
 
     if (!conversationResult.isSuccess || !conversationResult.data) {
@@ -315,6 +341,7 @@ async function loadData() {
       )
       conversations.value = []
       friends.value = []
+      workspaceMembers.value = []
       return
     }
 
@@ -325,15 +352,29 @@ async function loadData() {
       )
       conversations.value = []
       friends.value = []
+      workspaceMembers.value = []
+      return
+    }
+
+    if (!membersResult.isSuccess || !membersResult.data) {
+      error.value = getApiResultErrorMessage(
+        membersResult,
+        'Không thể kiểm tra thành viên workspace.'
+      )
+      conversations.value = []
+      friends.value = []
+      workspaceMembers.value = []
       return
     }
 
     conversations.value = conversationResult.data.items
     friends.value = friendResult.data
+    workspaceMembers.value = membersResult.data
   } catch (loadError) {
     error.value = getApiErrorMessage(loadError, 'Không thể tải danh sách share.')
     conversations.value = []
     friends.value = []
+    workspaceMembers.value = []
   } finally {
     isLoading.value = false
   }
@@ -358,6 +399,14 @@ async function resolveConversationId(target: ShareTarget) {
 
 async function shareToTarget(target: ShareTarget) {
   if (!props.workspaceId || sharingTargetKey.value) return
+
+  if (target.isWorkspaceMember) {
+    toast.info(
+      'Không cần share nữa',
+      `${target.fullName || target.userName} đã là thành viên của workspace này.`
+    )
+    return
+  }
 
   sharingTargetKey.value = target.key
 
@@ -650,8 +699,21 @@ async function shareToTarget(target: ShareTarget) {
 }
 
 .workspace-share-person:disabled {
-  opacity: 0.64;
   cursor: wait;
+}
+
+.workspace-share-person.already-member {
+  opacity: 0.68;
+  cursor: not-allowed;
+}
+
+.workspace-share-person.already-member:disabled {
+  cursor: not-allowed;
+}
+
+.workspace-share-person.already-member .workspace-share-send-chip {
+  color: #75b798;
+  background: rgba(117, 183, 152, 0.12);
 }
 
 .workspace-share-person img,

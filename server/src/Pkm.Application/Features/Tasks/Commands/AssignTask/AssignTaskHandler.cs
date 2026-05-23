@@ -3,10 +3,12 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.AssignTask;
@@ -22,6 +24,7 @@ public sealed class AssignTaskHandler
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
     public AssignTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -31,7 +34,8 @@ public sealed class AssignTaskHandler
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -42,6 +46,7 @@ public sealed class AssignTaskHandler
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _notificationService = notificationService;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -103,6 +108,23 @@ public sealed class AssignTaskHandler
 
         var detail = await _workTaskRepository.GetDetailAsync(task.Id, cancellationToken);
         var dto = detail is null ? task.ToDto() : detail.ToDto();
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                task.WorkspaceId,
+                currentUserId,
+                ActivityAction.Assign,
+                ActivityEntityType.TaskAssignee,
+                task.Id,
+                $"{_currentUser.UserName ?? "Có người"} đã phân công task \"{task.Title}\".",
+                ActivityLogMetadata.Serialize(new
+                {
+                    taskId = task.Id,
+                    title = task.Title,
+                    pageId = task.PageId,
+                    assigneeUserId = request.AssigneeUserId
+                })),
+            cancellationToken);
 
         await _taskRealtimePublisher.PublishToPageAsync(
             new TaskRealtimeEnvelope(

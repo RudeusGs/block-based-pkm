@@ -9,6 +9,10 @@ public interface IActivityLogRepository
         Guid workspaceId,
         ActivityAction? action,
         ActivityEntityType? entityType,
+        Guid? userId,
+        DateTimeOffset? fromUtc,
+        DateTimeOffset? toUtc,
+        string? search,
         int pageNumber,
         int pageSize,
         CancellationToken cancellationToken = default);
@@ -17,6 +21,10 @@ public interface IActivityLogRepository
         Guid workspaceId,
         ActivityAction? action,
         ActivityEntityType? entityType,
+        Guid? userId,
+        DateTimeOffset? fromUtc,
+        DateTimeOffset? toUtc,
+        string? search,
         CancellationToken cancellationToken = default);
 
     void Add(ActivityLog activityLog);

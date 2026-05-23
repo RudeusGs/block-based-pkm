@@ -4,9 +4,11 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.Common;
 using Pkm.Domain.Pages;
@@ -28,6 +30,7 @@ public sealed class CreateBlockHandler
     private readonly IOrderKeyGenerator _orderKeyGenerator;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
     private readonly IBlockPayloadValidator _blockPayloadValidator;
+    private readonly IActivityLogService _activityLogService;
 
     public CreateBlockHandler(
         ICurrentUser currentUser,
@@ -40,7 +43,8 @@ public sealed class CreateBlockHandler
         IClock clock,
         IOrderKeyGenerator orderKeyGenerator,
         IDocumentRealtimePublisher realtimePublisher,
-        IBlockPayloadValidator blockPayloadValidator)
+        IBlockPayloadValidator blockPayloadValidator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
@@ -53,6 +57,7 @@ public sealed class CreateBlockHandler
         _orderKeyGenerator = orderKeyGenerator;
         _realtimePublisher = realtimePublisher;
         _blockPayloadValidator = blockPayloadValidator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -181,6 +186,24 @@ public sealed class CreateBlockHandler
                 block.Id,
                 appliedRevision,
                 block.ToDto());
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    page.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.Block,
+                    block.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã tạo block {block.Type.Value}.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        pageId = page.Id,
+                        blockId = block.Id,
+                        type = block.Type.Value,
+                        parentBlockId = block.ParentBlockId,
+                        revision = appliedRevision
+                    })),
+                cancellationToken);
 
             await _realtimePublisher.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(

@@ -1,5 +1,5 @@
 import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { authController } from '@/api'
 import { useToast } from '@/components/composables/useToast'
 import {
@@ -7,9 +7,11 @@ import {
   getApiResultErrorMessage,
 } from '@/api/utils/api-error.util'
 import { saveAuthToken } from '@/modules/auth/utils/auth-token.util'
+import { getSafeAuthRedirect } from '@/modules/auth/utils/redirect.util'
 
 export function useLogin() {
   const router = useRouter()
+  const route = useRoute()
   const showPassword = ref(false)
   const isSubmitting = ref(false)
   const errorMessage = ref('')
@@ -50,7 +52,7 @@ export function useLogin() {
       saveAuthToken(token)
 
       toast.success('Signed in successfully', 'Welcome back.')
-      await router.replace('/app')
+      await router.replace(getSafeAuthRedirect(route.query.redirect))
     } catch (error) {
       console.error('Login failed:', error)
 

@@ -4,12 +4,14 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Application.Features.Recommendations.Services;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 using Pkm.Domain.Notifications;
 using Pkm.Domain.Recommendations;
@@ -37,6 +39,7 @@ public sealed class GenerateTaskRecommendationsHandler
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
     private readonly GenerateTaskRecommendationsCommandValidator _validator;
+    private readonly IActivityLogService _activityLogService;
 
     public GenerateTaskRecommendationsHandler(
         ICurrentUser currentUser,
@@ -53,7 +56,8 @@ public sealed class GenerateTaskRecommendationsHandler
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         IClock clock,
-        GenerateTaskRecommendationsCommandValidator validator)
+        GenerateTaskRecommendationsCommandValidator validator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -70,6 +74,7 @@ public sealed class GenerateTaskRecommendationsHandler
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<IReadOnlyList<TaskRecommendationDto>>> HandleAsync(
@@ -235,6 +240,24 @@ public sealed class GenerateTaskRecommendationsHandler
                     return x.ToDto(candidate);
                 })
                 .ToArray();
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    request.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.UserPreference,
+                    currentUserId,
+                    $"{_currentUser.UserName ?? "Có người"} đã tạo {dto.Length} gợi ý task.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        recommendationIds = dto.Select(x => x.Id).ToArray(),
+                        taskIds = dto.Select(x => x.TaskId).ToArray(),
+                        pageId = request.PageId,
+                        mode = isPersonalWorkspace ? "personal_habit" : "team_operational",
+                        count = dto.Length
+                    })),
+                cancellationToken);
 
             await PublishGeneratedBestEffortAsync(
                 currentUserId,

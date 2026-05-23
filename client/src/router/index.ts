@@ -3,6 +3,7 @@ import LandingView from '@/views/LandingView.vue'
 import LoginView from '@/views/LoginView.vue'
 import RegisterView from '@/views/RegisterView.vue'
 import AppLayout from '@/views/AppLayout.vue'
+import SuccessView from '@/views/SuccessView.vue'
 import { isAuthenticated } from '@/modules/auth/utils/auth-token.util'
 
 const router = createRouter({
@@ -28,6 +29,11 @@ const router = createRouter({
       path: '/register',
       name: 'register',
       component: RegisterView,
+    },
+    {
+      path: '/success',
+      name: 'success',
+      component: SuccessView,
     },
   ],
 })

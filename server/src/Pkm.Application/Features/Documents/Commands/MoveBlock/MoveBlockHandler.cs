@@ -4,9 +4,11 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.Common;
 using Pkm.Domain.Pages;
@@ -26,6 +28,7 @@ public sealed class MoveBlockHandler
     private readonly IClock _clock;
     private readonly IOrderKeyGenerator _orderKeyGenerator;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
+    private readonly IActivityLogService _activityLogService;
 
     public MoveBlockHandler(
         ICurrentUser currentUser,
@@ -38,7 +41,8 @@ public sealed class MoveBlockHandler
         IUnitOfWork unitOfWork,
         IClock clock,
         IOrderKeyGenerator orderKeyGenerator,
-        IDocumentRealtimePublisher realtimePublisher)
+        IDocumentRealtimePublisher realtimePublisher,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _blockRepository = blockRepository;
@@ -51,6 +55,7 @@ public sealed class MoveBlockHandler
         _clock = clock;
         _orderKeyGenerator = orderKeyGenerator;
         _realtimePublisher = realtimePublisher;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -137,6 +142,8 @@ public sealed class MoveBlockHandler
         {
             var now = _clock.UtcNow;
             var baseRevision = page.CurrentRevision;
+            var oldParentBlockId = block.ParentBlockId;
+            var oldOrderKey = block.OrderKey;
             var newOrderKey = _orderKeyGenerator.CreateBetween(previous?.OrderKey, next?.OrderKey);
 
             block.MoveTo(request.NewParentBlockId, newOrderKey, currentUserId, now);
@@ -176,6 +183,26 @@ public sealed class MoveBlockHandler
                 block.Id,
                 appliedRevision,
                 block.ToDto());
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    page.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Move,
+                    ActivityEntityType.Block,
+                    block.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã di chuyển block.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        pageId = page.Id,
+                        blockId = block.Id,
+                        oldParentBlockId,
+                        newParentBlockId = block.ParentBlockId,
+                        oldOrderKey,
+                        newOrderKey = block.OrderKey,
+                        revision = appliedRevision
+                    })),
+                cancellationToken);
 
             await _realtimePublisher.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(

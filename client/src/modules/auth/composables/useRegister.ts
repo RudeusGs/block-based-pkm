@@ -1,5 +1,5 @@
 import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { authController } from '@/api'
 import { useToast } from '@/components/composables/useToast'
 import type { RegisterRequest } from '@/api/models/auth.model'
@@ -8,9 +8,11 @@ import {
   getApiResultErrorMessage,
 } from '@/api/utils/api-error.util'
 import { saveAuthToken } from '@/modules/auth/utils/auth-token.util'
+import { getSafeAuthRedirect } from '@/modules/auth/utils/redirect.util'
 
 export function useRegister() {
   const router = useRouter()
+  const route = useRoute()
   const toast = useToast()
 
   const showPassword = ref(false)
@@ -84,7 +86,7 @@ export function useRegister() {
       saveAuthToken(token)
 
       toast.success('Signed in successfully', 'Welcome to your workspace.')
-      await router.replace('/app')
+      await router.replace(getSafeAuthRedirect(route.query.redirect))
     } catch (error) {
       console.error('Register failed:', error)
 

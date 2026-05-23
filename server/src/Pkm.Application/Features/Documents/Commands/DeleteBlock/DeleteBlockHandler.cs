@@ -4,9 +4,11 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.Pages;
 
@@ -24,6 +26,7 @@ public sealed class DeleteBlockHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
+    private readonly IActivityLogService _activityLogService;
 
     public DeleteBlockHandler(
         ICurrentUser currentUser,
@@ -35,7 +38,8 @@ public sealed class DeleteBlockHandler
         IBlockOperationRepository blockOperationRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IDocumentRealtimePublisher realtimePublisher)
+        IDocumentRealtimePublisher realtimePublisher,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _blockRepository = blockRepository;
@@ -47,6 +51,7 @@ public sealed class DeleteBlockHandler
         _unitOfWork = unitOfWork;
         _clock = clock;
         _realtimePublisher = realtimePublisher;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -139,6 +144,25 @@ public sealed class DeleteBlockHandler
             rootBlock.Id,
             appliedRevision,
             null);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                page.WorkspaceId,
+                currentUserId,
+                ActivityAction.Delete,
+                ActivityEntityType.Block,
+                rootBlock.Id,
+                $"{_currentUser.UserName ?? "Có người"} đã xóa block.",
+                ActivityLogMetadata.Serialize(new
+                {
+                    pageId = page.Id,
+                    rootBlockId = rootBlock.Id,
+                    deletedBlockIds = deletedIds,
+                    deletedBlockCount = deletedIds.Length,
+                    note = request.Note,
+                    revision = appliedRevision
+                })),
+            cancellationToken);
 
         await _realtimePublisher.PublishToPageAsync(
             new DocumentRealtimeEnvelope(

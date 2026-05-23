@@ -15,6 +15,7 @@ namespace Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation
 
 public sealed class AcceptWorkspaceInvitationHandler
 {
+    private readonly ICurrentUser _currentUser;
     private readonly IUserRepository _userRepository;
     private readonly IWorkspaceInvitationRepository _workspaceInvitationRepository;
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
@@ -26,6 +27,7 @@ public sealed class AcceptWorkspaceInvitationHandler
     private readonly INotificationService _notificationService;
 
     public AcceptWorkspaceInvitationHandler(
+        ICurrentUser currentUser,
         IUserRepository userRepository,
         IWorkspaceInvitationRepository workspaceInvitationRepository,
         IWorkspaceMemberRepository workspaceMemberRepository,
@@ -36,6 +38,7 @@ public sealed class AcceptWorkspaceInvitationHandler
         INotificationService notificationService,
         IActivityLogService activityLogService)
     {
+        _currentUser = currentUser;
         _userRepository = userRepository;
         _workspaceInvitationRepository = workspaceInvitationRepository;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -54,6 +57,11 @@ public sealed class AcceptWorkspaceInvitationHandler
         if (string.IsNullOrWhiteSpace(request.Token))
         {
             return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.InvalidInvitationToken);
+        }
+
+        if (!_currentUser.TryGetUserId(out var currentUserId))
+        {
+            return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.MissingUserContext);
         }
 
         var tokenHash = WorkspaceInvitationToken.Hash(request.Token);
@@ -79,13 +87,13 @@ public sealed class AcceptWorkspaceInvitationHandler
             return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.InvitationExpired);
         }
 
-        var targetUser = await _userRepository.GetByEmailAsync(
-            invitation.Email,
+        var targetUser = await _userRepository.GetByIdAsync(
+            currentUserId,
             cancellationToken);
 
         if (targetUser is null)
         {
-            return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.TargetUserNotFoundByEmail(invitation.Email));
+            return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.TargetUserNotFound);
         }
 
         if (targetUser.NormalizedEmail != invitation.NormalizedEmail)

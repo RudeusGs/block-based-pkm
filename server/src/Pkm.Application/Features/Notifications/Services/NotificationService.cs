@@ -3,8 +3,6 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Features.Notifications.Models;
-using Pkm.Application.Features.Activity.Services;
-using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 using Pkm.Domain.Notifications;
 
@@ -21,7 +19,6 @@ public sealed class NotificationService : INotificationService
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
-    private readonly IActivityLogService _activityLogService;
 
     public NotificationService(
         INotificationRepository notificationRepository,
@@ -30,8 +27,7 @@ public sealed class NotificationService : INotificationService
         INotificationRealtimePublisher notificationRealtimePublisher,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        IClock clock,
-        IActivityLogService activityLogService)
+        IClock clock)
     {
         _notificationRepository = notificationRepository;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -40,7 +36,6 @@ public sealed class NotificationService : INotificationService
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
-        _activityLogService = activityLogService;
     }
 
     public async Task<NotificationDto?> NotifyAsync(
@@ -75,11 +70,6 @@ public sealed class NotificationService : INotificationService
         var recipients = rawRecipients
             .Where(x => !excluded.Contains(x))
             .ToArray();
-
-        if (rawRecipients.Length > 0)
-        {
-            await RecordActivityFromNotificationAsync(request, cancellationToken);
-        }
 
         if (recipients.Length == 0)
             return Array.Empty<NotificationDto>();
@@ -241,126 +231,6 @@ public sealed class NotificationService : INotificationService
                     totalUnreadCount = totalUnread
                 }),
             cancellationToken);
-    }
-
-    private async Task RecordActivityFromNotificationAsync(
-        NotificationDispatchRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (!request.WorkspaceId.HasValue || request.WorkspaceId.Value == Guid.Empty)
-            return;
-
-        if (!request.ActorUserId.HasValue || request.ActorUserId.Value == Guid.Empty)
-            return;
-
-        var activity = MapNotificationToActivity(request);
-        if (activity is null)
-            return;
-
-        await _activityLogService.RecordAsync(
-            new ActivityLogRequest(
-                request.WorkspaceId.Value,
-                request.ActorUserId.Value,
-                activity.Value.Action,
-                activity.Value.EntityType,
-                activity.Value.EntityId,
-                request.Message),
-            cancellationToken);
-    }
-
-    private static (ActivityAction Action, ActivityEntityType EntityType, Guid EntityId)? MapNotificationToActivity(
-        NotificationDispatchRequest request)
-    {
-        var workspaceId = request.WorkspaceId ?? Guid.Empty;
-        var referenceId = request.ReferenceId ?? workspaceId;
-
-        if (referenceId == Guid.Empty)
-            return null;
-
-        return request.Type switch
-        {
-            NotificationType.WorkspaceInvited => (
-                ActivityAction.Assign,
-                ActivityEntityType.WorkspaceMember,
-                referenceId),
-
-            NotificationType.WorkspaceRoleChanged => (
-                ActivityAction.ChangePermissions,
-                ActivityEntityType.WorkspaceMember,
-                referenceId),
-
-            NotificationType.WorkspaceMemberRemoved => (
-                ActivityAction.Delete,
-                ActivityEntityType.WorkspaceMember,
-                referenceId),
-
-            NotificationType.PageCreated => (
-                ActivityAction.Create,
-                ActivityEntityType.Page,
-                referenceId),
-
-            NotificationType.PageUpdated => (
-                ActivityAction.Update,
-                ActivityEntityType.Page,
-                referenceId),
-
-            NotificationType.PageDeleted => (
-                ActivityAction.Delete,
-                ActivityEntityType.Page,
-                referenceId),
-
-            NotificationType.TaskCreated => (
-                ActivityAction.Create,
-                ActivityEntityType.WorkTask,
-                referenceId),
-
-            NotificationType.TaskUpdated => (
-                ActivityAction.Update,
-                ActivityEntityType.WorkTask,
-                referenceId),
-
-            NotificationType.TaskDeleted => (
-                ActivityAction.Delete,
-                ActivityEntityType.WorkTask,
-                referenceId),
-
-            NotificationType.TaskAssigned => (
-                ActivityAction.Assign,
-                ActivityEntityType.TaskAssignee,
-                referenceId),
-
-            NotificationType.TaskUnassigned => (
-                ActivityAction.Unassign,
-                ActivityEntityType.TaskAssignee,
-                referenceId),
-
-            NotificationType.TaskCompleted => (
-                ActivityAction.Complete,
-                ActivityEntityType.WorkTask,
-                referenceId),
-
-            NotificationType.TaskStatusChanged => (
-                ActivityAction.Update,
-                ActivityEntityType.WorkTask,
-                referenceId),
-
-            NotificationType.TaskCommentCreated => (
-                ActivityAction.Create,
-                ActivityEntityType.TaskComment,
-                referenceId),
-
-            NotificationType.TaskCommentReplied => (
-                ActivityAction.Create,
-                ActivityEntityType.TaskComment,
-                referenceId),
-
-            NotificationType.RecommendationGenerated => (
-                ActivityAction.Create,
-                ActivityEntityType.UserPreference,
-                referenceId),
-
-            _ => null
-        };
     }
 
 }

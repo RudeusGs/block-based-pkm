@@ -9,8 +9,10 @@ using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
 using Pkm.Domain.Tasks;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
+using Pkm.Domain.Audit;
 namespace Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
 
 public sealed class CreateWorkTaskHandler
@@ -26,6 +28,7 @@ public sealed class CreateWorkTaskHandler
     private readonly IClock _clock;
     private readonly CreateWorkTaskCommandValidator _validator;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
     public CreateWorkTaskHandler(
         ICurrentUser currentUser,
         IPageRepository pageRepository,
@@ -37,7 +40,8 @@ public sealed class CreateWorkTaskHandler
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
         CreateWorkTaskCommandValidator validator,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
@@ -50,6 +54,7 @@ public sealed class CreateWorkTaskHandler
         _clock = clock;
         _validator = validator;
         _notificationService = notificationService;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -149,6 +154,25 @@ public sealed class CreateWorkTaskHandler
             var dto = detail is null
                 ? task.ToDto()
                 : detail.ToDto();
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    task.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.WorkTask,
+                    task.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã tạo task \"{task.Title}\".",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        taskId = task.Id,
+                        title = task.Title,
+                        pageId = task.PageId,
+                        priority = task.Priority.ToString(),
+                        dueDate = task.DueDate,
+                        assigneeUserIds = assigneeIds
+                    })),
+                cancellationToken);
 
             await _taskRealtimePublisher.PublishToPageAsync(
                 new TaskRealtimeEnvelope(

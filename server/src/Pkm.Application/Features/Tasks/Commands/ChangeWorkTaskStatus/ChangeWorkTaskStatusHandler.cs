@@ -3,10 +3,12 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.ChangeWorkTaskStatus;
@@ -22,6 +24,7 @@ public sealed class ChangeWorkTaskStatusHandler
     private readonly IClock _clock;
     private readonly ChangeWorkTaskStatusCommandValidator _validator;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
     public ChangeWorkTaskStatusHandler(
         ICurrentUser currentUser,
         IWorkTaskRepository workTaskRepository,
@@ -31,7 +34,8 @@ public sealed class ChangeWorkTaskStatusHandler
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
         ChangeWorkTaskStatusCommandValidator validator,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -42,6 +46,7 @@ public sealed class ChangeWorkTaskStatusHandler
         _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -97,6 +102,7 @@ public sealed class ChangeWorkTaskStatusHandler
         }
 
         var now = _clock.UtcNow;
+        var oldStatus = task.Status;
 
         task.ChangeStatus(request.Status, currentUserId, now);
         _workTaskRepository.Update(task);
@@ -105,6 +111,24 @@ public sealed class ChangeWorkTaskStatusHandler
 
         var detail = await _workTaskRepository.GetDetailAsync(task.Id, cancellationToken);
         var dto = detail is null ? task.ToDto() : detail.ToDto();
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                task.WorkspaceId,
+                currentUserId,
+                ResolveStatusAction(oldStatus, request.Status),
+                ActivityEntityType.WorkTask,
+                task.Id,
+                $"{_currentUser.UserName ?? "Có người"} đã chuyển task \"{task.Title}\" từ {oldStatus} sang {request.Status}.",
+                ActivityLogMetadata.Serialize(new
+                {
+                    taskId = task.Id,
+                    title = task.Title,
+                    pageId = task.PageId,
+                    oldStatus = oldStatus.ToString(),
+                    newStatus = request.Status.ToString()
+                })),
+            cancellationToken);
 
         await _taskRealtimePublisher.PublishToPageAsync(
             new TaskRealtimeEnvelope(
@@ -136,6 +160,19 @@ public sealed class ChangeWorkTaskStatusHandler
             cancellationToken);
 
         return Result.Success(dto);
+    }
+
+    private static ActivityAction ResolveStatusAction(
+        StatusWorkTask oldStatus,
+        StatusWorkTask newStatus)
+    {
+        if (newStatus == StatusWorkTask.Done)
+            return ActivityAction.Complete;
+
+        if (oldStatus == StatusWorkTask.Done)
+            return ActivityAction.Reopen;
+
+        return ActivityAction.Update;
     }
 }
 

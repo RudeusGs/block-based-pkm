@@ -4,11 +4,13 @@ using Pkm.Application.Abstractions.Email;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Application.Features.Workspaces.Services;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Workspaces;
 
 namespace Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
@@ -30,6 +32,7 @@ public sealed class AddWorkspaceMemberHandler
     private readonly IEmailSender _emailSender;
     private readonly IWorkspaceInvitationLinkFactory _workspaceInvitationLinkFactory;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
 
     public AddWorkspaceMemberHandler(
         ICurrentUser currentUser,
@@ -43,7 +46,8 @@ public sealed class AddWorkspaceMemberHandler
         AddWorkspaceMemberCommandValidator validator,
         IEmailSender emailSender,
         IWorkspaceInvitationLinkFactory workspaceInvitationLinkFactory,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
@@ -57,6 +61,7 @@ public sealed class AddWorkspaceMemberHandler
         _emailSender = emailSender;
         _workspaceInvitationLinkFactory = workspaceInvitationLinkFactory;
         _notificationService = notificationService;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkspaceInvitationDto>> HandleAsync(
@@ -217,6 +222,23 @@ public sealed class AddWorkspaceMemberHandler
         {
 
         }
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                workspace.Id,
+                currentUserId,
+                ActivityAction.Assign,
+                ActivityEntityType.WorkspaceMember,
+                targetUser.Id,
+                $"{inviterDisplayName} đã mời {targetUser.FullName} vào workspace với vai trò {request.Role}.",
+                ActivityLogMetadata.Serialize(new
+                {
+                    invitationId = invitation.Id,
+                    targetUserId = targetUser.Id,
+                    targetEmail = targetUser.Email,
+                    role = request.Role.ToString()
+                })),
+            cancellationToken);
 
         return Result.Success(ToDto(invitation));
     }

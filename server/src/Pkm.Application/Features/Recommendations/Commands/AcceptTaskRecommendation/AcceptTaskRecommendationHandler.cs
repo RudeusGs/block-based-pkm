@@ -4,8 +4,10 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Application.Features.Tasks.Models;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 using Pkm.Domain.Recommendations;
 using Pkm.Domain.Tasks;
@@ -25,6 +27,7 @@ public sealed class AcceptTaskRecommendationHandler
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
+    private readonly IActivityLogService _activityLogService;
 
     public AcceptTaskRecommendationHandler(
         ICurrentUser currentUser,
@@ -37,7 +40,8 @@ public sealed class AcceptTaskRecommendationHandler
         ITaskRealtimePublisher taskRealtimePublisher,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        IClock clock)
+        IClock clock,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _recommendationRepository = recommendationRepository;
@@ -50,6 +54,7 @@ public sealed class AcceptTaskRecommendationHandler
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<TaskRecommendationDto>> HandleAsync(
@@ -150,6 +155,23 @@ public sealed class AcceptTaskRecommendationHandler
                 out var recommendationTask);
 
             var recommendationDto = recommendation.ToDto(recommendationTask);
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    recommendation.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Assign,
+                    ActivityEntityType.WorkTask,
+                    task.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã nhận task từ gợi ý.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        recommendationId = recommendation.Id,
+                        taskId = task.Id,
+                        pageId = task.PageId,
+                        alreadyAssigned
+                    })),
+                cancellationToken);
 
             await _realtimePublisher.PublishToUserAsync(
                 new RecommendationRealtimeEnvelope(

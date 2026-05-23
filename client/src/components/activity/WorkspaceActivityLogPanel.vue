@@ -32,6 +32,16 @@
             <button
               type="button"
               class="activity-log-ghost-btn"
+              :disabled="!hasActiveFilters || isLoading"
+              @click="clearFilters"
+            >
+              <span class="material-symbols-outlined">filter_alt_off</span>
+              <span>Reset</span>
+            </button>
+
+            <button
+              type="button"
+              class="activity-log-ghost-btn"
               :disabled="isLoading"
               @click="refresh"
             >
@@ -55,7 +65,7 @@
 
               <strong>Activity</strong>
               <p>
-                Theo dõi page, task, comment và thay đổi thành viên trong workspace.
+                {{ loadedCountLabel }}
               </p>
             </div>
 
@@ -69,6 +79,9 @@
               >
                 <span class="material-symbols-outlined">{{ filter.icon }}</span>
                 <span>{{ filter.label }}</span>
+                <small v-if="entityCount(filter.value) > 0">
+                  {{ entityCount(filter.value) }}
+                </small>
               </button>
             </nav>
           </aside>
@@ -77,25 +90,70 @@
             <section class="activity-log-toolbar">
               <div>
                 <strong>{{ totalCountLabel }}</strong>
-                <span>{{ workspaceId ? 'Latest workspace events' : 'Select a workspace first' }}</span>
+                <span>{{ toolbarSubtitle }}</span>
               </div>
 
-              <select
-                v-model="actionFilter"
-                class="activity-log-select"
-                :disabled="isLoading"
-                aria-label="Filter by action"
-                @change="refresh"
-              >
-                <option value="all">All actions</option>
-                <option value="Create">Created</option>
-                <option value="Update">Updated</option>
-                <option value="Delete">Deleted</option>
-                <option value="Assign">Assigned</option>
-                <option value="Unassign">Unassigned</option>
-                <option value="Complete">Completed</option>
-                <option value="ChangePermissions">Permissions changed</option>
-              </select>
+              <div class="activity-log-controls">
+                <label class="activity-log-search">
+                  <span class="material-symbols-outlined">search</span>
+                  <input
+                    v-model="search"
+                    type="search"
+                    placeholder="Search activity..."
+                    :disabled="isLoading"
+                    @keydown.enter.prevent="refresh"
+                  />
+                </label>
+
+                <select
+                  v-model="datePreset"
+                  class="activity-log-select compact"
+                  :disabled="isLoading"
+                  aria-label="Filter by time"
+                  @change="refresh"
+                >
+                  <option
+                    v-for="option in datePresetOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+
+                <select
+                  v-model="actionFilter"
+                  class="activity-log-select"
+                  :disabled="isLoading"
+                  aria-label="Filter by action"
+                  @change="refresh"
+                >
+                  <option
+                    v-for="option in actionOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </option>
+                </select>
+
+                <select
+                  v-model="actorFilter"
+                  class="activity-log-select"
+                  :disabled="isLoading || !actorOptions.length"
+                  aria-label="Filter by actor"
+                  @change="refresh"
+                >
+                  <option value="all">All people</option>
+                  <option
+                    v-for="actor in actorOptions"
+                    :key="actor.userId"
+                    :value="actor.userId"
+                  >
+                    {{ actor.name }}
+                  </option>
+                </select>
+              </div>
             </section>
 
             <div
@@ -198,6 +256,32 @@
                     <small v-if="activity.description">
                       {{ cleanDescription(activity.description, activity) }}
                     </small>
+
+                    <button
+                      v-if="metadataEntries(activity).length"
+                      type="button"
+                      class="activity-log-detail-toggle"
+                      :aria-expanded="isExpanded(activity.id)"
+                      @click="toggleExpanded(activity.id)"
+                    >
+                      <span class="material-symbols-outlined">
+                        {{ isExpanded(activity.id) ? 'expand_less' : 'expand_more' }}
+                      </span>
+                      Details
+                    </button>
+
+                    <dl
+                      v-if="isExpanded(activity.id)"
+                      class="activity-log-details"
+                    >
+                      <template
+                        v-for="entry in metadataEntries(activity)"
+                        :key="`${activity.id}:${entry.key}`"
+                      >
+                        <dt>{{ entry.label }}</dt>
+                        <dd>{{ entry.value }}</dd>
+                      </template>
+                    </dl>
                   </div>
                 </article>
               </section>
@@ -255,6 +339,7 @@ type EntityFilterValue =
   | 'Workspace'
   | 'WorkspaceMember'
   | 'Page'
+  | 'Block'
   | 'WorkTask'
   | 'TaskComment'
   | 'TaskAssignee'
@@ -268,6 +353,12 @@ type ActionFilterValue =
   | 'Unassign'
   | 'Complete'
   | 'ChangePermissions'
+  | 'Archive'
+  | 'Restore'
+  | 'Move'
+  | 'Reopen'
+
+type DatePresetValue = 'all' | '24h' | '7d' | '30d'
 
 const pageSize = 30
 const pageNumber = ref(1)
@@ -278,7 +369,13 @@ const isLoadingMore = ref(false)
 const error = ref<string | null>(null)
 const entityFilter = ref<EntityFilterValue>('all')
 const actionFilter = ref<ActionFilterValue>('all')
+const actorFilter = ref<Guid | 'all'>('all')
+const datePreset = ref<DatePresetValue>('all')
+const search = ref('')
 const failedAvatarUserIds = ref<Set<Guid>>(new Set())
+const expandedActivityIds = ref<Set<Guid>>(new Set())
+
+let searchDebounceId: number | null = null
 
 const entityFilters: Array<{
   value: EntityFilterValue
@@ -287,6 +384,7 @@ const entityFilters: Array<{
 }> = [
   { value: 'all', label: 'All activity', icon: 'all_inclusive' },
   { value: 'Page', label: 'Pages', icon: 'description' },
+  { value: 'Block', label: 'Blocks', icon: 'view_agenda' },
   { value: 'WorkTask', label: 'Tasks', icon: 'checklist' },
   { value: 'TaskComment', label: 'Comments', icon: 'mode_comment' },
   { value: 'WorkspaceMember', label: 'Members', icon: 'group' },
@@ -294,13 +392,89 @@ const entityFilters: Array<{
   { value: 'Workspace', label: 'Workspace', icon: 'workspaces' },
 ]
 
+const actionOptions: Array<{
+  value: ActionFilterValue
+  label: string
+}> = [
+  { value: 'all', label: 'All actions' },
+  { value: 'Create', label: 'Created' },
+  { value: 'Update', label: 'Updated' },
+  { value: 'Delete', label: 'Deleted' },
+  { value: 'Move', label: 'Moved' },
+  { value: 'Assign', label: 'Assigned' },
+  { value: 'Unassign', label: 'Unassigned' },
+  { value: 'Complete', label: 'Completed' },
+  { value: 'Reopen', label: 'Reopened' },
+  { value: 'Restore', label: 'Restored' },
+  { value: 'Archive', label: 'Archived' },
+  { value: 'ChangePermissions', label: 'Permissions changed' },
+]
+
+const datePresetOptions: Array<{
+  value: DatePresetValue
+  label: string
+}> = [
+  { value: 'all', label: 'All time' },
+  { value: '30d', label: 'Last 30 days' },
+  { value: '7d', label: 'Last 7 days' },
+  { value: '24h', label: 'Last 24 hours' },
+]
+
 const hasMore = computed(() => items.value.length < totalCount.value)
+
+const hasActiveFilters = computed(() => {
+  return Boolean(
+    entityFilter.value !== 'all' ||
+    actionFilter.value !== 'all' ||
+    actorFilter.value !== 'all' ||
+    datePreset.value !== 'all' ||
+    search.value.trim()
+  )
+})
 
 const totalCountLabel = computed(() => {
   if (!props.workspaceId) return 'No workspace'
   if (totalCount.value === 0) return 'No activity'
 
   return `${totalCount.value} event${totalCount.value > 1 ? 's' : ''}`
+})
+
+const loadedCountLabel = computed(() => {
+  if (!props.workspaceId) return 'No workspace selected'
+  if (!items.value.length) return 'No visible activity'
+
+  return `Showing ${items.value.length} of ${totalCount.value} events`
+})
+
+const toolbarSubtitle = computed(() => {
+  if (!props.workspaceId) return 'Select a workspace first'
+  if (hasActiveFilters.value) return 'Filtered workspace events'
+
+  return 'Latest workspace events'
+})
+
+const actorOptions = computed(() => {
+  const actorMap = new Map<Guid, string>()
+
+  for (const item of items.value) {
+    if (!item.userId) continue
+
+    actorMap.set(item.userId, actorName(item))
+  }
+
+  return Array.from(actorMap.entries())
+    .map(([userId, name]) => ({ userId, name }))
+    .sort((left, right) => left.name.localeCompare(right.name))
+})
+
+const entityCounts = computed(() => {
+  const counts = new Map<string, number>()
+
+  for (const item of items.value) {
+    counts.set(item.entityType, (counts.get(item.entityType) ?? 0) + 1)
+  }
+
+  return counts
 })
 
 const groupedItems = computed(() => {
@@ -345,8 +519,24 @@ watch(
 )
 
 onBeforeUnmount(() => {
+  if (searchDebounceId) {
+    window.clearTimeout(searchDebounceId)
+  }
+
   document.body.classList.remove('activity-log-scroll-lock')
   window.removeEventListener('keydown', handleKeydown)
+})
+
+watch(search, () => {
+  if (!props.open) return
+
+  if (searchDebounceId) {
+    window.clearTimeout(searchDebounceId)
+  }
+
+  searchDebounceId = window.setTimeout(() => {
+    void refresh()
+  }, 350)
 })
 
 function handleKeydown(event: KeyboardEvent) {
@@ -362,6 +552,16 @@ function setEntityFilter(value: EntityFilterValue) {
   void refresh()
 }
 
+function clearFilters() {
+  entityFilter.value = 'all'
+  actionFilter.value = 'all'
+  actorFilter.value = 'all'
+  datePreset.value = 'all'
+  search.value = ''
+  expandedActivityIds.value = new Set()
+  void refresh()
+}
+
 async function refresh() {
   if (!props.workspaceId) {
     items.value = []
@@ -374,6 +574,7 @@ async function refresh() {
   isLoading.value = true
   error.value = null
   pageNumber.value = 1
+  expandedActivityIds.value = new Set()
 
   try {
     const result = await activityLogController.listByWorkspace(props.workspaceId, {
@@ -381,6 +582,9 @@ async function refresh() {
       pageSize,
       action: actionFilter.value === 'all' ? null : actionFilter.value,
       entityType: entityFilter.value === 'all' ? null : entityFilter.value,
+      userId: actorFilter.value === 'all' ? null : actorFilter.value,
+      search: search.value.trim() || null,
+      ...resolveDateRange(),
     })
 
     if (!result.isSuccess || !result.data) {
@@ -420,6 +624,9 @@ async function loadMore() {
       pageSize,
       action: actionFilter.value === 'all' ? null : actionFilter.value,
       entityType: entityFilter.value === 'all' ? null : entityFilter.value,
+      userId: actorFilter.value === 'all' ? null : actorFilter.value,
+      search: search.value.trim() || null,
+      ...resolveDateRange(),
     })
 
     if (!result.isSuccess || !result.data) {
@@ -465,6 +672,12 @@ function markAvatarFailed(userId: Guid) {
   failedAvatarUserIds.value = new Set(failedAvatarUserIds.value).add(userId)
 }
 
+function entityCount(value: EntityFilterValue) {
+  if (value === 'all') return items.value.length
+
+  return entityCounts.value.get(value) ?? 0
+}
+
 function normalize(value: string | null | undefined) {
   return value?.trim().toLowerCase() ?? ''
 }
@@ -475,6 +688,7 @@ function entityLabel(entityType: string) {
   if (value === 'workspace') return 'Workspace'
   if (value === 'workspacemember') return 'Member'
   if (value === 'page') return 'Page'
+  if (value === 'block') return 'Block'
   if (value === 'worktask') return 'Task'
   if (value === 'taskcomment') return 'Comment'
   if (value === 'taskassignee') return 'Assignee'
@@ -489,6 +703,7 @@ function entityIcon(entityType: string) {
   if (value === 'workspace') return 'workspaces'
   if (value === 'workspacemember') return 'group'
   if (value === 'page') return 'description'
+  if (value === 'block') return 'view_agenda'
   if (value === 'worktask') return 'checklist'
   if (value === 'taskcomment') return 'mode_comment'
   if (value === 'taskassignee') return 'assignment_ind'
@@ -526,6 +741,100 @@ function cleanDescription(description: string, activity: ActivityLogResponse) {
   if (!value) return ''
 
   return value.replace(actor, '').trim() || value
+}
+
+function toggleExpanded(activityId: Guid) {
+  const next = new Set(expandedActivityIds.value)
+
+  if (next.has(activityId)) {
+    next.delete(activityId)
+  } else {
+    next.add(activityId)
+  }
+
+  expandedActivityIds.value = next
+}
+
+function isExpanded(activityId: Guid) {
+  return expandedActivityIds.value.has(activityId)
+}
+
+function metadataEntries(activity: ActivityLogResponse) {
+  const metadata = parseMetadata(activity.metadataJson)
+
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return []
+  }
+
+  return Object.entries(metadata)
+    .filter(([, value]) => value !== null && value !== undefined && value !== '')
+    .map(([key, value]) => ({
+      key,
+      label: metadataLabel(key),
+      value: metadataValue(value),
+    }))
+}
+
+function parseMetadata(metadataJson: string | null) {
+  if (!metadataJson?.trim()) return null
+
+  try {
+    return JSON.parse(metadataJson) as unknown
+  } catch {
+    return null
+  }
+}
+
+function metadataLabel(key: string) {
+  return key
+    .replace(/([A-Z])/g, ' $1')
+    .replace(/Id$/i, ' ID')
+    .replace(/^./, (value) => value.toUpperCase())
+}
+
+function metadataValue(value: unknown): string {
+  if (Array.isArray(value)) {
+    return value.length ? value.map(metadataValue).join(', ') : 'None'
+  }
+
+  if (value instanceof Date) {
+    return value.toLocaleString()
+  }
+
+  if (typeof value === 'object' && value !== null) {
+    return JSON.stringify(value)
+  }
+
+  if (typeof value === 'boolean') {
+    return value ? 'Yes' : 'No'
+  }
+
+  return String(value)
+}
+
+function resolveDateRange() {
+  if (datePreset.value === 'all') {
+    return {
+      fromUtc: null,
+      toUtc: null,
+    }
+  }
+
+  const now = new Date()
+  const from = new Date(now)
+
+  if (datePreset.value === '24h') {
+    from.setHours(now.getHours() - 24)
+  } else if (datePreset.value === '7d') {
+    from.setDate(now.getDate() - 7)
+  } else {
+    from.setDate(now.getDate() - 30)
+  }
+
+  return {
+    fromUtc: from.toISOString(),
+    toUtc: now.toISOString(),
+  }
 }
 
 function dayLabel(value: string) {
@@ -760,6 +1069,13 @@ function formatFullDate(value: string) {
   font-size: 13px;
 }
 
+.activity-log-filter-list button small {
+  margin-left: auto;
+  color: #737373;
+  font-size: 11px;
+  font-weight: 700;
+}
+
 .activity-log-filter-list button:hover,
 .activity-log-filter-list button.active {
   color: #f1f1f1;
@@ -793,7 +1109,7 @@ function formatFullDate(value: string) {
   backdrop-filter: blur(18px);
 }
 
-.activity-log-toolbar div {
+.activity-log-toolbar > div:first-child {
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -811,6 +1127,47 @@ function formatFullDate(value: string) {
   font-size: 12px;
 }
 
+.activity-log-controls {
+  min-width: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.activity-log-search {
+  width: min(280px, 34vw);
+  min-height: 32px;
+  border: 1px solid #303030;
+  border-radius: 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  color: #737373;
+  background: #202020;
+}
+
+.activity-log-search .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.activity-log-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: #d4d4d4;
+  background: transparent;
+  font-size: 13px;
+}
+
+.activity-log-search input::placeholder {
+  color: #666;
+}
+
 .activity-log-select {
   width: 170px;
   min-height: 32px;
@@ -821,6 +1178,10 @@ function formatFullDate(value: string) {
   color: #d4d4d4;
   background: #202020;
   font-size: 13px;
+}
+
+.activity-log-select.compact {
+  width: 132px;
 }
 
 .activity-log-select:focus {
@@ -952,6 +1313,57 @@ function formatFullDate(value: string) {
   color: #8a8a8a;
   font-size: 12px;
   line-height: 1.45;
+}
+
+.activity-log-detail-toggle {
+  min-height: 26px;
+  border: 0;
+  border-radius: 6px;
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  color: #a3a3a3;
+  background: #262626;
+  font-size: 11.5px;
+  font-weight: 680;
+}
+
+.activity-log-detail-toggle:hover {
+  color: #f1f1f1;
+  background: #303030;
+}
+
+.activity-log-detail-toggle .material-symbols-outlined {
+  font-size: 16px;
+}
+
+.activity-log-details {
+  margin: 9px 0 0;
+  border-top: 1px solid #2b2b2b;
+  padding-top: 9px;
+  display: grid;
+  grid-template-columns: minmax(92px, 0.34fr) minmax(0, 1fr);
+  gap: 7px 10px;
+}
+
+.activity-log-details dt,
+.activity-log-details dd {
+  margin: 0;
+  min-width: 0;
+  font-size: 11.5px;
+  line-height: 1.4;
+}
+
+.activity-log-details dt {
+  color: #737373;
+  font-weight: 700;
+}
+
+.activity-log-details dd {
+  overflow-wrap: anywhere;
+  color: #bdbdbd;
 }
 
 .activity-log-empty-state,
@@ -1151,6 +1563,14 @@ function formatFullDate(value: string) {
     padding-left: 18px;
     padding-right: 18px;
   }
+
+  .activity-log-controls {
+    justify-content: flex-start;
+  }
+
+  .activity-log-search {
+    width: 100%;
+  }
 }
 
 @media (max-width: 560px) {
@@ -1162,6 +1582,19 @@ function formatFullDate(value: string) {
 
   .activity-log-select {
     width: 100%;
+  }
+
+  .activity-log-controls {
+    width: 100%;
+  }
+
+  .activity-log-search {
+    width: 100%;
+  }
+
+  .activity-log-details {
+    grid-template-columns: 1fr;
+    gap: 3px;
   }
 }
 

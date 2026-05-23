@@ -13,5 +13,6 @@ public enum ActivityEntityType
     TaskAssignee = 6,
     User = 7,
     UserPreference = 8,
-    RealtimeSession = 9
+    RealtimeSession = 9,
+    Block = 10
 }

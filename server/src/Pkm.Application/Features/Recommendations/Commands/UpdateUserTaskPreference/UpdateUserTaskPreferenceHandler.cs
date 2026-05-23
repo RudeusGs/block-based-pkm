@@ -3,9 +3,11 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 using Pkm.Domain.Recommendations;
 
@@ -21,6 +23,7 @@ public sealed class UpdateUserTaskPreferenceHandler
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly IClock _clock;
     private readonly UpdateUserTaskPreferenceCommandValidator _validator;
+    private readonly IActivityLogService _activityLogService;
 
     public UpdateUserTaskPreferenceHandler(
         ICurrentUser currentUser,
@@ -30,7 +33,8 @@ public sealed class UpdateUserTaskPreferenceHandler
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         IClock clock,
-        UpdateUserTaskPreferenceCommandValidator validator)
+        UpdateUserTaskPreferenceCommandValidator validator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -40,6 +44,7 @@ public sealed class UpdateUserTaskPreferenceHandler
         _redisKeyFactory = redisKeyFactory;
         _clock = clock;
         _validator = validator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<UserTaskPreferenceDto>> HandleAsync(
@@ -103,6 +108,28 @@ public sealed class UpdateUserTaskPreferenceHandler
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             var dto = preference.ToDto();
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    request.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Update,
+                    ActivityEntityType.UserPreference,
+                    preference.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật cấu hình gợi ý task.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        preferenceId = preference.Id,
+                        workDayStartHour = request.WorkDayStartHour,
+                        workDayEndHour = request.WorkDayEndHour,
+                        preferredDaysOfWeek = request.PreferredDaysOfWeek,
+                        maxRecommendationsPerSession = request.MaxRecommendationsPerSession,
+                        minPriorityForRecommendation = request.MinPriorityForRecommendation.ToString(),
+                        recommendationSensitivity = request.RecommendationSensitivity,
+                        recommendationIntervalMinutes = request.RecommendationIntervalMinutes,
+                        enableAutoRecommendation = request.EnableAutoRecommendation
+                    })),
+                cancellationToken);
 
             await _redisCache.SetAsync(
                 RecommendationCacheKeys.Preference(_redisKeyFactory, request.WorkspaceId, currentUserId),

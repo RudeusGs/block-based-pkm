@@ -22,7 +22,7 @@ internal sealed class WorkspaceInvitationLinkFactory : IWorkspaceInvitationLinkF
             : _options.PublicBaseUrl.TrimEnd('/');
 
         var path = string.IsNullOrWhiteSpace(_options.WorkspaceInvitationAcceptPath)
-            ? "/api/v1/workspace-invitations/accept"
+            ? "/success"
             : _options.WorkspaceInvitationAcceptPath;
 
         if (!path.StartsWith('/'))

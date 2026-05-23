@@ -6,6 +6,7 @@ using Pkm.Application.Abstractions.Time;
 using System.Text.Json;
 using Pkm.Application.Common.Authorization;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Files.Services;
 using Pkm.Application.Features.Messaging.Models;
 using Pkm.Application.Features.Notifications;
@@ -13,6 +14,7 @@ using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Common;
 using Pkm.Domain.Messaging;
 using Pkm.Domain.Workspaces;
@@ -42,6 +44,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
     private readonly INotificationService _notificationService;
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IActivityLogService _activityLogService;
 
     public MessagingApplicationService(
         ICurrentUser currentUser,
@@ -57,7 +60,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         ISocialRealtimePublisher realtimePublisher,
         INotificationService notificationService,
         IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IRedisKeyFactory redisKeyFactory,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _userRepository = userRepository;
@@ -73,6 +77,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         _notificationService = notificationService;
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<ConversationDto>> CreateOrGetDirectConversationAsync(Guid recipientUserId, CancellationToken cancellationToken = default)
@@ -221,6 +226,14 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         if (!access.CanManageMembers)
             return Result.Failure<MessageDto>(WorkspaceErrors.WorkspaceManageMembersForbidden);
 
+        var recipientAlreadyMember = await _workspaceMemberRepository.ExistsAsync(
+            workspaceId,
+            recipientId,
+            cancellationToken);
+
+        if (recipientAlreadyMember)
+            return Result.Failure<MessageDto>(WorkspaceErrors.WorkspaceMemberAlreadyExists);
+
         var workspace = await _workspaceRepository.GetDetailAsync(workspaceId, cancellationToken);
         if (workspace is null)
             return Result.Failure<MessageDto>(WorkspaceErrors.WorkspaceNotFound);
@@ -344,6 +357,22 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
             await InvalidateWorkspaceMembershipCachesAsync(
                 payload.WorkspaceId,
                 currentUserId,
+                cancellationToken);
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    payload.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.WorkspaceMember,
+                    currentUserId,
+                    $"{_currentUser.UserName ?? "Có người"} đã tham gia workspace qua Messenger share.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        messageId,
+                        sharedByUserId = message.SenderUserId,
+                        role = grantedRole.ToString()
+                    })),
                 cancellationToken);
         }
 
@@ -525,6 +554,4 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
     private static int NormalizeSize(int pageSize) => pageSize <= 0 ? 30 : Math.Min(pageSize, 100);
     private static int CalculateTotalPages(int total, int size) => total <= 0 ? 0 : (int)Math.Ceiling(total / (double)size);
 }
-
-
 

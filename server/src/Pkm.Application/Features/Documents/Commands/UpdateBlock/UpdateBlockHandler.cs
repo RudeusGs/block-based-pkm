@@ -4,9 +4,11 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
+using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.Common;
 using Pkm.Domain.Pages;
@@ -26,6 +28,7 @@ public sealed class UpdateBlockHandler
     private readonly IClock _clock;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
     private readonly IBlockPayloadValidator _blockPayloadValidator;
+    private readonly IActivityLogService _activityLogService;
 
     public UpdateBlockHandler(
         ICurrentUser currentUser,
@@ -38,7 +41,8 @@ public sealed class UpdateBlockHandler
         IUnitOfWork unitOfWork,
         IClock clock,
         IDocumentRealtimePublisher realtimePublisher,
-        IBlockPayloadValidator blockPayloadValidator)
+        IBlockPayloadValidator blockPayloadValidator,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _blockRepository = blockRepository;
@@ -51,6 +55,7 @@ public sealed class UpdateBlockHandler
         _clock = clock;
         _realtimePublisher = realtimePublisher;
         _blockPayloadValidator = blockPayloadValidator;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -176,6 +181,27 @@ public sealed class UpdateBlockHandler
                 appliedRevision,
                 block.ToDto());
 
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    page.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Update,
+                    ActivityEntityType.Block,
+                    block.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật block {block.Type.Value}.",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        pageId = page.Id,
+                        blockId = block.Id,
+                        operationType = operationType.ToString(),
+                        oldType,
+                        newType = block.Type.Value,
+                        oldTextPreview = Preview(oldText),
+                        newTextPreview = Preview(block.TextContent),
+                        revision = appliedRevision
+                    })),
+                cancellationToken);
+
             await _realtimePublisher.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(
                     EventName: "BlockUpdated",
@@ -195,7 +221,19 @@ public sealed class UpdateBlockHandler
             return Result.Failure<BlockMutationDto>(new Error(
                 "Document.UpdateBlockFailed",
                 ex.Message,
-                ResultStatus.Unprocessable));
+            ResultStatus.Unprocessable));
         }
+    }
+
+    private static string? Preview(string? value)
+    {
+        var normalized = value?.Trim();
+
+        if (string.IsNullOrWhiteSpace(normalized))
+            return null;
+
+        return normalized.Length <= 160
+            ? normalized
+            : $"{normalized[..160]}...";
     }
 }

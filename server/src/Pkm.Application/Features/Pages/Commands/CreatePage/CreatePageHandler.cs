@@ -8,8 +8,10 @@ using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Common;
 using Pkm.Domain.Pages;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
+using Pkm.Domain.Audit;
 namespace Pkm.Application.Features.Pages.Commands.CreatePage;
 
 public sealed class CreatePageHandler
@@ -21,6 +23,7 @@ public sealed class CreatePageHandler
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
     public CreatePageHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
@@ -28,7 +31,8 @@ public sealed class CreatePageHandler
         IPageRepository pageRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -37,6 +41,7 @@ public sealed class CreatePageHandler
         _unitOfWork = unitOfWork;
         _clock = clock;
         _notificationService = notificationService;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<PageDto>> HandleAsync(
@@ -102,6 +107,24 @@ public sealed class CreatePageHandler
 
             _pageRepository.Add(page);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+            await _activityLogService.RecordAsync(
+                new ActivityLogRequest(
+                    page.WorkspaceId,
+                    currentUserId,
+                    ActivityAction.Create,
+                    ActivityEntityType.Page,
+                    page.Id,
+                    $"{_currentUser.UserName ?? "Có người"} đã tạo page \"{page.Title}\".",
+                    ActivityLogMetadata.Serialize(new
+                    {
+                        pageId = page.Id,
+                        title = page.Title,
+                        parentPageId = page.ParentPageId,
+                        icon = page.Icon
+                    })),
+                cancellationToken);
+
             await _notificationService.NotifyWorkspaceAsync(
                 page.WorkspaceId,
                 NotificationTemplates.PageCreated(

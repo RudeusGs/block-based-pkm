@@ -3,9 +3,11 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Workspaces.Policies;
+using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 
@@ -19,6 +21,8 @@ public sealed class RemoveWorkspaceMemberHandler
     private readonly IRedisCache _redisCache;
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly INotificationService _notificationService;
+    private readonly IUserRepository _userRepository;
+    private readonly IActivityLogService _activityLogService;
     public RemoveWorkspaceMemberHandler(
         ICurrentUser currentUser,
         IWorkspaceMemberRepository workspaceMemberRepository,
@@ -27,7 +31,9 @@ public sealed class RemoveWorkspaceMemberHandler
         IClock clock,
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IUserRepository userRepository,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -37,6 +43,8 @@ public sealed class RemoveWorkspaceMemberHandler
         _redisCache = redisCache;
         _redisKeyFactory = redisKeyFactory;
         _notificationService = notificationService;
+        _userRepository = userRepository;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result> HandleAsync(
@@ -93,6 +101,11 @@ public sealed class RemoveWorkspaceMemberHandler
             return Result.Failure(WorkspaceErrors.CannotModifyOwnerMembership);
         }
 
+        var removedRole = member.Role;
+        var targetUser = await _userRepository.GetByIdAsync(
+            request.UserId,
+            cancellationToken);
+
         member.SoftDelete(_clock.UtcNow);
         _workspaceMemberRepository.Update(member);
 
@@ -112,6 +125,22 @@ public sealed class RemoveWorkspaceMemberHandler
                 currentUserId,
                 _currentUser.UserName ?? "Có người",
                 request.WorkspaceId),
+            cancellationToken);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                request.WorkspaceId,
+                currentUserId,
+                ActivityAction.Delete,
+                ActivityEntityType.WorkspaceMember,
+                request.UserId,
+                $"{_currentUser.UserName ?? "Có người"} đã xóa {targetUser?.FullName ?? "một thành viên"} khỏi workspace.",
+                ActivityLogMetadata.Serialize(new
+                {
+                    targetUserId = request.UserId,
+                    targetEmail = targetUser?.Email,
+                    role = removedRole.ToString()
+                })),
             cancellationToken);
 
         var targetVersionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, request.UserId);

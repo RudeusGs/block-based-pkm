@@ -3,11 +3,13 @@ using Pkm.Application.Abstractions.Caching;
 using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Workspaces;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
+using Pkm.Domain.Audit;
 namespace Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 
 public sealed class ChangeWorkspaceMemberRoleHandler
@@ -21,6 +23,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
     private readonly IRedisKeyFactory _redisKeyFactory;
     private readonly INotificationService _notificationService;
     private readonly IUserRepository _userRepository;
+    private readonly IActivityLogService _activityLogService;
     public ChangeWorkspaceMemberRoleHandler(
         ICurrentUser currentUser,
         IWorkspaceMemberRepository workspaceMemberRepository,
@@ -30,7 +33,8 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         IRedisCache redisCache,
         IRedisKeyFactory redisKeyFactory,
         INotificationService notificationService,
-        IUserRepository userRepository)
+        IUserRepository userRepository,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceMemberRepository = workspaceMemberRepository;
@@ -41,6 +45,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
         _redisKeyFactory = redisKeyFactory;
         _notificationService = notificationService;
         _userRepository = userRepository;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkspaceMemberDto>> HandleAsync(
@@ -108,6 +113,7 @@ public sealed class ChangeWorkspaceMemberRoleHandler
             return Result.Failure<WorkspaceMemberDto>(WorkspaceErrors.CannotModifyOwnerMembership);
         }
 
+        var oldRole = member.Role;
         member.ChangeRole(request.Role, _clock.UtcNow);
         _workspaceMemberRepository.Update(member);
 
@@ -141,6 +147,23 @@ public sealed class ChangeWorkspaceMemberRoleHandler
                 _currentUser.UserName ?? "Có người",
                 request.WorkspaceId,
                 request.Role),
+            cancellationToken);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                request.WorkspaceId,
+                currentUserId,
+                ActivityAction.ChangePermissions,
+                ActivityEntityType.WorkspaceMember,
+                request.UserId,
+                $"{_currentUser.UserName ?? "Có người"} đã đổi vai trò của {targetUser.FullName} từ {oldRole} sang {request.Role}.",
+                ActivityLogMetadata.Serialize(new
+                {
+                    targetUserId = request.UserId,
+                    targetEmail = targetUser.Email,
+                    oldRole = oldRole.ToString(),
+                    newRole = request.Role.ToString()
+                })),
             cancellationToken);
 
         return Result.Success(member.ToDto(targetUser, currentUserId));

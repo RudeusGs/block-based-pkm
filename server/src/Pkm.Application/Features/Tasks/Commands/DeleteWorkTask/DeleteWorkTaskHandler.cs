@@ -3,9 +3,11 @@ using Pkm.Application.Abstractions.Persistence;
 using Pkm.Application.Abstractions.Realtime;
 using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Policies;
+using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
 
@@ -19,6 +21,7 @@ public sealed class DeleteWorkTaskHandler
     private readonly IClock _clock;
     private readonly DeleteWorkTaskCommandValidator _validator;
     private readonly INotificationService _notificationService;
+    private readonly IActivityLogService _activityLogService;
 
     public DeleteWorkTaskHandler(
         ICurrentUser currentUser,
@@ -28,7 +31,8 @@ public sealed class DeleteWorkTaskHandler
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
         DeleteWorkTaskCommandValidator validator,
-        INotificationService notificationService)
+        INotificationService notificationService,
+        IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workTaskRepository = workTaskRepository;
@@ -38,6 +42,7 @@ public sealed class DeleteWorkTaskHandler
         _clock = clock;
         _validator = validator;
         _notificationService = notificationService;
+        _activityLogService = activityLogService;
     }
 
     public async Task<Result> HandleAsync(
@@ -89,6 +94,23 @@ public sealed class DeleteWorkTaskHandler
         _workTaskRepository.Update(task);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        await _activityLogService.RecordAsync(
+            new ActivityLogRequest(
+                task.WorkspaceId,
+                currentUserId,
+                ActivityAction.Delete,
+                ActivityEntityType.WorkTask,
+                task.Id,
+                $"{_currentUser.UserName ?? "Có người"} đã xóa task \"{task.Title}\".",
+                ActivityLogMetadata.Serialize(new
+                {
+                    taskId = task.Id,
+                    title = task.Title,
+                    pageId = task.PageId,
+                    assigneeUserIds = assigneeIds
+                })),
+            cancellationToken);
 
         await _taskRealtimePublisher.PublishToPageAsync(
             new TaskRealtimeEnvelope(
