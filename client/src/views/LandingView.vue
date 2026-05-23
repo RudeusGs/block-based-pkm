@@ -5,7 +5,7 @@
       <div class="container-xl px-4">
         <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="#" @click.prevent="scrollToTop">
           <span class="material-symbols-outlined text-primary-accent">architecture</span>
-          Block-based
+          Block Based
         </a>
         <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#mainNav">
           <span class="material-symbols-outlined text-muted">menu</span>
@@ -13,10 +13,13 @@
         <div class="collapse navbar-collapse" id="mainNav">
           <ul class="navbar-nav mx-auto gap-4">
             <li class="nav-item">
-              <a class="nav-link nav-active" href="#features" @click.prevent="scrollToSection('features')">Features</a>
+              <a class="nav-link" href="#demo" @click.prevent="scrollToSection('demo')">Demo</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" href="#how-it-works" @click.prevent="scrollToSection('how-it-works')">How It Works</a>
+              <a class="nav-link nav-active" href="#features" @click.prevent="scrollToSection('features')">Tính năng</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="#how-it-works" @click.prevent="scrollToSection('how-it-works')">Cách hoạt động</a>
             </li>
 
           </ul>
@@ -28,7 +31,7 @@
               :aria-busy="isNavigating"
               @click="goToAuthEntry"
             >
-              Get Started
+              Bắt đầu
             </button>
           </div>
         </div>
@@ -41,13 +44,13 @@
         <div class="container-xl px-4 text-center">
           <div class="badge-pill d-inline-flex align-items-center gap-2 px-3 py-2 mb-4 rounded-pill">
             <span class="pulse-dot"></span>
-            <span class="text-muted small text-uppercase fw-medium" style="letter-spacing: 0.05em; font-size: 0.6875rem;">Version 2.0 is now live</span>
+            <span class="text-muted small text-uppercase fw-medium" style="letter-spacing: 0.05em; font-size: 0.6875rem;">Bản demo đồ án đã sẵn sàng</span>
           </div>
           <h1 class="hero-title fw-black mb-4">
-            Architect your <br />focused workspace.
+            Quản lý tri thức <br />và cộng tác realtime.
           </h1>
           <p class="text-muted fs-5 mb-5 mx-auto" style="max-width: 600px; line-height: 1.7;">
-            A precision-engineered productivity environment designed for high-performance teams. Replace disconnected tools with a single, elegant source of truth.
+            Một không gian làm việc lấy cảm hứng từ Notion: ghi chú theo block, quản lý task, cộng tác realtime, kết bạn, nhắn tin và AI Prioritizer trong cùng một hệ thống.
           </p>
           <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
             <button
@@ -57,15 +60,29 @@
               :aria-busy="isNavigating"
               @click="goToAuthEntry"
             >
-              Get Started for free
+              Vào ứng dụng
             </button>
             <button
               class="btn btn-ghost px-5 py-3 rounded-3 fw-semibold"
               type="button"
               @click="scrollToSection('demo')"
             >
-              Try Demo
+              Xem demo
             </button>
+          </div>
+          <div class="hero-stats d-flex flex-wrap justify-content-center gap-3 mt-5">
+            <div class="hero-stat rounded-4 px-4 py-3">
+              <strong>Realtime</strong>
+              <span>SignalR + Redis</span>
+            </div>
+            <div class="hero-stat rounded-4 px-4 py-3">
+              <strong>AI</strong>
+              <span>Task prioritizer</span>
+            </div>
+            <div class="hero-stat rounded-4 px-4 py-3">
+              <strong>Social</strong>
+              <span>Friend + Messenger</span>
+            </div>
           </div>
         </div>
       </section>
@@ -82,7 +99,7 @@
               </div>
               <div class="demo-url mx-auto d-flex align-items-center gap-2 px-3 py-1 rounded-2">
                 <span class="material-symbols-outlined" style="font-size:14px;">lock</span>
-                <span class="text-muted" style="font-size: 12px;">block-based.io/workspace/q3-roadmap</span>
+                <span class="text-muted" style="font-size: 12px;">block-paged.app/workspace/do-an-tot-nghiep</span>
               </div>
             </div>
             <div class="row g-0" style="height: 540px;">
@@ -94,39 +111,39 @@
                   <div class="d-flex align-items-center justify-content-between p-2 rounded-3" style="background: rgba(255,255,255,0.05); cursor: pointer;">
                     <div class="d-flex align-items-center gap-2 text-muted">
                       <span class="material-symbols-outlined text-primary-accent fs-6">folder_open</span>
-                      <span class="small fw-medium text-white">Projects</span>
+                      <span class="small fw-medium text-white">Đồ án tốt nghiệp</span>
                     </div>
                     <span class="material-symbols-outlined fs-6 text-muted">expand_more</span>
                   </div>
                   <div class="d-flex flex-column gap-1 ms-3 ps-2 border-start border-secondary mb-2 mt-1">
                     <div class="d-flex align-items-center gap-2 p-1 px-2 rounded-2" style="background: rgba(255,255,255,0.08); cursor: pointer;">
                       <span class="material-symbols-outlined fs-6 text-primary-accent text-opacity-75" style="font-size: 14px !important;">description</span>
-                      <span class="small fw-medium text-white">Q3 Roadmap</span>
+                      <span class="small fw-medium text-white">Kế hoạch báo cáo</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 p-1 px-2 rounded-2 text-muted" style="cursor: pointer;">
                       <span class="material-symbols-outlined fs-6 text-muted" style="font-size: 14px !important;">description</span>
-                      <span class="small">Product Spec</span>
+                      <span class="small">Tài liệu hệ thống</span>
                     </div>
                     <div class="d-flex align-items-center gap-2 p-1 px-2 rounded-2 text-muted" style="cursor: pointer;">
                       <span class="material-symbols-outlined fs-6 text-muted" style="font-size: 14px !important;">analytics</span>
-                      <span class="small">User Research</span>
+                      <span class="small">Activity log</span>
                     </div>
                   </div>
                   <div class="d-flex align-items-center gap-2 p-2 rounded-3 text-muted mt-2" style="cursor: pointer;">
                     <span class="material-symbols-outlined fs-6">folder</span>
-                    <span class="small fw-medium">Meeting Notes</span>
+                    <span class="small fw-medium">Ghi chú họp</span>
                   </div>
                   <div class="d-flex align-items-center gap-2 p-2 rounded-3 text-muted" style="cursor: pointer;">
                     <span class="material-symbols-outlined fs-6">folder</span>
-                    <span class="small fw-medium">Daily Journal</span>
+                    <span class="small fw-medium">Nhật ký học tập</span>
                   </div>
                 </div>
               </div>
               <div class="col-12 col-md-9 p-5">
                 <div class="d-flex justify-content-between align-items-end mb-5">
                   <div>
-                    <h3 class="fw-bold mb-1" style="font-size: 1.75rem; letter-spacing: -0.03em;">Q3 Growth Roadmap</h3>
-                    <p class="text-muted small mb-0">Last edited by Alex 5m ago</p>
+                    <h3 class="fw-bold mb-1" style="font-size: 1.75rem; letter-spacing: -0.03em;">Block Paged Workspace</h3>
+                    <p class="text-muted small mb-0">Đang cộng tác realtime với thành viên</p>
                   </div>
                   <div class="d-flex" style="margin-right: -8px;">
                     <div class="avatar-circle bg-gray-700"></div>
@@ -139,28 +156,28 @@
                     <div class="feature-card p-4 rounded-4 h-100">
                       <div class="d-flex align-items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-primary-accent" style="font-size: 16px;">task_alt</span>
-                        <span class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.1em;">Active Tasks</span>
+                        <span class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.1em;">Task hôm nay</span>
                       </div>
                       <div class="d-flex flex-column gap-2">
                         <div class="d-flex align-items-start gap-3 p-2 rounded-3" style="background: rgba(255,255,255,0.03);">
                           <input type="checkbox" checked class="form-check-input mt-1 shadow-none" style="background-color: #ffffff; border-color: #ffffff;">
                           <div>
-                            <div class="text-muted small fw-medium text-decoration-line-through">Finalize Q3 KPI targets</div>
-                            <div class="text-muted" style="font-size: 10px;">Assigned to Alex</div>
+                            <div class="text-muted small fw-medium text-decoration-line-through">Hoàn thiện README và báo cáo</div>
+                            <div class="text-muted" style="font-size: 10px;">Đã xong</div>
                           </div>
                         </div>
                         <div class="d-flex align-items-start gap-3 p-2 rounded-3 border-start border-2 border-white" style="background: rgba(255,255,255,0.05);">
                           <input type="checkbox" class="form-check-input mt-1 shadow-none" style="background-color: transparent; border-color: #404040;">
                           <div>
-                            <div class="text-white small fw-medium">Draft go-to-market strategy</div>
-                            <div class="text-primary-accent" style="font-size: 10px;">Due Tomorrow</div>
+                            <div class="text-white small fw-medium">Demo realtime + messenger</div>
+                            <div class="text-primary-accent" style="font-size: 10px;">Hạn chót: ngày mai</div>
                           </div>
                         </div>
                         <div class="d-flex align-items-start gap-3 p-2 rounded-3" style="background: transparent; border: 1px solid rgba(255,255,255,0.05);">
                           <input type="checkbox" class="form-check-input mt-1 shadow-none" style="background-color: transparent; border-color: #404040;">
                           <div>
-                            <div class="text-muted small fw-medium">Review customer feedback</div>
-                            <div class="text-muted" style="font-size: 10px;">Blocked by Design team</div>
+                            <div class="text-muted small fw-medium">Kiểm tra Redis trước khi demo</div>
+                            <div class="text-muted" style="font-size: 10px;">Ưu tiên cao</div>
                           </div>
                         </div>
                       </div>
@@ -170,7 +187,7 @@
                     <div class="feature-card p-4 rounded-4 h-100">
                       <div class="d-flex align-items-center gap-2 mb-3">
                         <span class="material-symbols-outlined text-muted" style="font-size: 16px;">analytics</span>
-                        <span class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.1em;">Velocity</span>
+                        <span class="text-muted text-uppercase fw-bold" style="font-size: 10px; letter-spacing: 0.1em;">AI Prioritizer</span>
                       </div>
                       <div class="velocity-chart rounded-3 d-flex align-items-end p-3 gap-2 pb-4">
                         <div class="bar-item position-relative" style="height: 40%;"><span class="position-absolute bottom-0 start-50 translate-middle-x text-muted" style="font-size: 9px; margin-bottom: -18px;">W1</span></div>
@@ -188,19 +205,19 @@
                      <div class="px-3">
                         <div class="d-flex align-items-center gap-2 mb-2 text-muted">
                            <span class="material-symbols-outlined" style="font-size: 14px; opacity: 0.5;">drag_indicator</span>
-                           <h4 class="text-white fs-5 fw-semibold mb-0" style="letter-spacing: -0.02em;">Project Overview</h4>
+                           <h4 class="text-white fs-5 fw-semibold mb-0" style="letter-spacing: -0.02em;">Tổng quan dự án</h4>
                         </div>
                         <div class="d-flex align-items-start gap-2 mb-2 text-muted ms-4">
-                           <p class="mb-0" style="font-size: 14px; line-height: 1.6;">The Q3 roadmap focuses entirely on <span class="text-primary-accent bg-dark px-2 py-1 rounded-2" style="font-size: 12px; border: 1px solid #262626;">user adoption</span> and reducing onboarding friction. Everything else is secondary priority.</p>
+                           <p class="mb-0" style="font-size: 14px; line-height: 1.6;">Workspace này quản lý <span class="text-primary-accent bg-dark px-2 py-1 rounded-2" style="font-size: 12px; border: 1px solid #262626;">page, task, member, social</span> và cộng tác realtime bằng SignalR + Redis.</p>
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-4 text-muted">
                            <span class="material-symbols-outlined" style="font-size: 14px; opacity: 0.5;">drag_indicator</span>
                            <span class="material-symbols-outlined text-primary-accent" style="font-size: 16px;">format_quote</span>
-                           <p class="fst-italic border-start border-2 ps-3 mb-0 text-white-50" style="font-size: 14px; border-color: #404040 !important;">"Simplicity is the ultimate sophistication." - We need to push for at least 30% conversion rate before Halloween.</p>
+                           <p class="fst-italic border-start border-2 ps-3 mb-0 text-white-50" style="font-size: 14px; border-color: #404040 !important;">AI Prioritizer tự gộp các task gần giống nhau như ‘học bài’ và ‘học bài 1’, rồi chỉ gợi ý việc thật sự nên làm.</p>
                         </div>
                         <div class="d-flex align-items-center gap-2 mt-4 text-muted ms-4">
                            <span class="material-symbols-outlined text-primary-accent" style="font-size: 14px;">add</span>
-                           <span class="text-muted" style="font-size: 14px;">Type '/' for commands</span>
+                           <span class="text-muted" style="font-size: 14px;">Tạo page, task, bình luận và theo dõi activity trong một workspace</span>
                         </div>
                      </div>
                   </div>
@@ -213,48 +230,48 @@
 
       <section id="features" class="container-xl px-4 mb-5 pb-5">
         <div class="mb-5">
-          <h2 class="fw-bold mb-2" style="font-size: 2.25rem; letter-spacing: -0.04em;">Built for the modern builder.</h2>
-          <p class="text-muted">Everything you need, nothing you don't. Pure productivity.</p>
+          <h2 class="fw-bold mb-2" style="font-size: 2.25rem; letter-spacing: -0.04em;">Đủ module để demo như một sản phẩm thật.</h2>
+          <p class="text-muted">Tập trung vào trải nghiệm sạch, rõ quyền, realtime ổn định và nghiệp vụ có chiều sâu.</p>
         </div>
         <div class="row g-4">
           <div class="col-12 col-md-8">
             <div class="bento-card p-5 rounded-4 d-flex flex-column justify-content-between" style="min-height: 380px;">
               <div>
                 <span class="material-symbols-outlined text-white mb-3 fs-3">hub</span>
-                <h4 class="fw-bold fs-4 mb-3 text-white">Real-time Collaboration</h4>
-                <p class="text-muted" style="max-width: 420px;">Edit together in real-time with zero latency. See who's working on what and sync instantly across all devices.</p>
+                <h4 class="fw-bold fs-4 mb-3 text-white">Cộng tác realtime</h4>
+                <p class="text-muted" style="max-width: 420px;">Nhiều user có thể cùng mở workspace/page, thấy trạng thái online, typing, notification và đồng bộ thay đổi nhanh qua SignalR.</p>
               </div>
               <div class="collab-bar d-flex align-items-center gap-3 rounded-3 p-3 mt-4">
-                <span class="collab-chip">Alex joined the chat</span>
-                <span class="collab-chip typing">Typing...</span>
+                <span class="collab-chip">Bạn bè vừa online</span>
+                <span class="collab-chip typing">Đang nhập...</span>
               </div>
             </div>
           </div>
           <div class="col-12 col-md-4">
             <div class="bento-card p-5 rounded-4" style="min-height: 380px;">
               <span class="material-symbols-outlined text-white mb-3 fs-3">bolt</span>
-              <h4 class="fw-bold fs-4 mb-3 text-white">Lightning Sync</h4>
-              <p class="text-muted">Offline-first architecture ensures you never lose a single keystroke, even in a tunnel.</p>
+              <h4 class="fw-bold fs-4 mb-3 text-white">AI Prioritizer</h4>
+              <p class="text-muted">Gợi ý task dựa trên deadline, priority, trạng thái và semantic dedupe để tránh spam các công việc trùng ý nghĩa.</p>
             </div>
           </div>
           <div class="col-12 col-md-4">
             <div class="bento-card p-5 rounded-4" style="min-height: 280px;">
               <span class="material-symbols-outlined text-white mb-3 fs-3">grid_view</span>
-              <h4 class="fw-bold fs-4 mb-3 text-white">Custom Views</h4>
-              <p class="text-muted">Switch between Kanban, List, Calendar, and Gallery views with a single command.</p>
+              <h4 class="fw-bold fs-4 mb-3 text-white">Workspace & Page</h4>
+              <p class="text-muted">Tổ chức tri thức bằng workspace, page tree, favorite, recent, duplicate và trash/restore giống workflow Notion.</p>
             </div>
           </div>
           <div class="col-12 col-md-8">
             <div class="bento-card p-5 rounded-4 d-flex justify-content-between align-items-start" style="min-height: 280px;">
               <div style="max-width: 280px;">
                 <span class="material-symbols-outlined text-white mb-3 fs-3">terminal</span>
-                <h4 class="fw-bold fs-4 mb-3 text-white">Command Center</h4>
-                <p class="text-muted">The Command+K palette allows you to navigate and execute actions in milliseconds.</p>
+                <h4 class="fw-bold fs-4 mb-3 text-white">Social & Messenger</h4>
+                <p class="text-muted">Kết bạn, xem profile, nhắn tin realtime, gửi ảnh và chia sẻ workspace cho bạn bè ngay trong hệ thống.</p>
               </div>
               <div class="command-panel p-3 rounded-3 d-none d-sm-block">
                 <div class="d-flex flex-column gap-2">
-                  <div class="px-2 py-1 rounded-2 text-white fw-bold text-uppercase" style="font-size: 10px; letter-spacing: 0.1em; background: rgba(255,255,255,0.1);">Active Search</div>
-                  <div class="text-muted font-monospace" style="font-size: 13px;">&gt; Create new doc</div>
+                  <div class="px-2 py-1 rounded-2 text-white fw-bold text-uppercase" style="font-size: 10px; letter-spacing: 0.1em; background: rgba(255,255,255,0.1);">Workspace share</div>
+                  <div class="text-muted font-monospace" style="font-size: 13px;">&gt; Gửi workspace cho bạn bè</div>
                 </div>
               </div>
             </div>
@@ -265,8 +282,8 @@
       <section id="how-it-works" class="how-section py-5 mb-5">
         <div class="container-xl px-4">
           <div class="text-center mb-5 pb-3">
-            <h2 class="fw-bold mb-2 text-white" style="font-size: 2.25rem; letter-spacing: -0.04em;">Three steps to flow.</h2>
-            <p class="text-muted">Designed to get out of your way so you can do the work.</p>
+            <h2 class="fw-bold mb-2 text-white" style="font-size: 2.25rem; letter-spacing: -0.04em;">Ba bước để bắt đầu làm việc.</h2>
+            <p class="text-muted">Từ tạo workspace đến cộng tác và chốt task, mọi thứ nằm trong một luồng liền mạch.</p>
           </div>
           <div class="row g-5 position-relative">
             <div class="how-line d-none d-md-block"></div>
@@ -274,22 +291,22 @@
               <div class="step-badge mx-auto mb-4">
                 <span class="fw-bold text-white fs-5">01</span>
               </div>
-              <h4 class="fw-bold mb-3 text-white">Ingest</h4>
-              <p class="text-muted small">Quick capture ideas, tasks, and files from any source without switching tabs.</p>
+              <h4 class="fw-bold mb-3 text-white">Tạo không gian</h4>
+              <p class="text-muted small">Tạo workspace, page, task và mời thành viên theo vai trò Owner / Manager / Member / Viewer.</p>
             </div>
             <div class="col-12 col-md-4 text-center position-relative z-1">
               <div class="step-badge mx-auto mb-4">
                 <span class="fw-bold text-white fs-5">02</span>
               </div>
-              <h4 class="fw-bold mb-3 text-white">Architect</h4>
-              <p class="text-muted small">Organize with intelligent tagging and automated relational databases.</p>
+              <h4 class="fw-bold mb-3 text-white">Cộng tác</h4>
+              <p class="text-muted small">Chỉnh sửa nội dung, bình luận task, theo dõi activity log, nhận notification và nhắn tin realtime.</p>
             </div>
             <div class="col-12 col-md-4 text-center position-relative z-1">
               <div class="step-badge mx-auto mb-4">
                 <span class="fw-bold text-white fs-5">03</span>
               </div>
-              <h4 class="fw-bold mb-3 text-white">Execute</h4>
-              <p class="text-muted small">Focus with distraction-free modes and prioritized action lists.</p>
+              <h4 class="fw-bold mb-3 text-white">Ưu tiên</h4>
+              <p class="text-muted small">Dùng AI Prioritizer để lọc task quan trọng, tránh trùng lặp và tập trung vào việc nên làm trước.</p>
             </div>
           </div>
         </div>
@@ -301,37 +318,37 @@
             <div class="testimonial-card p-5 rounded-4 position-relative">
               <span class="material-symbols-outlined quote-icon">format_quote</span>
               <p class="fs-5 fw-medium fst-italic mb-4 lh-lg text-white-50">
-                "The first tool that actually keeps up with my brain. It's like having a digital nervous system for our engineering team."
+                "Một đồ án full-stack gom đủ các phần khó: auth, phân quyền, realtime, Redis, task, social, messenger và AI gợi ý task."
               </p>
               <div class="d-flex align-items-center gap-3">
                 <div class="avatar-initial text-white fw-bold">MK</div>
                 <div>
-                  <h6 class="fw-bold mb-0 text-white">Marcus Keeling</h6>
-                  <p class="text-muted mb-0 text-uppercase" style="font-size: 10px; letter-spacing: 0.1em;">CTO @ NexTech</p>
+                  <h6 class="fw-bold mb-0 text-white">Full-stack Module</h6>
+                  <p class="text-muted mb-0 text-uppercase" style="font-size: 10px; letter-spacing: 0.1em;">Vue 3 + ASP.NET Core + PostgreSQL</p>
                 </div>
               </div>
             </div>
             <div class="testimonial-card p-5 rounded-4 position-relative">
               <span class="material-symbols-outlined quote-icon">format_quote</span>
               <p class="fs-5 fw-medium fst-italic mb-4 lh-lg text-white-50">
-                "Block Paged turned our chaotic Notion workspace into a precision instrument. The UI is honestly breathtaking."
+                "Điểm mạnh của hệ thống là không chỉ ghi chú, mà còn có workflow cộng tác và mạng xã hội nội bộ để demo thực tế."
               </p>
               <div class="d-flex align-items-center gap-3">
                 <div class="avatar-initial text-white fw-bold">SL</div>
                 <div>
-                  <h6 class="fw-bold mb-0 text-white">Sarah Lavoie</h6>
-                  <p class="text-muted mb-0 text-uppercase" style="font-size: 10px; letter-spacing: 0.1em;">Design Lead @ Studio Aura</p>
+                  <h6 class="fw-bold mb-0 text-white">Realtime Workflow</h6>
+                  <p class="text-muted mb-0 text-uppercase" style="font-size: 10px; letter-spacing: 0.1em;">SignalR + Redis + Notification</p>
                 </div>
               </div>
             </div>
           </div>
           <div class="col-12 col-md-6 ps-md-5">
-            <h2 class="fw-black mb-4 text-white" style="font-size: 3rem; letter-spacing: -0.04em; line-height: 1.1;">Used by teams who build the future.</h2>
-            <p class="text-muted fs-5 mb-4 lh-lg">Join 20,000+ designers, developers, and founders who have moved their entire cognitive workflow to Block Paged.</p>
+            <h2 class="fw-black mb-4 text-white" style="font-size: 3rem; letter-spacing: -0.04em; line-height: 1.1;">Xây dựng để demo như một sản phẩm hoàn chỉnh.</h2>
+            <p class="text-muted fs-5 mb-4 lh-lg">Block Paged được thiết kế như một hệ thống quản lý tri thức và cộng tác dành cho nhóm nhỏ, sinh viên, lập trình viên và các dự án cần quản lý nội dung lẫn công việc.</p>
             <div class="d-flex gap-4 opacity-50">
-              <span class="fw-black fs-4 text-white" style="letter-spacing: -0.05em;">LINEAR</span>
-              <span class="fw-black fs-4 text-white" style="letter-spacing: -0.05em;">STRIPE</span>
-              <span class="fw-black fs-4 text-white" style="letter-spacing: -0.05em;">VERCEL</span>
+              <span class="fw-black fs-4 text-white" style="letter-spacing: -0.05em;">NOTION-LIKE</span>
+              <span class="fw-black fs-4 text-white" style="letter-spacing: -0.05em;">REALTIME</span>
+              <span class="fw-black fs-4 text-white" style="letter-spacing: -0.05em;">AI TASK</span>
             </div>
           </div>
         </div>
@@ -344,8 +361,8 @@
           <div class="cta-blob cta-blob-1"></div>
           <div class="cta-blob cta-blob-2"></div>
           <div class="position-relative" style="z-index: 1;">
-            <h2 class="fw-bold mb-4 text-white" style="font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -0.04em;">Ready to architect your focus?</h2>
-            <p class="text-muted fs-5 mb-5 mx-auto" style="max-width: 500px;">Join the new standard of productivity today.</p>
+            <h2 class="fw-bold mb-4 text-white" style="font-size: clamp(2rem, 5vw, 3.5rem); letter-spacing: -0.04em;">Sẵn sàng vào workspace?</h2>
+            <p class="text-muted fs-5 mb-5 mx-auto" style="max-width: 500px;">Đăng nhập để tạo page, quản lý task, nhắn tin và demo realtime ngay.</p>
             <button
               class="btn btn-cta px-5 py-3 rounded-4 fw-black fs-5"
               type="button"
@@ -353,7 +370,7 @@
               :aria-busy="isNavigating"
               @click="goToAuthEntry"
             >
-              Get Started Now
+              Bắt đầu Now
             </button>
           </div>
         </div>
@@ -362,7 +379,7 @@
 
     <footer class="site-footer">
       <div class="container-xl px-4 py-5 d-flex flex-column flex-md-row justify-content-between align-items-center gap-4">
-        <span class="text-muted" style="font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;">© 2026 Block Paged - RudeusGrey.</span>
+        <span class="text-muted" style="font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.05em;">© 2026 Block Paged - Ngô Trần Nguyên Quân.</span>
         <div class="d-flex gap-4 align-items-center">
           <a href="#" class="footer-link">Docs</a>
           <a href="#" class="footer-link">GitHub</a>
@@ -684,6 +701,27 @@ onMounted(() => {
 }
 
 .btn-ghost:hover { background: #111111; }
+
+.hero-stats { position: relative; z-index: 1; }
+.hero-stat {
+  min-width: 150px;
+  background: rgba(255,255,255,0.035);
+  border: 1px solid #1f1f1f;
+  text-align: left;
+}
+.hero-stat strong {
+  display: block;
+  color: #fff;
+  font-size: 0.82rem;
+  letter-spacing: -0.02em;
+}
+.hero-stat span {
+  display: block;
+  color: #8f8f8f;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
 
 /* ─── Demo Panel ─── */
 .demo-wrapper { padding: 2px; }

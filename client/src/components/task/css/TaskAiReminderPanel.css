@@ -103,7 +103,7 @@
 
 .ai-reminder-icon-btn:hover:not(:disabled) {
   color: #f1f1ef;
-  background: rgba(255, 255, 255, 0.065);
+  background: #a8a8a3;
 }
 
 .ai-reminder-icon-btn:disabled {
@@ -129,8 +129,7 @@
   border: 1px solid #30302d;
   border-radius: 13px;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.038), rgba(255, 255, 255, 0.012)),
-    #252522;
+    #30302d;
 }
 
 .ai-reminder-kicker {
