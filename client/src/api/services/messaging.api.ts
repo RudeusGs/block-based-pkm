@@ -80,6 +80,3 @@ export const messagingController = {
     return api.post<ApiResult>(`conversations/${conversationId}/read`)
   },
 }
-
-
-

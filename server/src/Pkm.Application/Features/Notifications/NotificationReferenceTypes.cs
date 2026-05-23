@@ -12,4 +12,3 @@ public static class NotificationReferenceTypes
     public const string UserProfile = "user_profile";
     public const string System = "system";
 }
-

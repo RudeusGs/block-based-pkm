@@ -95,13 +95,20 @@
       </button>
 
       <button
-        class="app-icon-btn"
+        class="app-icon-btn app-message-btn"
         type="button"
-        title="Messages"
+        :title="messageUnreadCount > 0 ? `${messageUnreadCount} tin nhắn chưa đọc` : 'Messages'"
         aria-label="Messages"
         @click="openMessenger()"
       >
         <span class="material-symbols-outlined">chat_bubble</span>
+
+        <span
+          v-if="messageUnreadCount > 0"
+          class="app-notification-badge app-message-badge"
+        >
+          {{ messageUnreadLabel }}
+        </span>
       </button>
 
       <div
@@ -279,7 +286,9 @@
       <button
         class="app-icon-btn"
         type="button"
-        title="Star"
+        title="Favorite current page"
+        aria-label="Favorite current page"
+        @click="favoriteCurrentPage"
       >
         <span class="material-symbols-outlined">star</span>
       </button>
@@ -372,6 +381,22 @@
               </span>
             </button>
 
+            <button
+              v-if="canLeaveWorkspace"
+              type="button"
+              class="app-more-item danger"
+              role="menuitem"
+              :disabled="isLeavingWorkspace"
+              @click="leaveCurrentWorkspace"
+            >
+              <span class="material-symbols-outlined">logout</span>
+
+              <span>
+                <strong>Rời workspace</strong>
+                <small>Gỡ workspace này khỏi sidebar của bạn</small>
+              </span>
+            </button>
+
             <div
               v-if="canDeleteWorkspace"
               class="app-more-separator"
@@ -451,6 +476,11 @@ import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWork
 import { useNotificationCenter } from '@/modules/notifications/composables/useNotificationCenter'
 import { useInviteWorkspaceMember } from '@/modules/workspaces/composables/useInviteWorkspaceMember'
 import { useDeleteWorkspace } from '@/modules/workspaces/composables/useDeleteWorkspace'
+import { workspaceController } from '@/api/services/workspace.api'
+import { pageController } from '@/api/services/page.api'
+import { messagingController } from '@/api/services/messaging.api'
+import { realtimeClient } from '@/realtime/realtime.client'
+import { getApiErrorMessage, getApiResultErrorMessage } from '@/api/utils/api-error.util'
 import type { Guid } from '@/api/models/common.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import InviteWorkspaceMemberModal from './InviteWorkspaceMemberModal.vue'
@@ -501,9 +531,14 @@ const isMoreMenuOpen = ref(false)
 const isInviteModalOpen = ref(false)
 const isWorkspaceSettingsOpen = ref(false)
 const isWorkspaceShareOpen = ref(false)
+const isLeavingWorkspace = ref(false)
+const messageUnreadCount = ref(0)
 
 const notificationMenuRef = ref<HTMLElement | null>(null)
 const moreMenuRef = ref<HTMLElement | null>(null)
+
+let unsubscribeMessageCreated: (() => void) | null = null
+let unsubscribeConversationRead: (() => void) | null = null
 
 const currentWorkspaceId = computed<Guid | null>(() => {
   return workspaceNavigation.workspace.value?.id ?? null
@@ -511,6 +546,10 @@ const currentWorkspaceId = computed<Guid | null>(() => {
 
 const activePageId = computed<Guid | null>(() => {
   return workspaceNavigation.page.value?.id ?? null
+})
+
+const messageUnreadLabel = computed(() => {
+  return messageUnreadCount.value > 99 ? '99+' : String(messageUnreadCount.value)
 })
 
 const canShareWorkspace = computed(() => {
@@ -531,6 +570,10 @@ const canManageWorkspaceSettings = computed(() => {
 
 const canDeleteWorkspace = computed(() => {
   return Boolean(currentWorkspaceId.value && props.canDeleteWorkspace)
+})
+
+const canLeaveWorkspace = computed(() => {
+  return Boolean(currentWorkspaceId.value && !props.canDeleteWorkspace)
 })
 
 const canReadActivityLog = computed(() => {
@@ -593,6 +636,42 @@ function openWorkspaceMembers() {
   emit('open-members')
 }
 
+async function leaveCurrentWorkspace() {
+  const workspaceId = currentWorkspaceId.value
+
+  if (!workspaceId || isLeavingWorkspace.value) return
+
+  isLeavingWorkspace.value = true
+  isMoreMenuOpen.value = false
+
+  try {
+    const result = await workspaceController.leave(workspaceId)
+
+    if (!result.isSuccess) {
+      toast.warning(
+        'Không thể rời workspace',
+        getApiResultErrorMessage(result, 'Hãy thử lại sau.')
+      )
+      return
+    }
+
+    toast.success('Đã rời workspace', 'Workspace đã được gỡ khỏi sidebar của bạn.')
+
+    if (currentWorkspaceId.value === workspaceId) {
+      workspaceNavigation.clearNavigation()
+    }
+
+    emit('workspace-deleted', workspaceId)
+  } catch (error) {
+    toast.warning(
+      'Không thể rời workspace',
+      getApiErrorMessage(error, 'Hãy thử lại sau.')
+    )
+  } finally {
+    isLeavingWorkspace.value = false
+  }
+}
+
 function openSocialHub() {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
@@ -603,6 +682,47 @@ function openMessenger(userId?: Guid | null) {
   isNotificationMenuOpen.value = false
   isMoreMenuOpen.value = false
   emit('open-messenger', userId ?? null)
+
+  window.setTimeout(() => {
+    void fetchMessageUnreadCount()
+  }, 450)
+}
+
+async function fetchMessageUnreadCount() {
+  try {
+    const result = await messagingController.listConversations({
+      pageNumber: 1,
+      pageSize: 50,
+    })
+
+    if (!result.isSuccess || !result.data) return
+
+    messageUnreadCount.value = result.data.items.reduce(
+      (total, conversation) => total + Math.max(0, conversation.unreadCount ?? 0),
+      0
+    )
+  } catch {
+    // Keep the current badge if the network hiccups.
+  }
+}
+
+function bindMessageBadgeRealtime() {
+  if (unsubscribeMessageCreated || unsubscribeConversationRead) return
+
+  unsubscribeMessageCreated = realtimeClient.on('MessageCreated', () => {
+    void fetchMessageUnreadCount()
+  })
+
+  unsubscribeConversationRead = realtimeClient.on('ConversationRead', () => {
+    void fetchMessageUnreadCount()
+  })
+}
+
+function unbindMessageBadgeRealtime() {
+  unsubscribeMessageCreated?.()
+  unsubscribeConversationRead?.()
+  unsubscribeMessageCreated = null
+  unsubscribeConversationRead = null
 }
 
 function openAiReminders() {
@@ -626,6 +746,35 @@ function openWorkspaceShare() {
   }
 
   isWorkspaceShareOpen.value = true
+}
+
+async function favoriteCurrentPage() {
+  const page = workspaceNavigation.page.value
+
+  if (!page) {
+    toast.warning('Chưa chọn page', 'Hãy mở page trước khi favorite nha.')
+    return
+  }
+
+  try {
+    const result = await pageController.favorite(page.id)
+
+    if (!result.isSuccess) {
+      toast.warning(
+        'Không thể favorite page',
+        getApiResultErrorMessage(result, 'Hãy thử lại sau.')
+      )
+      return
+    }
+
+    toast.success('Đã favorite page', `Page "${page.title}" đã vào danh sách Favorites.`)
+    window.dispatchEvent(new CustomEvent('pkm:page-favorite-updated'))
+  } catch (error) {
+    toast.warning(
+      'Không thể favorite page',
+      getApiErrorMessage(error, 'Hãy thử lại sau.')
+    )
+  }
 }
 
 function selectPageTab(pageId: Guid) {
@@ -793,13 +942,16 @@ onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
 
   notificationCenter.bindRealtime()
+  bindMessageBadgeRealtime()
 
   void notificationCenter.fetchUnreadCount()
   void notificationCenter.fetchNotifications()
   void notificationCenter.startRealtime()
+  void fetchMessageUnreadCount()
 })
 
 onBeforeUnmount(() => {
+  unbindMessageBadgeRealtime()
   document.removeEventListener('click', handleDocumentClick)
   window.removeEventListener('keydown', handleKeydown)
 })
@@ -1032,8 +1184,14 @@ onBeforeUnmount(() => {
   position: relative;
 }
 
-.app-notification-btn {
+.app-notification-btn,
+.app-message-btn {
   overflow: visible;
+}
+
+.app-message-badge {
+  top: 2px;
+  right: 0;
 }
 
 .app-notification-badge {
@@ -1603,6 +1761,7 @@ onBeforeUnmount(() => {
 }
 
 .app-notification-badge,
+.app-message-badge,
 .app-ai-reminder-badge {
   color: #191919;
   background: #d8d8d4;
@@ -1664,6 +1823,3 @@ onBeforeUnmount(() => {
 }
 
 </style>
-
-
-

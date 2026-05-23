@@ -11,4 +11,3 @@ public sealed record WorkspaceListItemDto(
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate,
     WorkspaceRole CurrentUserRole);
-

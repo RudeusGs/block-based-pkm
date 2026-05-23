@@ -11,4 +11,3 @@ public sealed record WorkspaceDetailReadModel(
     Guid? LastModifiedBy,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);
-

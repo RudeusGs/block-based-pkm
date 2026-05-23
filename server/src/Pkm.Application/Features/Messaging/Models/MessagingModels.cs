@@ -50,6 +50,3 @@ public sealed record MessagePagedResultDto(
     int PageSize,
     int TotalCount,
     int TotalPages);
-
-
-

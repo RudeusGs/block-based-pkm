@@ -56,6 +56,20 @@ public sealed class Workspace : EntityBase
         Touch(now);
     }
 
+    public void TransferOwnership(Guid newOwnerId, Guid actorId, DateTimeOffset now)
+    {
+        ThrowIfDeleted();
+        DomainGuard.AgainstEmpty(newOwnerId, nameof(newOwnerId));
+        DomainGuard.AgainstEmpty(actorId, nameof(actorId));
+
+        if (OwnerId == newOwnerId)
+            return;
+
+        OwnerId = newOwnerId;
+        LastModifiedBy = actorId;
+        Touch(now);
+    }
+
     public void ChangeVisibility(WorkspaceVisibility visibility, Guid actorId, DateTimeOffset now)
     {
         ThrowIfDeleted();
@@ -65,4 +79,3 @@ public sealed class Workspace : EntityBase
         Touch(now);
     }
 }
-

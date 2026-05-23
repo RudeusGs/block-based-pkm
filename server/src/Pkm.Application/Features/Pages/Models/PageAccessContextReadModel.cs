@@ -9,4 +9,3 @@ public sealed record PageAccessContextReadModel(
     WorkspaceRole? Role,
     WorkspaceVisibility Visibility,
     bool IsArchived);
-

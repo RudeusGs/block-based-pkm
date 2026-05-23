@@ -66,6 +66,43 @@ public sealed class CollaborationHub : Hub
         return new ConversationJoinAck(conversationId, groupName);
     }
 
+
+    public async Task SendConversationTyping(ConversationTypingRequest request)
+    {
+        if (request.ConversationId == Guid.Empty)
+            throw new HubException("ConversationId không hợp lệ.");
+
+        var userId = GetRequiredUserId();
+
+        var conversation = await _messagingRepository.GetConversationForParticipantAsync(
+            request.ConversationId,
+            userId,
+            Context.ConnectionAborted);
+
+        EnsureExists(conversation is not null, "Cuộc trò chuyện không tồn tại.");
+
+        var recipientId = conversation!.GetOtherParticipant(userId);
+
+        var envelope = new MessagingRealtimeEnvelope(
+            "ConversationTyping",
+            request.ConversationId,
+            userId,
+            recipientId,
+            _clock.UtcNow,
+            new
+            {
+                conversationId = request.ConversationId,
+                senderUserId = userId,
+                recipientUserId = recipientId,
+                userName = GetCurrentUserDisplayName(),
+                isTyping = request.IsTyping
+            });
+
+        await Clients
+            .OthersInGroup(RealtimeGroupNames.Conversation(request.ConversationId))
+            .SendAsync("ConversationTyping", envelope, Context.ConnectionAborted);
+    }
+
     public async Task LeaveConversation(Guid conversationId)
     {
         if (conversationId == Guid.Empty)
@@ -79,47 +116,54 @@ public sealed class CollaborationHub : Hub
 
     public async Task<WorkspaceJoinAck> JoinWorkspace(Guid workspaceId)
     {
-        if (workspaceId == Guid.Empty)
-            throw new HubException("WorkspaceId không hợp lệ.");
+        try
+        {
+            if (workspaceId == Guid.Empty)
+                throw new HubException("WorkspaceId không hợp lệ.");
 
-        var userId = GetRequiredUserId();
+            var userId = GetRequiredUserId();
 
-        var access = await _workspaceAccessEvaluator.EvaluateAsync(
-            workspaceId,
-            userId,
-            Context.ConnectionAborted);
+            var access = await _workspaceAccessEvaluator.EvaluateAsync(
+                workspaceId,
+                userId,
+                Context.ConnectionAborted);
 
-        EnsureExists(access.Exists, "Workspace không tồn tại.");
-        EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền tham gia workspace này.");
+            EnsureExists(access.Exists, "Workspace không tồn tại.");
+            EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền tham gia workspace này.");
 
-        var groupName = RealtimeGroupNames.Workspace(workspaceId);
+            var groupName = RealtimeGroupNames.Workspace(workspaceId);
 
-        await Groups.AddToGroupAsync(
-            Context.ConnectionId,
-            groupName,
-            Context.ConnectionAborted);
+            await Groups.AddToGroupAsync(
+                Context.ConnectionId,
+                groupName,
+                Context.ConnectionAborted);
 
-        await _workspacePresenceService.UpsertAsync(
-            workspaceId,
-            userId,
-            GetCurrentUserDisplayName(),
-            Context.ConnectionId,
-            Context.ConnectionAborted);
+            await _workspacePresenceService.UpsertAsync(
+                workspaceId,
+                userId,
+                GetCurrentUserDisplayName(),
+                Context.ConnectionId,
+                Context.ConnectionAborted);
 
-        var snapshot = await BuildWorkspacePresenceDtoAsync(
-            workspaceId,
-            Context.ConnectionAborted);
+            var snapshot = await BuildWorkspacePresenceDtoAsync(
+                workspaceId,
+                Context.ConnectionAborted);
 
-        await PublishWorkspacePresenceChangedAsync(
-            workspaceId,
-            userId,
-            snapshot,
-            Context.ConnectionAborted);
+            await PublishWorkspacePresenceChangedAsync(
+                workspaceId,
+                userId,
+                snapshot,
+                Context.ConnectionAborted);
 
-        return new WorkspaceJoinAck(
-            workspaceId,
-            groupName,
-            snapshot);
+            return new WorkspaceJoinAck(
+                workspaceId,
+                groupName,
+                snapshot);
+        }
+        catch (OperationCanceledException) when (Context.ConnectionAborted.IsCancellationRequested)
+        {
+            return EmptyWorkspaceJoinAck(workspaceId);
+        }
     }
 
     public async Task LeaveWorkspace(Guid workspaceId)
@@ -155,29 +199,36 @@ public sealed class CollaborationHub : Hub
 
     public async Task<WorkspacePresenceDto> HeartbeatWorkspace(Guid workspaceId)
     {
-        if (workspaceId == Guid.Empty)
-            throw new HubException("WorkspaceId không hợp lệ.");
+        try
+        {
+            if (workspaceId == Guid.Empty)
+                throw new HubException("WorkspaceId không hợp lệ.");
 
-        var userId = GetRequiredUserId();
+            var userId = GetRequiredUserId();
 
-        var access = await _workspaceAccessEvaluator.EvaluateAsync(
-            workspaceId,
-            userId,
-            Context.ConnectionAborted);
+            var access = await _workspaceAccessEvaluator.EvaluateAsync(
+                workspaceId,
+                userId,
+                Context.ConnectionAborted);
 
-        EnsureExists(access.Exists, "Workspace không tồn tại.");
-        EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền truy cập workspace này.");
+            EnsureExists(access.Exists, "Workspace không tồn tại.");
+            EnsureAllowed(access.CanReadWorkspace, "Bạn không có quyền truy cập workspace này.");
 
-        await _workspacePresenceService.UpsertAsync(
-            workspaceId,
-            userId,
-            GetCurrentUserDisplayName(),
-            Context.ConnectionId,
-            Context.ConnectionAborted);
+            await _workspacePresenceService.UpsertAsync(
+                workspaceId,
+                userId,
+                GetCurrentUserDisplayName(),
+                Context.ConnectionId,
+                Context.ConnectionAborted);
 
-        return await BuildWorkspacePresenceDtoAsync(
-            workspaceId,
-            Context.ConnectionAborted);
+            return await BuildWorkspacePresenceDtoAsync(
+                workspaceId,
+                Context.ConnectionAborted);
+        }
+        catch (OperationCanceledException) when (Context.ConnectionAborted.IsCancellationRequested)
+        {
+            return EmptyWorkspacePresence(workspaceId);
+        }
     }
 
     public async Task<PageJoinAck> JoinPage(Guid pageId)
@@ -710,6 +761,21 @@ public sealed class CollaborationHub : Hub
             cancellationToken);
     }
 
+    private static WorkspaceJoinAck EmptyWorkspaceJoinAck(Guid workspaceId)
+    {
+        return new WorkspaceJoinAck(
+            workspaceId,
+            RealtimeGroupNames.Workspace(workspaceId),
+            EmptyWorkspacePresence(workspaceId));
+    }
+
+    private static WorkspacePresenceDto EmptyWorkspacePresence(Guid workspaceId)
+    {
+        return new WorkspacePresenceDto(
+            workspaceId,
+            Array.Empty<WorkspacePresenceUserDto>());
+    }
+
     private Guid GetRequiredUserId()
     {
         var rawUserId =
@@ -780,6 +846,3 @@ public sealed class CollaborationHub : Hub
             : normalized[..maxLength];
     }
 }
-
-
-

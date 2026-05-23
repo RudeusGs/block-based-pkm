@@ -73,6 +73,3 @@ export interface WorkspaceShareMessagePayload {
 export interface ListConversationsParams extends PagingParams {}
 
 export interface ListMessagesParams extends PagingParams {}
-
-
-

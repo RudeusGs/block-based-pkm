@@ -33,6 +33,3 @@ public interface IMessagingRepository
 
     void UpdateConversation(Conversation conversation);
 }
-
-
-

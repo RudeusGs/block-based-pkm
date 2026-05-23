@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="100%" height="100%">
+  <!-- Đổ bóng phía sau (Drop Shadow phong cách Notion) -->
+  <rect x="25" y="25" width="150" height="150" rx="24" fill="#000000" />
+  
+  <!-- Khối Block chính (Nền trắng, viền đen dày) -->
+  <rect x="15" y="15" width="150" height="150" rx="24" fill="#FFFFFF" stroke="#000000" stroke-width="10" stroke-linejoin="round" />
+  
+  <!-- Khối 3D mô phỏng Block bên trong (Nét vẽ tay góc cạnh) -->
+  <!-- Mặt trên của khối -->
+  <path d="M 55 65 L 90 45 L 125 65 L 90 85 Z" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Cạnh dọc xuống -->
+  <path d="M 55 65 L 55 115 L 90 135 L 125 115 L 125 65" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M 90 85 L 90 135" fill="none" stroke="#000000" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+  
+  <!-- Điểm nhấn: Chữ B ẩn trong khối hoặc các đường gạch tinh tế -->
+  <!-- Ở đây sử dụng 2 đường gạch ngang trong mặt phải tạo cảm giác các hàng text/block -->
+  <line x1="98" y1="92" x2="115" y2="82" stroke="#000000" stroke-width="6" stroke-linecap="round" />
+  <line x1="98" y1="107" x2="115" y2="97" stroke="#000000" stroke-width="6" stroke-linecap="round" />
+</svg>

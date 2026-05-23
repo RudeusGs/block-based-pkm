@@ -37,4 +37,3 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
             .HasFilter("\"IsDeleted\" = false");
     }
 }
-

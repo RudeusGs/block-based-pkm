@@ -22,6 +22,3 @@ public interface IMessagingApplicationService
 
     Task<Result> MarkConversationReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
 }
-
-
-

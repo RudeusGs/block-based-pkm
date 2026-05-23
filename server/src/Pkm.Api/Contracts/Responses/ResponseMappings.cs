@@ -73,6 +73,33 @@ public static class ResponseMappings
             dto.CurrentRevision,
             dto.Blocks.Select(x => x.ToResponse()).ToArray());
 
+
+    public static PageQuickAccessResponse ToResponse(this AppPages.PageQuickAccessDto dto)
+        => new(
+            dto.Id,
+            dto.WorkspaceId,
+            dto.ParentPageId,
+            dto.WorkspaceName,
+            dto.Title,
+            dto.Icon,
+            dto.CoverImage,
+            dto.IsArchived,
+            dto.CurrentRevision,
+            dto.CreatedDate,
+            dto.UpdatedDate,
+            dto.IsFavorite,
+            dto.FavoritedAtUtc,
+            dto.LastVisitedAtUtc,
+            dto.VisitCount);
+
+    public static PageQuickAccessPagedResultResponse ToResponse(this AppPages.PageQuickAccessPagedResultDto dto)
+        => new(
+            dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
+
     public static PagePresenceUserResponse ToResponse(this AppDocuments.PagePresenceUserDto dto)
         => new(
             dto.UserId,

@@ -118,4 +118,3 @@ internal sealed class BlockRepository : IBlockRepository
     }
     public void Add(Block block) => _dataContext.Blocks.Add(block);
 }
-

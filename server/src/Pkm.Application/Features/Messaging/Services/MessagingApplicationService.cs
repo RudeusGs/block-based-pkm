@@ -554,4 +554,3 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
     private static int NormalizeSize(int pageSize) => pageSize <= 0 ? 30 : Math.Min(pageSize, 100);
     private static int CalculateTotalPages(int total, int size) => total <= 0 ? 0 : (int)Math.Ceiling(total / (double)size);
 }
-

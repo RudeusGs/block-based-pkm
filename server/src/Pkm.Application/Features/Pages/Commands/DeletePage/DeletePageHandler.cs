@@ -62,17 +62,17 @@ public sealed class DeletePageHandler
         if (page is null)
             return Result.Failure(PageErrors.PageNotFound);
 
-        page.SoftDelete(_clock.UtcNow);
+        page.Archive(currentUserId, _clock.UtcNow);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         await _activityLogService.RecordAsync(
             new ActivityLogRequest(
                 page.WorkspaceId,
                 currentUserId,
-                ActivityAction.Delete,
+                ActivityAction.Archive,
                 ActivityEntityType.Page,
                 page.Id,
-                $"{_currentUser.UserName ?? "Có người"} đã xóa page \"{page.Title}\".",
+                $"{_currentUser.UserName ?? "Có người"} đã đưa page vào Trash \"{page.Title}\".",
                 ActivityLogMetadata.Serialize(new
                 {
                     pageId = page.Id,

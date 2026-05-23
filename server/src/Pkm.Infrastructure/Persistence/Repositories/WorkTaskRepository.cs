@@ -474,4 +474,3 @@ internal sealed class WorkTaskRepository : IWorkTaskRepository
         return ApplyFilter(query, normalizedFilter);
     }
 }
-

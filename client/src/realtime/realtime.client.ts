@@ -65,6 +65,7 @@ const KNOWN_BACKEND_EVENTS = [
   'ConversationUpserted',
   'MessageCreated',
   'ConversationRead',
+  'ConversationTyping',
 ] as const
 
 let connection: HubConnection | null = null
@@ -366,6 +367,10 @@ function leaveConversation(conversationId: string) {
   return invoke('LeaveConversation', conversationId)
 }
 
+function sendConversationTyping(conversationId: string, isTyping: boolean) {
+  return invoke<void>('SendConversationTyping', { conversationId, isTyping })
+}
+
 function joinWorkspace(workspaceId: string) {
   return invoke('JoinWorkspace', workspaceId)
 }
@@ -424,6 +429,7 @@ export const realtimeClient = {
 
   joinConversation,
   leaveConversation,
+  sendConversationTyping,
 
   joinWorkspace,
   leaveWorkspace,
@@ -438,6 +444,3 @@ export const realtimeClient = {
   sendBlockDraft,
   sendBlockEditingState,
 }
-
-
-

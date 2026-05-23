@@ -13,6 +13,8 @@ using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.JoinPublicWorkspaceAsViewer;
+using Pkm.Application.Features.Workspaces.Commands.TransferWorkspaceOwnership;
+using Pkm.Application.Features.Workspaces.Commands.LeaveWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
@@ -35,6 +37,8 @@ public sealed class WorkspacesController : BaseController
     private readonly ChangeWorkspaceMemberRoleHandler _changeWorkspaceMemberRoleHandler;
     private readonly RemoveWorkspaceMemberHandler _removeWorkspaceMemberHandler;
     private readonly JoinPublicWorkspaceAsViewerHandler _joinPublicWorkspaceAsViewerHandler;
+    private readonly LeaveWorkspaceHandler _leaveWorkspaceHandler;
+    private readonly TransferWorkspaceOwnershipHandler _transferWorkspaceOwnershipHandler;
 
     public WorkspacesController(
         ICurrentUser currentUser,
@@ -47,7 +51,9 @@ public sealed class WorkspacesController : BaseController
         AcceptWorkspaceInvitationHandler acceptWorkspaceInvitationHandler,
         ChangeWorkspaceMemberRoleHandler changeWorkspaceMemberRoleHandler,
         RemoveWorkspaceMemberHandler removeWorkspaceMemberHandler,
-        JoinPublicWorkspaceAsViewerHandler joinPublicWorkspaceAsViewerHandler)
+        JoinPublicWorkspaceAsViewerHandler joinPublicWorkspaceAsViewerHandler,
+        LeaveWorkspaceHandler leaveWorkspaceHandler,
+        TransferWorkspaceOwnershipHandler transferWorkspaceOwnershipHandler)
         : base(currentUser)
     {
         _createWorkspaceHandler = createWorkspaceHandler;
@@ -60,6 +66,8 @@ public sealed class WorkspacesController : BaseController
         _changeWorkspaceMemberRoleHandler = changeWorkspaceMemberRoleHandler;
         _removeWorkspaceMemberHandler = removeWorkspaceMemberHandler;
         _joinPublicWorkspaceAsViewerHandler = joinPublicWorkspaceAsViewerHandler;
+        _leaveWorkspaceHandler = leaveWorkspaceHandler;
+        _transferWorkspaceOwnershipHandler = transferWorkspaceOwnershipHandler;
     }
 
     [HttpPost]
@@ -210,6 +218,41 @@ public sealed class WorkspacesController : BaseController
     {
         var result = await _joinPublicWorkspaceAsViewerHandler.HandleAsync(
             new JoinPublicWorkspaceAsViewerCommand(workspaceId),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpPost("{workspaceId:guid}/leave")]
+    [ProducesResponseType(typeof(ApiResult), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult>> Leave(
+        [FromRoute] Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _leaveWorkspaceHandler.HandleAsync(
+            new LeaveWorkspaceCommand(workspaceId),
+            cancellationToken);
+
+        return HandleResult(result);
+    }
+
+    [HttpPost("{workspaceId:guid}/transfer-ownership")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<WorkspaceResponse>>> TransferOwnership(
+        [FromRoute] Guid workspaceId,
+        [FromBody] TransferWorkspaceOwnershipRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _transferWorkspaceOwnershipHandler.HandleAsync(
+            new TransferWorkspaceOwnershipCommand(workspaceId, request.NewOwnerUserId),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());

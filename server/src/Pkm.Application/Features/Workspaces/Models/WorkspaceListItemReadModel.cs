@@ -11,4 +11,3 @@ public sealed record WorkspaceListItemReadModel(
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate,
     WorkspaceRole CurrentUserRole);
-

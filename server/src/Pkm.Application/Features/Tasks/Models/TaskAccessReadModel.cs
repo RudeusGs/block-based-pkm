@@ -10,4 +10,3 @@ public sealed record TaskAccessReadModel(
     WorkspaceRole? Role,
     WorkspaceVisibility Visibility,
     StatusWorkTask Status);
-

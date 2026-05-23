@@ -268,6 +268,18 @@
                 </article>
               </main>
 
+              <div
+                v-if="selectedTypingUser"
+                class="message-typing-indicator"
+              >
+                <span class="typing-dots" aria-hidden="true">
+                  <i></i>
+                  <i></i>
+                  <i></i>
+                </span>
+                <strong>{{ selectedTypingUser }}</strong> đang nhập...
+              </div>
+
               <footer class="message-composer">
                 <div
                   v-if="selectedImageFile"
@@ -389,18 +401,41 @@ const messageError = ref<string | null>(null)
 const messageDraft = ref('')
 const selectedImageFile = ref<File | null>(null)
 const acceptingWorkspaceShareMessageId = ref<Guid | null>(null)
+const typingUsersByConversationId = ref<
+  Record<Guid, { userName: string | null; isTyping: boolean }>
+>({})
 
 const messageListRef = ref<HTMLElement | null>(null)
 const messageInputRef = ref<HTMLTextAreaElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 
 let joinedConversationId: Guid | null = null
+let lastTypingConversationId: Guid | null = null
+let lastTypingState = false
+let lastTypingSentAt = 0
+let typingIdleTimer: number | null = null
+const typingClearTimers = new Map<Guid, number>()
 const unsubscribeRealtimeHandlers: Array<() => void> = []
 
 const selectedConversation = computed(() => {
   return conversations.value.find(
     (conversation) => conversation.id === selectedConversationId.value
   ) ?? null
+})
+
+const selectedTypingUser = computed(() => {
+  const conversationId = selectedConversationId.value
+  if (!conversationId) return null
+
+  const typingState = typingUsersByConversationId.value[conversationId]
+  if (!typingState?.isTyping) return null
+
+  return (
+    typingState.userName?.trim() ||
+    selectedConversation.value?.otherUser.fullName ||
+    selectedConversation.value?.otherUser.userName ||
+    'Bạn ấy'
+  )
 })
 
 const hasMoreMessages = computed(() => messages.value.length < totalMessages.value)
@@ -447,14 +482,31 @@ watch(
   }
 )
 
+watch(messageDraft, (value) => {
+  const conversationId = selectedConversationId.value
+  if (!props.open || !conversationId) return
+
+  if (value.trim()) {
+    publishTyping(conversationId, true)
+    scheduleTypingIdleStop(conversationId)
+  } else {
+    clearTypingIdleTimer()
+    void publishTyping(conversationId, false)
+  }
+})
+
 watch(selectedConversationId, async (conversationId, previousConversationId) => {
   if (previousConversationId) {
+    clearTypingState(previousConversationId)
+    await publishTyping(previousConversationId, false)
     await realtimeClient.leaveConversation(previousConversationId).catch(() => undefined)
   }
 
   messages.value = []
   totalMessages.value = 0
   messagePageNumber.value = 1
+  messageDraft.value = ''
+  selectedImageFile.value = null
   joinedConversationId = null
 
   if (!conversationId) return
@@ -468,6 +520,12 @@ watch(selectedConversationId, async (conversationId, previousConversationId) => 
 })
 
 function close() {
+  const conversationId = selectedConversationId.value
+  if (conversationId) {
+    void publishTyping(conversationId, false)
+  }
+
+  clearAllTypingState()
   document.body.classList.remove('messenger-lock')
   emit('close')
 }
@@ -782,6 +840,8 @@ async function leaveJoinedConversation() {
   const conversationId = joinedConversationId
   joinedConversationId = null
 
+  clearTypingState(conversationId)
+  await publishTyping(conversationId, false)
   await realtimeClient.leaveConversation(conversationId).catch(() => undefined)
 }
 
@@ -804,6 +864,8 @@ async function sendCurrentMessage() {
 
   isSendingMessage.value = true
   messageError.value = null
+  clearTypingIdleTimer()
+  await publishTyping(conversationId, false)
 
   try {
     let result
@@ -859,6 +921,114 @@ function handleImageSelected(event: Event) {
 
 function clearSelectedImage() {
   selectedImageFile.value = null
+}
+
+function clearTypingIdleTimer() {
+  if (typingIdleTimer !== null) {
+    window.clearTimeout(typingIdleTimer)
+    typingIdleTimer = null
+  }
+}
+
+function scheduleTypingIdleStop(conversationId: Guid) {
+  clearTypingIdleTimer()
+  typingIdleTimer = window.setTimeout(() => {
+    void publishTyping(conversationId, false)
+  }, 1600)
+}
+
+async function publishTyping(conversationId: Guid, isTyping: boolean) {
+  const now = Date.now()
+
+  if (
+    lastTypingConversationId === conversationId &&
+    lastTypingState === isTyping &&
+    (isTyping ? now - lastTypingSentAt < 1200 : now - lastTypingSentAt < 250)
+  ) {
+    return
+  }
+
+  lastTypingConversationId = conversationId
+  lastTypingState = isTyping
+  lastTypingSentAt = now
+
+  try {
+    await realtimeClient.sendConversationTyping(conversationId, isTyping)
+  } catch {
+    // Typing indicator is a nice-to-have realtime hint; failing silently keeps chat usable.
+  }
+}
+
+function setTypingState(conversationId: Guid, userName: string | null, isTyping: boolean) {
+  if (typingClearTimers.has(conversationId)) {
+    window.clearTimeout(typingClearTimers.get(conversationId))
+    typingClearTimers.delete(conversationId)
+  }
+
+  typingUsersByConversationId.value = {
+    ...typingUsersByConversationId.value,
+    [conversationId]: { userName, isTyping },
+  }
+
+  if (isTyping) {
+    const timerId = window.setTimeout(() => {
+      clearTypingState(conversationId)
+    }, 2600)
+
+    typingClearTimers.set(conversationId, timerId)
+  }
+}
+
+function clearTypingState(conversationId: Guid) {
+  if (typingClearTimers.has(conversationId)) {
+    window.clearTimeout(typingClearTimers.get(conversationId))
+    typingClearTimers.delete(conversationId)
+  }
+
+  if (!typingUsersByConversationId.value[conversationId]) return
+
+  const next = { ...typingUsersByConversationId.value }
+  delete next[conversationId]
+  typingUsersByConversationId.value = next
+}
+
+function clearAllTypingState() {
+  clearTypingIdleTimer()
+
+  for (const timerId of typingClearTimers.values()) {
+    window.clearTimeout(timerId)
+  }
+
+  typingClearTimers.clear()
+  typingUsersByConversationId.value = {}
+  lastTypingConversationId = null
+  lastTypingState = false
+  lastTypingSentAt = 0
+}
+
+function normalizeTypingPayload(envelope: RealtimeEnvelope<unknown>) {
+  const raw = normalizePayloadObject(envelope)
+  if (!raw) return null
+
+  const conversationId = String(raw.conversationId ?? raw.ConversationId ?? '')
+  const senderUserId = String(raw.senderUserId ?? raw.SenderUserId ?? '')
+
+  if (!conversationId || !senderUserId) return null
+
+  return {
+    conversationId,
+    senderUserId,
+    senderDisplayName: (
+      raw.senderDisplayName ??
+      raw.SenderDisplayName ??
+      raw.userName ??
+      raw.UserName ??
+      raw.senderUserName ??
+      raw.SenderUserName ??
+      null
+    ) as string | null,
+    isTyping: Boolean(raw.isTyping ?? raw.IsTyping ?? false),
+  }
 }
 
 function normalizePayloadObject(envelope: RealtimeEnvelope<unknown>) {
@@ -988,6 +1158,19 @@ function bindRealtime() {
       }
     })
   )
+
+  unsubscribeRealtimeHandlers.push(
+    realtimeClient.on('ConversationTyping', (envelope) => {
+      const typing = normalizeTypingPayload(envelope)
+      if (!typing || typing.senderUserId === currentUserId.value) return
+
+      setTypingState(
+        typing.conversationId,
+        typing.senderDisplayName,
+        typing.isTyping
+      )
+    })
+  )
 }
 
 function unbindRealtime() {
@@ -1032,6 +1215,7 @@ function formatMessageTime(value: string) {
 }
 
 onBeforeUnmount(() => {
+  clearAllTypingState()
   unbindRealtime()
   void leaveJoinedConversation()
   document.body.classList.remove('messenger-lock')
@@ -1039,5 +1223,3 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/MessengerPanel.css"></style>
-
-

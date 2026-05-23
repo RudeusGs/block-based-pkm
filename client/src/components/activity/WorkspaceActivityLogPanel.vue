@@ -1649,6 +1649,3 @@ function formatFullDate(value: string) {
   }
 }
 </style>
-
-
-

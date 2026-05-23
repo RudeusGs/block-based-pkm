@@ -10,4 +10,3 @@ public sealed record BlockAccessContextReadModel(
     WorkspaceRole? Role,
     WorkspaceVisibility Visibility,
     bool IsPageArchived);
-

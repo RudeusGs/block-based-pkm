@@ -161,5 +161,3 @@ public sealed class UpdateWorkspaceHandler
         }
     }
 }
-
-

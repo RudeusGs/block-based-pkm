@@ -17,6 +17,7 @@ import type { RealtimeEnvelope } from '@/realtime/realtime.types'
 import type { Guid } from '@/api/models/common.model'
 import type {
   WorkspaceMemberResponse,
+  WorkspaceResponse,
   WorkspaceRoleValue,
 } from '@/api/models/workspace.model'
 
@@ -196,6 +197,8 @@ export function useWorkspaceMembersSidebar(
   const canUpdateWorkspace = computed(() => currentWorkspaceRole.value === 'owner')
 
   const canDeleteWorkspace = computed(() => currentWorkspaceRole.value === 'owner')
+
+  const canTransferOwnership = computed(() => currentWorkspaceRole.value === 'owner')
 
   const canCreatePages = computed(() => {
     const role = currentWorkspaceRole.value
@@ -571,6 +574,90 @@ export function useWorkspaceMembersSidebar(
     }
   }
 
+  async function transferOwnership(targetMember: WorkspaceMemberListItem): Promise<WorkspaceResponse | null> {
+    const targetWorkspaceId = workspaceId.value ?? targetMember.workspaceId
+
+    if (!targetWorkspaceId) {
+      memberActionError.value = 'Không tìm thấy workspace hiện tại.'
+      return null
+    }
+
+    if (!canTransferOwnership.value) {
+      memberActionError.value = 'Chỉ owner mới được chuyển quyền sở hữu workspace.'
+      return null
+    }
+
+    if (targetMember.isCurrentUser || targetMember.isOwner) {
+      memberActionError.value = 'Người này đã là owner của workspace.'
+      return null
+    }
+
+    if (isMutatingMember.value) return null
+
+    isMutatingMember.value = true
+    mutatingMemberId.value = targetMember.userId
+    memberActionError.value = null
+
+    try {
+      const result = await workspaceController.transferOwnership(
+        targetWorkspaceId,
+        { newOwnerUserId: targetMember.userId }
+      )
+
+      if (!result.isSuccess || !result.data) {
+        memberActionError.value = getApiResultErrorMessage(
+          result,
+          'Không thể chuyển quyền owner.'
+        )
+        return null
+      }
+
+      members.value = members.value
+        .map((member) => {
+          if (member.userId === targetMember.userId) {
+            return mapMember({
+              ...member,
+              role: 'Owner',
+              isOwner: true,
+            })
+          }
+
+          if (member.isCurrentUser) {
+            return mapMember({
+              ...member,
+              role: 'Manager',
+              isOwner: false,
+            })
+          }
+
+          return member
+        })
+        .sort(compareMembers)
+
+      window.dispatchEvent(
+        new CustomEvent('pkm:workspace-members-updated', {
+          detail: {
+            workspaceId: targetWorkspaceId,
+            userId: targetMember.userId,
+            action: 'ownership-transferred',
+          },
+        })
+      )
+
+      void fetchMembers(targetWorkspaceId, { silent: true })
+      return result.data
+    } catch (mutationError) {
+      memberActionError.value = getApiErrorMessage(
+        mutationError,
+        'Không thể chuyển quyền owner.'
+      )
+      return null
+    } finally {
+      isMutatingMember.value = false
+      mutatingMemberId.value = null
+    }
+  }
+
   async function removeMember(targetMember: WorkspaceMemberListItem) {
     const targetWorkspaceId = workspaceId.value ?? targetMember.workspaceId
 
@@ -701,6 +788,7 @@ export function useWorkspaceMembersSidebar(
     canManageMembers,
     canUpdateWorkspace,
     canDeleteWorkspace,
+    canTransferOwnership,
     canCreatePages,
     canEditDocument,
     canManagePages,
@@ -714,6 +802,7 @@ export function useWorkspaceMembersSidebar(
     fetchMembers,
     connectWorkspaceRealtime,
     changeMemberRole,
+    transferOwnership,
     removeMember,
   }
 }

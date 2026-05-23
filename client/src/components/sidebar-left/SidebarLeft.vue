@@ -92,6 +92,14 @@
             :is-loading-pages="workspaceTree.isLoadingPages"
             :get-workspace-pages="workspaceTree.getWorkspacePages"
             :get-page-list-error="workspaceTree.getPageListError"
+            :favorite-pages="workspaceTree.favoritePages.value"
+            :recent-pages="workspaceTree.recentPages.value"
+            :archived-pages="workspaceTree.archivedPages.value"
+            :is-loading-quick-access="workspaceTree.isLoadingQuickAccess.value"
+            :is-loading-trash="workspaceTree.isLoadingTrash.value"
+            :quick-access-error="workspaceTree.quickAccessError.value"
+            :trash-error="workspaceTree.trashError.value"
+            :is-favorite-page="workspaceTree.isFavoritePage"
             @toggle="workspaceTree.toggleWorkspaces"
             @create-workspace="workspaceTree.openCreateWorkspaceModal"
             @refresh-tree="refreshSidebarTree"
@@ -104,6 +112,10 @@
             @page-settings="openPageSettings"
             @share-page="sharePage"
             @delete-page="workspaceTree.requestDeletePage"
+            @duplicate-page="duplicatePage"
+            @toggle-favorite-page="toggleFavoritePage"
+            @select-quick-page="workspaceTree.selectQuickAccessPage"
+            @restore-page="restorePage"
           />
         </nav>
 
@@ -195,11 +207,11 @@
 
     <ConfirmActionModal
       :open="workspaceTree.isDeletePageConfirmOpen.value"
-      title="Xóa page này?"
+      title="Archive page này?"
       :message="workspaceTree.deletePageConfirmMessage.value"
-      description="Page bị xóa sẽ biến mất khỏi sidebar. Nếu backend đang soft-delete thì vẫn có thể restore bằng API riêng sau này."
-      confirm-label="Xóa page"
-      submitting-label="Đang xóa..."
+      description="Page sẽ chuyển vào Trash và có thể restore lại trong sidebar."
+      confirm-label="Archive page"
+      submitting-label="Đang archive..."
       :is-submitting="workspaceTree.isDeletingPage.value"
       :error="workspaceTree.deletePageError.value"
       @close="workspaceTree.closeDeletePageConfirm"
@@ -217,6 +229,7 @@ import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWork
 import { useToast } from '@/components/composables/useToast'
 import type { Guid } from '@/api/models/common.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
+import type { PageResponse } from '@/api/models/page.model'
 import type { PageTreeItem } from './types/sidebar.types'
 
 import SidebarRail from './features/rail/SidebarRail.vue'
@@ -256,6 +269,8 @@ watch(
     if (isSettingsModalOpen.value) {
       void settings.fetchTaskPreference(workspaceId)
     }
+
+    void workspaceTree.fetchTrashPages(workspaceId)
   }
 )
 
@@ -371,6 +386,10 @@ function notifyProfileUpdated() {
   window.dispatchEvent(new CustomEvent('pkm:profile-updated'))
 }
 
+function handlePageFavoriteUpdated() {
+  void workspaceTree.fetchQuickAccessPages()
+}
+
 async function saveProfileSettings() {
   const saved = await settings.saveProfileSettings()
 
@@ -424,6 +443,39 @@ async function sharePage(page: PageTreeItem) {
   }
 }
 
+async function toggleFavoritePage(page: { id: Guid; title?: string }) {
+  const result = await workspaceTree.toggleFavoritePage(page)
+
+  if (result === null) return
+
+  toast.success(
+    result ? 'Đã favorite page' : 'Đã bỏ favorite',
+    page.title ? `Page "${page.title}" đã được cập nhật.` : undefined
+  )
+}
+
+async function duplicatePage(page: { id: Guid; title?: string }) {
+  const duplicated = await workspaceTree.duplicatePage(page)
+
+  if (!duplicated) return
+
+  toast.success(
+    'Đã duplicate page',
+    `Tạo bản sao "${duplicated.title}" thành công.`
+  )
+}
+
+async function restorePage(page: PageResponse | PageTreeItem) {
+  const restored = await workspaceTree.restorePage(page)
+
+  if (!restored) return
+
+  toast.success(
+    'Đã restore page',
+    `Page "${restored.title}" đã quay lại workspace.`
+  )
+}
+
 async function confirmDeletePage() {
   const deletedPage = await workspaceTree.confirmDeletePage()
 
@@ -431,7 +483,7 @@ async function confirmDeletePage() {
     return
   }
 
-  toast.success('Đã xóa page', `Page "${deletedPage.title}" đã được xóa khỏi workspace.`)
+  toast.success('Đã archive page', `Page "${deletedPage.title}" đã được chuyển vào Trash.`)
 }
 
 function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
@@ -455,13 +507,16 @@ defineExpose({
 onMounted(() => {
   void account.fetchMyProfile()
   void workspaceTree.fetchMyWorkspaces()
+  void workspaceTree.fetchQuickAccessPages()
   void myTasks.fetchMyTasks()
   void recommendations.fetchPendingRecommendations()
   void recommendations.startRecommendationRealtime()
+  window.addEventListener('pkm:page-favorite-updated', handlePageFavoriteUpdated)
 })
 
 onBeforeUnmount(() => {
   recommendations.stopRecommendationRealtime()
+  window.removeEventListener('pkm:page-favorite-updated', handlePageFavoriteUpdated)
 })
 </script>
 
@@ -568,8 +623,3 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
-
-
-
-
-

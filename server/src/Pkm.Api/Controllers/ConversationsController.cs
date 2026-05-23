@@ -208,6 +208,3 @@ public sealed class SendImageMessageFormRequest
     public IFormFile? File { get; init; }
     public string? Caption { get; init; }
 }
-
-
-

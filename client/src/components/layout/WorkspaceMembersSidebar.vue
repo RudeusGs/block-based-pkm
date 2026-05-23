@@ -201,59 +201,15 @@
                 </div>
 
                 <div class="member-copy">
-                  <div class="member-name-line">
-                    <strong :title="memberName(member)">
-                      {{ memberName(member) }}
-                    </strong>
-
-                    <span
-                      v-if="isMemberFriend(member)"
-                      class="member-friend-badge"
-                      title="Bạn bè của bạn"
-                    >
-                      <span class="material-symbols-outlined">diversity_1</span>
-                    </span>
-                  </div>
+                  <strong :title="memberName(member)">
+                    {{ memberName(member) }}
+                  </strong>
 
                   <span
                     v-if="!member.isCurrentUser"
-                    class="member-subline-row"
+                    class="member-subline"
                   >
-                    <span class="member-subline">
-                      {{ memberSubline(member) }}
-                    </span>
-
-                    <button
-                      v-if="canClickMemberSocialAction(member)"
-                      type="button"
-                      class="member-social-action add"
-                      :disabled="mutatingSocialUserId === member.userId"
-                      :title="memberSocialTitle(member)"
-                      @click.stop="handleMemberSocialAction(member)"
-                    >
-                      <span
-                        v-if="mutatingSocialUserId === member.userId"
-                        class="member-social-spinner"
-                      ></span>
-
-                      <span
-                        v-else
-                        class="material-symbols-outlined"
-                      >
-                        {{ memberSocialIcon(member) }}
-                      </span>
-                    </button>
-
-                    <span
-                      v-else-if="!isMemberFriend(member)"
-                      class="member-social-action state"
-                      :class="memberSocialStateClass(member)"
-                      :title="memberSocialTitle(member)"
-                    >
-                      <span class="material-symbols-outlined">
-                        {{ memberSocialIcon(member) }}
-                      </span>
-                    </span>
+                    {{ memberSubline(member) }}
                   </span>
                 </div>
 
@@ -317,6 +273,21 @@
                     </button>
 
                     <div class="member-dropdown-divider"></div>
+
+                    <button
+                      v-if="canTransferOwnerTo(member)"
+                      type="button"
+                      class="member-dropdown-item"
+                      :disabled="isMemberMutating(member)"
+                      @click="handleTransferOwnership(member)"
+                    >
+                      <span class="material-symbols-outlined">workspace_premium</span>
+
+                      <span>
+                        <strong>Chuyển owner</strong>
+                        <small>Trao quyền sở hữu workspace cho người này.</small>
+                      </span>
+                    </button>
 
                     <button
                       type="button"
@@ -375,59 +346,15 @@
                 </div>
 
                 <div class="member-copy">
-                  <div class="member-name-line">
-                    <strong :title="memberName(member)">
-                      {{ memberName(member) }}
-                    </strong>
-
-                    <span
-                      v-if="isMemberFriend(member)"
-                      class="member-friend-badge"
-                      title="Bạn bè của bạn"
-                    >
-                      <span class="material-symbols-outlined">diversity_1</span>
-                    </span>
-                  </div>
+                  <strong :title="memberName(member)">
+                    {{ memberName(member) }}
+                  </strong>
 
                   <span
                     v-if="!member.isCurrentUser"
-                    class="member-subline-row"
+                    class="member-subline"
                   >
-                    <span class="member-subline">
-                      {{ memberSubline(member) }}
-                    </span>
-
-                    <button
-                      v-if="canClickMemberSocialAction(member)"
-                      type="button"
-                      class="member-social-action add"
-                      :disabled="mutatingSocialUserId === member.userId"
-                      :title="memberSocialTitle(member)"
-                      @click.stop="handleMemberSocialAction(member)"
-                    >
-                      <span
-                        v-if="mutatingSocialUserId === member.userId"
-                        class="member-social-spinner"
-                      ></span>
-
-                      <span
-                        v-else
-                        class="material-symbols-outlined"
-                      >
-                        {{ memberSocialIcon(member) }}
-                      </span>
-                    </button>
-
-                    <span
-                      v-else-if="!isMemberFriend(member)"
-                      class="member-social-action state"
-                      :class="memberSocialStateClass(member)"
-                      :title="memberSocialTitle(member)"
-                    >
-                      <span class="material-symbols-outlined">
-                        {{ memberSocialIcon(member) }}
-                      </span>
-                    </span>
+                    {{ memberSubline(member) }}
                   </span>
                 </div>
 
@@ -493,6 +420,21 @@
                     <div class="member-dropdown-divider"></div>
 
                     <button
+                      v-if="canTransferOwnerTo(member)"
+                      type="button"
+                      class="member-dropdown-item"
+                      :disabled="isMemberMutating(member)"
+                      @click="handleTransferOwnership(member)"
+                    >
+                      <span class="material-symbols-outlined">workspace_premium</span>
+
+                      <span>
+                        <strong>Chuyển owner</strong>
+                        <small>Trao quyền sở hữu workspace cho người này.</small>
+                      </span>
+                    </button>
+
+                    <button
                       type="button"
                       class="member-dropdown-item danger"
                       :disabled="isMemberMutating(member)"
@@ -532,12 +474,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import ConfirmActionModal from '@/components/shared/ConfirmActionModal.vue'
-import { socialController } from '@/api/services/social.api'
-import {
-  getApiErrorMessage,
-  getApiResultErrorMessage,
-} from '@/api/utils/api-error.util'
-import { useToast } from '@/components/composables/useToast'
 import { normalizeImageUrl } from '@/utils/image-url.util'
 import type { Guid } from '@/api/models/common.model'
 import type { WorkspaceRoleValue } from '@/api/models/workspace.model'
@@ -553,6 +489,7 @@ const props = defineProps<{
   isLoading: boolean
   error: string | null
   canManageMembers: boolean
+  canTransferOwnership: boolean
   isMutatingMember: boolean
   mutatingMemberId: Guid | null
   memberActionError: string | null
@@ -563,9 +500,8 @@ const emit = defineEmits<{
   refresh: []
   changeRole: [member: WorkspaceMemberListItem, role: WorkspaceRoleValue]
   removeMember: [member: WorkspaceMemberListItem]
+  transferOwnership: [member: WorkspaceMemberListItem]
 }>()
-
-const toast = useToast()
 
 const roleOptions: Array<{
   value: WorkspaceRoleValue
@@ -597,11 +533,6 @@ const searchTerm = ref('')
 const failedAvatarUserIds = ref<Set<string>>(new Set())
 const activeMemberMenuId = ref<Guid | null>(null)
 const memberToRemove = ref<WorkspaceMemberListItem | null>(null)
-const friendUserIds = ref<Set<Guid>>(new Set())
-const outgoingRequestIdsByUserId = ref<Map<Guid, Guid>>(new Map())
-const incomingRequestIdsByUserId = ref<Map<Guid, Guid>>(new Map())
-const isLoadingSocialRelations = ref(false)
-const mutatingSocialUserId = ref<Guid | null>(null)
 
 const normalizedSearchTerm = computed(() => {
   return searchTerm.value.trim().toLowerCase()
@@ -678,144 +609,9 @@ watch(
       activeMemberMenuId.value = null
       memberToRemove.value = null
       searchTerm.value = ''
-      return
     }
-
-    void loadSocialRelations()
   }
 )
-
-
-async function loadSocialRelations() {
-  if (isLoadingSocialRelations.value) return
-
-  isLoadingSocialRelations.value = true
-
-  try {
-    const [friendsResult, outgoingResult, incomingResult] = await Promise.all([
-      socialController.listFriends(1, 200),
-      socialController.listOutgoingRequests(1, 200),
-      socialController.listIncomingRequests(1, 200),
-    ])
-
-    friendUserIds.value =
-      friendsResult.isSuccess && friendsResult.data
-        ? new Set(friendsResult.data.map((friend) => friend.userId))
-        : new Set()
-
-    outgoingRequestIdsByUserId.value =
-      outgoingResult.isSuccess && outgoingResult.data
-        ? new Map(
-            outgoingResult.data.map((request) => [
-              request.otherUser.id,
-              request.id,
-            ])
-          )
-        : new Map()
-
-    incomingRequestIdsByUserId.value =
-      incomingResult.isSuccess && incomingResult.data
-        ? new Map(
-            incomingResult.data.map((request) => [
-              request.otherUser.id,
-              request.id,
-            ])
-          )
-        : new Map()
-  } catch {
-    friendUserIds.value = new Set()
-    outgoingRequestIdsByUserId.value = new Map()
-    incomingRequestIdsByUserId.value = new Map()
-  } finally {
-    isLoadingSocialRelations.value = false
-  }
-}
-
-function isMemberFriend(member: WorkspaceMemberListItem) {
-  return !member.isCurrentUser && friendUserIds.value.has(member.userId)
-}
-
-function hasOutgoingFriendRequest(member: WorkspaceMemberListItem) {
-  return outgoingRequestIdsByUserId.value.has(member.userId)
-}
-
-function hasIncomingFriendRequest(member: WorkspaceMemberListItem) {
-  return incomingRequestIdsByUserId.value.has(member.userId)
-}
-
-function memberSocialIcon(member: WorkspaceMemberListItem) {
-  if (isMemberFriend(member)) return 'diversity_1'
-  if (hasIncomingFriendRequest(member)) return 'how_to_reg'
-  if (hasOutgoingFriendRequest(member)) return 'schedule'
-
-  return 'person_add'
-}
-
-function memberSocialTitle(member: WorkspaceMemberListItem) {
-  if (isMemberFriend(member)) return 'Đã là bạn bè'
-  if (hasIncomingFriendRequest(member)) {
-    return `Xác nhận lời mời kết bạn từ ${memberName(member)}`
-  }
-
-  if (hasOutgoingFriendRequest(member)) {
-    return `Đã gửi lời mời kết bạn tới ${memberName(member)}`
-  }
-
-  return `Thêm ${memberName(member)} làm bạn bè`
-}
-
-function memberSocialStateClass(member: WorkspaceMemberListItem) {
-  if (hasOutgoingFriendRequest(member)) return 'pending'
-  if (hasIncomingFriendRequest(member)) return 'incoming'
-
-  return 'idle'
-}
-
-function canClickMemberSocialAction(member: WorkspaceMemberListItem) {
-  if (member.isCurrentUser || isMemberFriend(member) || isLoadingSocialRelations.value) return false
-  if (mutatingSocialUserId.value === member.userId) return true
-  if (hasOutgoingFriendRequest(member)) return false
-
-  return true
-}
-
-async function handleMemberSocialAction(member: WorkspaceMemberListItem) {
-  if (!canClickMemberSocialAction(member) || mutatingSocialUserId.value) return
-
-  mutatingSocialUserId.value = member.userId
-
-  try {
-    const incomingRequestId = incomingRequestIdsByUserId.value.get(member.userId)
-
-    if (incomingRequestId) {
-      const result = await socialController.acceptFriendRequest(incomingRequestId)
-
-      if (!result.isSuccess) {
-        toast.error('Không thể xác nhận kết bạn', getApiResultErrorMessage(result))
-        return
-      }
-
-      toast.success('Đã kết bạn', `${memberName(member)} giờ là bạn bè của bạn.`)
-    } else {
-      const result = await socialController.sendFriendRequest({
-        addresseeUserId: member.userId,
-      })
-
-      if (!result.isSuccess) {
-        toast.error('Không gửi được lời mời', getApiResultErrorMessage(result))
-        return
-      }
-
-      toast.success('Đã gửi lời mời kết bạn', `Đã gửi lời mời tới ${memberName(member)}.`)
-    }
-
-    await loadSocialRelations()
-  } catch (error) {
-    toast.error('Không xử lý được kết bạn', getApiErrorMessage(error))
-  } finally {
-    mutatingSocialUserId.value = null
-  }
-}
 
 function memberAvatarSrc(member: WorkspaceMemberListItem) {
   return normalizeImageUrl(member.avatarUrl) ?? undefined
@@ -930,6 +726,22 @@ function handleRoleChange(
   emit('changeRole', member, role)
 }
 
+function canTransferOwnerTo(member: WorkspaceMemberListItem) {
+  return (
+    props.canTransferOwnership &&
+    props.canManageMembers &&
+    !member.isCurrentUser &&
+    !member.isOwner
+  )
+}
+
+function handleTransferOwnership(member: WorkspaceMemberListItem) {
+  if (!canTransferOwnerTo(member) || isMemberMutating(member)) return
+
+  activeMemberMenuId.value = null
+  emit('transferOwnership', member)
+}
+
 function openRemoveMemberConfirm(member: WorkspaceMemberListItem) {
   if (!canShowMemberActions(member) || isMemberMutating(member)) return
 
@@ -956,7 +768,6 @@ function memberMatchesSearch(member: WorkspaceMemberListItem, keyword: string) {
     member.email,
     roleLabel(member),
     availabilityLabel(member),
-    memberSocialTitle(member),
   ]
     .filter(Boolean)
     .some((value) => value.toLowerCase().includes(keyword))
@@ -1887,118 +1698,4 @@ function memberMatchesSearch(member: WorkspaceMemberListItem, keyword: string) {
   }
 }
 
-.member-name-line {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.member-name-line strong {
-  min-width: 0;
-}
-
-.member-friend-badge {
-  width: 19px;
-  height: 19px;
-  border: 1px solid rgba(117, 183, 152, 0.26);
-  border-radius: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  color: #9ddfc1;
-  background: rgba(117, 183, 152, 0.12);
-}
-
-.member-friend-badge .material-symbols-outlined {
-  font-size: 14px;
-}
-
-.member-subline-row {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.member-subline-row .member-subline {
-  min-width: 0;
-  flex: 0 1 auto;
-}
-
-.member-social-action {
-  width: 22px;
-  height: 22px;
-  min-width: 22px;
-  border: 1px solid #303030;
-  border-radius: 7px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: #8f8f8f;
-  background: #202020;
-}
-
-button.member-social-action {
-  cursor: pointer;
-  transition:
-    background 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    transform 140ms ease;
-}
-
-button.member-social-action:hover:not(:disabled) {
-  color: #f1f1f1;
-  background: #2a2a2a;
-  border-color: #3a3a3a;
-  transform: translateY(-1px);
-}
-
-.member-social-action.add {
-  color: #d8d8d8;
-  background: rgba(255, 255, 255, 0.055);
-}
-
-.member-social-action.pending {
-  color: #ffdca8;
-  background: rgba(255, 209, 102, 0.095);
-  border-color: rgba(255, 209, 102, 0.18);
-}
-
-.member-social-action.incoming {
-  color: #9ddfc1;
-  background: rgba(117, 183, 152, 0.11);
-  border-color: rgba(117, 183, 152, 0.2);
-}
-
-.member-social-action .material-symbols-outlined {
-  font-size: 15px;
-}
-
-.member-social-action:disabled {
-  opacity: 0.55;
-  cursor: wait;
-}
-
-.member-social-spinner {
-  width: 12px;
-  height: 12px;
-  border: 2px solid #3a3a3a;
-  border-top-color: #f1f1f1;
-  border-radius: 999px;
-  animation: member-social-spin 0.75s linear infinite;
-}
-
-@keyframes member-social-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 </style>
-
-
-
-

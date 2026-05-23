@@ -15,4 +15,3 @@ public sealed record WorkspaceDto(
     bool CanRead,
     bool CanWrite,
     bool CanManageMembers);
-

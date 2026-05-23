@@ -8,4 +8,3 @@ public enum WorkspaceRole
     Member = 3,
     Viewer = 4
 }
-

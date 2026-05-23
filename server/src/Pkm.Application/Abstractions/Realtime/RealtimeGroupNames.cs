@@ -6,4 +6,3 @@ public static class RealtimeGroupNames
     public static string Page(Guid pageId) => $"page:{pageId:D}";
     public static string Conversation(Guid conversationId) => $"conversation:{conversationId:D}";
 }
-

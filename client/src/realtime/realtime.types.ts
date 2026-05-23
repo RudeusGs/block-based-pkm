@@ -42,6 +42,14 @@ export interface ConversationJoinAck {
   groupName: string
 }
 
+export interface ConversationTypingPayload {
+  conversationId: Guid
+  senderUserId: Guid
+  recipientUserId: Guid
+  userName?: string | null
+  isTyping: boolean
+}
+
 export interface PageCursorRequest {
   pageId: Guid
   blockId?: Guid | null

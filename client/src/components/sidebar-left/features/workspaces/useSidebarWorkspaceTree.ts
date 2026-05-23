@@ -7,7 +7,7 @@ import {
   getApiResultErrorMessage,
 } from '@/api/utils/api-error.util'
 import type { Guid } from '@/api/models/common.model'
-import type { PageResponse } from '@/api/models/page.model'
+import type { PageQuickAccessResponse, PageResponse } from '@/api/models/page.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
 import type {
   PageTreeItem,
@@ -48,6 +48,19 @@ export function useSidebarWorkspaceTree() {
   const pageTreesByWorkspaceId = ref<Record<Guid, PageTreeItem[]>>({})
   const pageListErrorsByWorkspaceId = ref<Record<Guid, string | null>>({})
 
+  const favoritePages = ref<PageQuickAccessResponse[]>([])
+  const recentPages = ref<PageQuickAccessResponse[]>([])
+  const archivedPages = ref<PageResponse[]>([])
+  const isLoadingQuickAccess = ref(false)
+  const isLoadingTrash = ref(false)
+  const quickAccessError = ref<string | null>(null)
+  const trashError = ref<string | null>(null)
+
+  const favoritePageIds = computed(() => {
+    return new Set(favoritePages.value.map((page) => page.id))
+  })
+
+
   const pageToDelete = ref<PageTreeItem | null>(null)
   const isDeletePageConfirmOpen = ref(false)
   const isDeletingPage = ref(false)
@@ -57,10 +70,10 @@ export function useSidebarWorkspaceTree() {
     const page = pageToDelete.value
 
     if (!page) {
-      return 'Bạn có chắc muốn xóa page này không?'
+      return 'Bạn có chắc muốn archive page này không?'
     }
 
-    return `Bạn sắp xóa page "${page.title}" và toàn bộ subpage bên trong nếu có. Hành động này không thể hoàn tác.`
+    return `Bạn sắp chuyển page "${page.title}" và toàn bộ subpage bên trong vào Trash. Bạn có thể restore lại sau.`
   })
 
   const {
@@ -316,6 +329,80 @@ export function useSidebarWorkspaceTree() {
     }
   }
 
+  async function fetchQuickAccessPages() {
+    if (isLoadingQuickAccess.value) return
+
+    isLoadingQuickAccess.value = true
+    quickAccessError.value = null
+
+    try {
+      const [favoritesResult, recentResult] = await Promise.all([
+        pageController.listFavorites({ pageNumber: 1, pageSize: 12 }),
+        pageController.listRecent({ pageNumber: 1, pageSize: 12 }),
+      ])
+
+      if (favoritesResult.isSuccess && favoritesResult.data) {
+        favoritePages.value = favoritesResult.data.items
+      } else {
+        quickAccessError.value = getApiResultErrorMessage(
+          favoritesResult,
+          'Không thể tải favorite pages.'
+        )
+      }
+
+      if (recentResult.isSuccess && recentResult.data) {
+        recentPages.value = recentResult.data.items
+      } else {
+        quickAccessError.value = getApiResultErrorMessage(
+          recentResult,
+          'Không thể tải recent pages.'
+        )
+      }
+    } catch (error) {
+      quickAccessError.value = getApiErrorMessage(
+        error,
+        'Không thể tải quick access pages.'
+      )
+    } finally {
+      isLoadingQuickAccess.value = false
+    }
+  }
+
+  async function fetchTrashPages(workspaceId: Guid | null = selectedWorkspaceId.value) {
+    if (!workspaceId || isLoadingTrash.value) return
+
+    isLoadingTrash.value = true
+    trashError.value = null
+
+    try {
+      const result = await pageController.listTrash(workspaceId, {
+        pageNumber: 1,
+        pageSize: 20,
+      })
+
+      if (!result.isSuccess || !result.data) {
+        trashError.value = getApiResultErrorMessage(
+          result,
+          'Không thể tải thùng rác page.'
+        )
+        return
+      }
+
+      archivedPages.value = result.data.items
+    } catch (error) {
+      trashError.value = getApiErrorMessage(
+        error,
+        'Không thể tải thùng rác page.'
+      )
+    } finally {
+      isLoadingTrash.value = false
+    }
+  }
+
+  function isFavoritePage(pageId: Guid) {
+    return favoritePageIds.value.has(pageId)
+  }
+
   function retryLoadPages(workspaceId: Guid) {
     void fetchWorkspacePages(workspaceId)
   }
@@ -394,8 +481,122 @@ export function useSidebarWorkspaceTree() {
           })
         )
       )
+
+
+      await fetchQuickAccessPages()
+      await fetchTrashPages(nextSelectedWorkspaceId)
     } finally {
       isRefreshingSidebarTree.value = false
+    }
+  }
+
+  async function selectQuickAccessPage(page: PageQuickAccessResponse) {
+    selectedPageId.value = page.id
+    selectedWorkspaceId.value = page.workspaceId
+
+    workspaceNavigation.setWorkspace({
+      id: page.workspaceId,
+      name: page.workspaceName,
+    })
+
+    workspaceNavigation.setPage({
+      id: page.id,
+      workspaceId: page.workspaceId,
+      title: page.title,
+      icon: page.icon,
+      coverImage: page.coverImage,
+      currentRevision: page.currentRevision,
+    })
+
+    openWorkspaceBranch(page.workspaceId)
+    await fetchWorkspacePages(page.workspaceId, {
+      preferredPageId: page.id,
+      syncSelection: false,
+    })
+
+    void fetchQuickAccessPages()
+  }
+
+  async function toggleFavoritePage(page: { id: Guid }) {
+    const isAlreadyFavorite = isFavoritePage(page.id)
+
+    try {
+      const result = isAlreadyFavorite
+        ? await pageController.unfavorite(page.id)
+        : await pageController.favorite(page.id)
+
+      if (!result.isSuccess) {
+        quickAccessError.value = getApiResultErrorMessage(
+          result,
+          isAlreadyFavorite
+            ? 'Không thể bỏ favorite page.'
+            : 'Không thể favorite page.'
+        )
+        return null
+      }
+
+      await fetchQuickAccessPages()
+      return !isAlreadyFavorite
+    } catch (error) {
+      quickAccessError.value = getApiErrorMessage(
+        error,
+        isAlreadyFavorite
+          ? 'Không thể bỏ favorite page.'
+          : 'Không thể favorite page.'
+      )
+      return null
+    }
+  }
+
+  async function duplicatePage(page: { id: Guid }) {
+    try {
+      const result = await pageController.duplicate(page.id)
+
+      if (!result.isSuccess || !result.data) {
+        pageListErrorsByWorkspaceId.value = {
+          ...pageListErrorsByWorkspaceId.value,
+          [selectedWorkspaceId.value ?? 'unknown']: getApiResultErrorMessage(
+            result,
+            'Không thể duplicate page.'
+          ),
+        }
+        return null
+      }
+
+      handlePageCreated(result.data)
+      await fetchQuickAccessPages()
+      return result.data
+    } catch (error) {
+      pageListErrorsByWorkspaceId.value = {
+        ...pageListErrorsByWorkspaceId.value,
+        [selectedWorkspaceId.value ?? 'unknown']: getApiErrorMessage(
+          error,
+          'Không thể duplicate page.'
+        ),
+      }
+      return null
+    }
+  }
+
+  async function restorePage(page: PageResponse) {
+    try {
+      const result = await pageController.restore(page.id)
+
+      if (!result.isSuccess || !result.data) {
+        trashError.value = getApiResultErrorMessage(
+          result,
+          'Không thể restore page.'
+        )
+        return null
+      }
+
+      handlePageCreated(result.data)
+      await fetchTrashPages(result.data.workspaceId)
+      await fetchQuickAccessPages()
+      return result.data
+    } catch (error) {
+      trashError.value = getApiErrorMessage(error, 'Không thể restore page.')
+      return null
     }
   }
 
@@ -475,7 +676,7 @@ export function useSidebarWorkspaceTree() {
       if (!result.isSuccess) {
         deletePageError.value = getApiResultErrorMessage(
           result,
-          'Không thể xóa page này.'
+          'Không thể archive page này.'
         )
 
         return null
@@ -512,11 +713,14 @@ export function useSidebarWorkspaceTree() {
       deletePageError.value = null
       pageToDelete.value = null
 
+      await fetchTrashPages(target.workspaceId)
+      await fetchQuickAccessPages()
+
       return removedPage ?? target
     } catch (error) {
       deletePageError.value = getApiErrorMessage(
         error,
-        'Không thể xóa page này.'
+        'Không thể archive page này.'
       )
 
       return null
@@ -630,6 +834,15 @@ export function useSidebarWorkspaceTree() {
     deletePageError,
     deletePageConfirmMessage,
 
+    favoritePages,
+    recentPages,
+    archivedPages,
+    isLoadingQuickAccess,
+    isLoadingTrash,
+    quickAccessError,
+    trashError,
+
+
     fetchMyWorkspaces,
     toggleWorkspaces,
     openCreateWorkspaceModal,
@@ -643,6 +856,13 @@ export function useSidebarWorkspaceTree() {
     retryLoadPages,
     retryLoadWorkspaces,
     refreshSidebarTree,
+    fetchQuickAccessPages,
+    fetchTrashPages,
+    isFavoritePage,
+    selectQuickAccessPage,
+    toggleFavoritePage,
+    duplicatePage,
+    restorePage,
     selectPage,
     handleWorkspaceCreated,
     handleWorkspaceUpdated,

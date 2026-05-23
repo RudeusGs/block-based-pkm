@@ -245,6 +245,3 @@ internal sealed class MessagingRepository : IMessagingRepository
 
     public void UpdateConversation(Conversation conversation) => _context.Conversations.Update(conversation);
 }
-
-
-

@@ -4,6 +4,7 @@ import type {
   AddWorkspaceMemberRequest,
   ChangeWorkspaceMemberRoleRequest,
   CreateWorkspaceRequest,
+  TransferWorkspaceOwnershipRequest,
   UpdateWorkspaceRequest,
   WorkspaceInvitationResponse,
   WorkspaceMemberResponse,
@@ -33,6 +34,20 @@ export const workspaceController = {
   joinAsViewer(workspaceId: Guid) {
     return api.post<ApiResult<WorkspaceResponse>>(
       `workspaces/${workspaceId}/join-as-viewer`
+    )
+  },
+
+  leave(workspaceId: Guid) {
+    return api.post<ApiResult>(`workspaces/${workspaceId}/leave`)
+  },
+
+  transferOwnership(
+    workspaceId: Guid,
+    payload: TransferWorkspaceOwnershipRequest
+  ) {
+    return api.post<ApiResult<WorkspaceResponse>>(
+      `workspaces/${workspaceId}/transfer-ownership`,
+      payload
     )
   },
 

@@ -1,8 +1,10 @@
 ﻿using Pkm.Application.Abstractions.Authentication;
 using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Pages.Queries.GetPage;
 
@@ -11,15 +13,24 @@ public sealed class GetPageHandler
     private readonly ICurrentUser _currentUser;
     private readonly IPageRepository _pageRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
+    private readonly IPageUserStateRepository _pageUserStateRepository;
+    private readonly IUnitOfWork _unitOfWork;
+    private readonly IClock _clock;
 
     public GetPageHandler(
         ICurrentUser currentUser,
         IPageRepository pageRepository,
-        IPageAccessEvaluator pageAccessEvaluator)
+        IPageAccessEvaluator pageAccessEvaluator,
+        IPageUserStateRepository pageUserStateRepository,
+        IUnitOfWork unitOfWork,
+        IClock clock)
     {
         _currentUser = currentUser;
         _pageRepository = pageRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
+        _pageUserStateRepository = pageUserStateRepository;
+        _unitOfWork = unitOfWork;
+        _clock = clock;
     }
 
     public async Task<Result<PageDto>> HandleAsync(
@@ -47,6 +58,24 @@ public sealed class GetPageHandler
         if (page is null)
             return Result.Failure<PageDto>(PageErrors.PageNotFound);
 
+        await RecordRecentPageAsync(currentUserId, page.Id, cancellationToken);
+
         return Result.Success(page.ToDto());
+    }
+
+    private async Task RecordRecentPageAsync(Guid userId, Guid pageId, CancellationToken cancellationToken)
+    {
+        var recent = await _pageUserStateRepository.GetRecentAsync(userId, pageId, cancellationToken);
+
+        if (recent is null)
+        {
+            _pageUserStateRepository.AddRecent(new PageRecent(Guid.NewGuid(), userId, pageId, _clock.UtcNow));
+        }
+        else
+        {
+            recent.MarkVisited(_clock.UtcNow);
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

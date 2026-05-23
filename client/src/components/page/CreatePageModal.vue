@@ -446,5 +446,3 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/CreatePageModal.css"></style>
-
-

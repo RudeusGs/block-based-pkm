@@ -35,6 +35,13 @@ using Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
 using Pkm.Application.Features.Notifications.Queries.ListNotifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Commands.CreatePage;
+using Pkm.Application.Features.Pages.Queries.ListArchivedPages;
+using Pkm.Application.Features.Pages.Queries.ListRecentPages;
+using Pkm.Application.Features.Pages.Queries.ListFavoritePages;
+using Pkm.Application.Features.Pages.Commands.RestorePage;
+using Pkm.Application.Features.Pages.Commands.DuplicatePage;
+using Pkm.Application.Features.Pages.Commands.UnfavoritePage;
+using Pkm.Application.Features.Pages.Commands.FavoritePage;
 using Pkm.Application.Features.Pages.Commands.DeletePage;
 using Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
 using Pkm.Application.Features.Pages.Policies;
@@ -74,6 +81,8 @@ using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
 using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.JoinPublicWorkspaceAsViewer;
+using Pkm.Application.Features.Workspaces.Commands.TransferWorkspaceOwnership;
+using Pkm.Application.Features.Workspaces.Commands.LeaveWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Policies;
@@ -142,6 +151,8 @@ public static class ApplicationServiceCollection
         services.AddScoped<ChangeWorkspaceMemberRoleHandler>();
         services.AddScoped<RemoveWorkspaceMemberHandler>();
         services.AddScoped<JoinPublicWorkspaceAsViewerHandler>();
+        services.AddScoped<LeaveWorkspaceHandler>();
+        services.AddScoped<TransferWorkspaceOwnershipHandler>();
 
         services.AddScoped<GetWorkspaceByIdHandler>();
         services.AddScoped<ListMyWorkspacesHandler>();
@@ -150,11 +161,18 @@ public static class ApplicationServiceCollection
         services.AddScoped<CreatePageHandler>();
         services.AddScoped<UpdatePageMetadataHandler>();
         services.AddScoped<DeletePageHandler>();
+        services.AddScoped<FavoritePageHandler>();
+        services.AddScoped<UnfavoritePageHandler>();
+        services.AddScoped<DuplicatePageHandler>();
+        services.AddScoped<RestorePageHandler>();
 
         services.AddScoped<GetPageHandler>();
         services.AddScoped<ListWorkspacePagesHandler>();
         services.AddScoped<ListSubPagesHandler>();
         services.AddScoped<SearchPagesHandler>();
+        services.AddScoped<ListFavoritePagesHandler>();
+        services.AddScoped<ListRecentPagesHandler>();
+        services.AddScoped<ListArchivedPagesHandler>();
 
         services.AddScoped<GetBlockHandler>();
         services.AddScoped<GetBlockLeaseHandler>();

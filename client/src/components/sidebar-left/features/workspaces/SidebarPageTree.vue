@@ -45,14 +45,18 @@
         </button>
 
         <PageActionMenu
-          v-if="canManagePages"
           :page="page"
           :can-settings="canManagePages"
           :can-share="canManagePages"
           :can-delete="canManagePages"
+          :can-duplicate="canManagePages"
+          :can-favorite="true"
+          :is-favorite="isFavoritePage(page.id)"
           @settings="emit('pageSettings', $event)"
           @share="emit('sharePage', $event)"
           @delete="emit('deletePage', $event)"
+          @duplicate="emit('duplicatePage', $event)"
+          @favorite="emit('toggleFavoritePage', $event)"
         />
       </div>
 
@@ -66,12 +70,15 @@
         :max-visual-depth="maxVisualDepth"
         :can-create-child="canCreateChild"
         :can-manage-pages="canManagePages"
+        :is-favorite-page="isFavoritePage"
         @select-page="emit('selectPage', $event)"
         @create-child="emit('createChild', $event)"
         @toggle-page="emit('togglePage', $event)"
         @page-settings="emit('pageSettings', $event)"
         @share-page="emit('sharePage', $event)"
         @delete-page="emit('deletePage', $event)"
+        @duplicate-page="emit('duplicatePage', $event)"
+        @toggle-favorite-page="emit('toggleFavoritePage', $event)"
       />
     </li>
   </ul>
@@ -94,12 +101,14 @@ withDefaults(
     maxVisualDepth?: number
     canCreateChild?: boolean
     canManagePages?: boolean
+    isFavoritePage?: (pageId: string) => boolean
   }>(),
   {
     depth: 0,
     maxVisualDepth: 4,
     canCreateChild: false,
     canManagePages: false,
+    isFavoritePage: () => false,
   }
 )
 
@@ -110,6 +119,8 @@ const emit = defineEmits<{
   pageSettings: [page: PageTreeItem]
   sharePage: [page: PageTreeItem]
   deletePage: [page: PageTreeItem]
+  duplicatePage: [page: PageTreeItem]
+  toggleFavoritePage: [page: PageTreeItem]
 }>()
 </script>
 

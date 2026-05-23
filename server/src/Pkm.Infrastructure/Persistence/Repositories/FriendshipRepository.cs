@@ -194,6 +194,3 @@ internal sealed class FriendshipRepository : IFriendshipRepository
             .ToListAsync(cancellationToken);
     }
 }
-
-
-

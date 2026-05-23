@@ -178,4 +178,3 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
         _dataContext.Workspaces.Update(workspace);
     }
 }
-

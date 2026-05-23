@@ -521,5 +521,3 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped src="./css/CreateTaskPanel.css"></style>
-
-

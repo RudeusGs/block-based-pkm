@@ -73,4 +73,3 @@ public sealed class DocumentAccessEvaluator : IDocumentAccessEvaluator
             CanManagePage: capabilities.CanManagePage);
     }
 }
-

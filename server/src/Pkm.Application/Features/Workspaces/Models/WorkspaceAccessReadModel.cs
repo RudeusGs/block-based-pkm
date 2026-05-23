@@ -7,4 +7,3 @@ public sealed record WorkspaceAccessReadModel(
     Guid OwnerId,
     WorkspaceRole? Role,
     WorkspaceVisibility Visibility);
-

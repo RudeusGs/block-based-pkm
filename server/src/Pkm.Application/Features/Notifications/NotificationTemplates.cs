@@ -254,4 +254,3 @@ public static class NotificationTemplates
             ReferenceType: NotificationReferenceTypes.Conversation);
 
 }
-

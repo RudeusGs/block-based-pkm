@@ -22,6 +22,12 @@ public sealed class ExceptionMappingMiddleware
         {
             await _next(httpContext);
         }
+        catch (OperationCanceledException) when (httpContext.RequestAborted.IsCancellationRequested)
+        {
+            // Browser/client cancelled the request. This is expected during fast navigation
+            // or SignalR reconnects, so do not turn it into a noisy 500 error.
+            return;
+        }
         catch (Exception exception)
         {
             _logger.LogError(

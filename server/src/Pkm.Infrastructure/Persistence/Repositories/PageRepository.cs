@@ -23,6 +23,10 @@ internal sealed class PageRepository : IPageRepository
         => await _dataContext.Pages
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsArchived, cancellationToken);
 
+    public async Task<Page?> GetByIdIncludingArchivedForUpdateAsync(Guid id, CancellationToken cancellationToken = default)
+        => await _dataContext.Pages
+            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
         => await _dataContext.Pages
             .AnyAsync(x => x.Id == id && !x.IsArchived, cancellationToken);
@@ -63,6 +67,33 @@ internal sealed class PageRepository : IPageRepository
             .Where(x => x.ParentPageId == parentPageId && !x.IsArchived)
             .OrderByDescending(x => x.CreatedDate)
             .ToListAsync(cancellationToken);
+    }
+
+
+    public async Task<IReadOnlyList<Page>> ListArchivedByWorkspaceAsync(
+        Guid workspaceId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        pageSize = pageSize <= 0 ? 20 : pageSize;
+
+        return await _dataContext.Pages
+            .AsNoTracking()
+            .Where(x => x.WorkspaceId == workspaceId && x.IsArchived)
+            .OrderByDescending(x => x.ArchivedAt ?? x.UpdatedDate ?? x.CreatedDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountArchivedByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dataContext.Pages
+            .CountAsync(x => x.WorkspaceId == workspaceId && x.IsArchived, cancellationToken);
     }
 
     public async Task<IReadOnlyList<Page>> SearchInWorkspaceAsync(
@@ -130,4 +161,3 @@ internal sealed class PageRepository : IPageRepository
 
     public void Add(Page page) => _dataContext.Pages.Add(page);
 }
-

@@ -7,6 +7,7 @@ public interface IPageRepository
 {
     Task<Page?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
     Task<Page?> GetByIdForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
+    Task<Page?> GetByIdIncludingArchivedForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Page>> ListByWorkspaceAsync(
@@ -21,6 +22,16 @@ public interface IPageRepository
 
     Task<IReadOnlyList<Page>> ListSubPagesAsync(
         Guid parentPageId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Page>> ListArchivedByWorkspaceAsync(
+        Guid workspaceId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountArchivedByWorkspaceAsync(
+        Guid workspaceId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<Page>> SearchInWorkspaceAsync(

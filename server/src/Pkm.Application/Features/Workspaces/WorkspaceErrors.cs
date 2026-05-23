@@ -65,6 +65,22 @@ public static class WorkspaceErrors
         ResultStatus.Unprocessable);
 
 
+    public static readonly Error CannotLeaveOwnedWorkspace = new(
+        "Workspace.CannotLeaveOwnedWorkspace",
+        "Owner cần chuyển quyền sở hữu trước khi rời workspace.",
+        ResultStatus.Unprocessable);
+
+    public static readonly Error CannotTransferOwnershipToYourself = new(
+        "Workspace.CannotTransferOwnershipToYourself",
+        "Bạn đã là owner của workspace này rồi.",
+        ResultStatus.Unprocessable);
+
+    public static readonly Error NewOwnerMustBeWorkspaceMember = new(
+        "Workspace.NewOwnerMustBeWorkspaceMember",
+        "Người nhận quyền owner phải là thành viên hiện tại của workspace.",
+        ResultStatus.Unprocessable);
+
+
     public static readonly Error WorkspaceInvitationAlreadyPending = new(
         "Workspace.InvitationAlreadyPending",
         "Email này đã có lời mời đang chờ xác nhận trong workspace.",

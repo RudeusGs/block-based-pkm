@@ -92,6 +92,7 @@
       :is-loading="workspaceMembers.isLoading.value"
       :error="workspaceMembers.error.value"
       :can-manage-members="workspaceMembers.canManageMembers.value"
+      :can-transfer-ownership="workspaceMembers.canTransferOwnership.value"
       :is-mutating-member="workspaceMembers.isMutatingMember.value"
       :mutating-member-id="workspaceMembers.mutatingMemberId.value"
       :member-action-error="workspaceMembers.memberActionError.value"
@@ -99,6 +100,7 @@
       @refresh="workspaceMembers.refresh"
       @change-role="workspaceMembers.changeMemberRole"
       @remove-member="workspaceMembers.removeMember"
+      @transfer-ownership="transferWorkspaceOwnership"
     />
     
     <WorkspaceActivityLogPanel
@@ -150,7 +152,10 @@ import WorkspaceActivityLogPanel from '@/components/activity/WorkspaceActivityLo
 import SocialHubPanel from '@/components/social/SocialHubPanel.vue'
 import MessengerPanel from '@/components/messaging/MessengerPanel.vue'
 import { useWorkspaceNavigation } from '@/modules/navigation/composables/useWorkspaceNavigation'
-import { useWorkspaceMembersSidebar } from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
+import {
+  useWorkspaceMembersSidebar,
+  type WorkspaceMemberListItem,
+} from '@/modules/workspaces/composables/useWorkspaceMembersSidebar'
 import { useTaskAiReminders } from '@/modules/task/composables/useTaskAiReminders'
 import type { Guid } from '@/api/models/common.model'
 import type { WorkspaceResponse } from '@/api/models/workspace.model'
@@ -229,6 +234,14 @@ function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
       name: workspace.name,
     })
   }
+}
+
+async function transferWorkspaceOwnership(member: WorkspaceMemberListItem) {
+  const workspace = await workspaceMembers.transferOwnership(member)
+
+  if (!workspace) return
+
+  handleWorkspaceUpdated(workspace)
 }
 
 function openActivityLog() {

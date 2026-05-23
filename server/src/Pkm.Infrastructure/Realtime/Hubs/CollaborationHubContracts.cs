@@ -12,6 +12,10 @@ public sealed record ConversationJoinAck(
     Guid ConversationId,
     string GroupName);
 
+public sealed record ConversationTypingRequest(
+    Guid ConversationId,
+    bool IsTyping);
+
 public sealed record PageJoinAck(
     Guid WorkspaceId,
     Guid PageId,
@@ -48,4 +52,3 @@ public sealed record BlockEditingStateRequest(
     Guid BlockId,
     string EditorSessionId,
     bool IsEditing);
-

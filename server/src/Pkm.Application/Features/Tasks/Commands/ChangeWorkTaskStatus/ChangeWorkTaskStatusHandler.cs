@@ -175,5 +175,3 @@ public sealed class ChangeWorkTaskStatusHandler
         return ActivityAction.Update;
     }
 }
-
-

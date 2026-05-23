@@ -100,4 +100,3 @@ public sealed class WorkspaceAccessEvaluator : IWorkspaceAccessEvaluator
         return result;
     }
 }
-

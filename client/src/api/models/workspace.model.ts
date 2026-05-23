@@ -24,6 +24,10 @@ export interface ChangeWorkspaceMemberRoleRequest {
   role: WorkspaceRoleValue | 'owner'
 }
 
+export interface TransferWorkspaceOwnershipRequest {
+  newOwnerUserId: Guid
+}
+
 export interface WorkspaceResponse {
   id: Guid
   name: string

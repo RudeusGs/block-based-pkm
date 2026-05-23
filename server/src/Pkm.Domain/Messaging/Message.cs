@@ -114,6 +114,3 @@ public sealed class Message : EntityBase
         Touch(now);
     }
 }
-
-
-

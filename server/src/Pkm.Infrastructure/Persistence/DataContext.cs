@@ -34,6 +34,8 @@ public sealed class DataContext : DbContext
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<Page> Pages => Set<Page>();
+    public DbSet<PageFavorite> PageFavorites => Set<PageFavorite>();
+    public DbSet<PageRecent> PageRecents => Set<PageRecent>();
     public DbSet<PageRevision> PageRevisions => Set<PageRevision>();
     public DbSet<Block> Blocks => Set<Block>();
     public DbSet<BlockOperation> BlockOperations => Set<BlockOperation>();
@@ -80,5 +82,3 @@ public sealed class DataContext : DbContext
         }
     }
 }
-
-

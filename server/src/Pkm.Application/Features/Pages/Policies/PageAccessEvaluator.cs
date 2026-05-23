@@ -82,4 +82,3 @@ public sealed class PageAccessEvaluator : IPageAccessEvaluator
             CanAcquireLease: capabilities.CanAcquireLease);
     }
 }
-

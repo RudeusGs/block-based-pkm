@@ -5,6 +5,7 @@ import type {
   ListWorkspacePagesParams,
   PagePagedResultResponse,
   PagePresenceResponse,
+  PageQuickAccessPagedResultResponse,
   PageResponse,
   SearchPagesParams,
   UpdatePageMetadataRequest,
@@ -50,5 +51,42 @@ export const pageController = {
       `workspaces/${workspaceId}/pages:search`,
       params
     )
+  },
+
+  listFavorites(params?: ListWorkspacePagesParams) {
+    return api.get<ApiResult<PageQuickAccessPagedResultResponse>>(
+      'pages/favorites',
+      params
+    )
+  },
+
+  listRecent(params?: ListWorkspacePagesParams) {
+    return api.get<ApiResult<PageQuickAccessPagedResultResponse>>(
+      'pages/recent',
+      params
+    )
+  },
+
+  listTrash(workspaceId: Guid, params?: ListWorkspacePagesParams) {
+    return api.get<ApiResult<PagePagedResultResponse>>(
+      `workspaces/${workspaceId}/pages/trash`,
+      params
+    )
+  },
+
+  favorite(pageId: Guid) {
+    return api.post<ApiResult<PageResponse>>(`pages/${pageId}/favorite`)
+  },
+
+  unfavorite(pageId: Guid) {
+    return api.delete<ApiResult>(`pages/${pageId}/favorite`)
+  },
+
+  duplicate(pageId: Guid) {
+    return api.post<ApiResult<PageResponse>>(`pages/${pageId}/duplicate`)
+  },
+
+  restore(pageId: Guid) {
+    return api.post<ApiResult<PageResponse>>(`pages/${pageId}/restore`)
   },
 }

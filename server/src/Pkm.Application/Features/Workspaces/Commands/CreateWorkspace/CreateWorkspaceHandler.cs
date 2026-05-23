@@ -118,5 +118,3 @@ public sealed class CreateWorkspaceHandler
         }
     }
 }
-
-

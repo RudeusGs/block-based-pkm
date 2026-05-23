@@ -11,6 +11,3 @@ export interface SidebarWorkspaceLike {
   visibility?: string | null
   currentUserRole?: string | null
 }
-
-
-

@@ -54,8 +54,38 @@
           </span>
         </button>
 
+        <button
+          v-if="canFavorite"
+          type="button"
+          class="lunar-page-menu-item"
+          role="menuitem"
+          @click="selectAction('favorite')"
+        >
+          <i class="bi" :class="isFavorite ? 'bi-star-fill' : 'bi-star'"></i>
+
+          <span>
+            <strong>{{ isFavorite ? 'Bỏ favorite' : 'Favorite page' }}</strong>
+            <small>Ghim page vào danh sách nhanh</small>
+          </span>
+        </button>
+
+        <button
+          v-if="canDuplicate"
+          type="button"
+          class="lunar-page-menu-item"
+          role="menuitem"
+          @click="selectAction('duplicate')"
+        >
+          <i class="bi bi-copy"></i>
+
+          <span>
+            <strong>Duplicate</strong>
+            <small>Tạo bản sao page và block</small>
+          </span>
+        </button>
+
         <div
-          v-if="canDelete && (canSettings || canShare)"
+          v-if="canDelete && (canSettings || canShare || canFavorite || canDuplicate)"
           class="lunar-page-menu-separator"
         ></div>
 
@@ -88,11 +118,17 @@ const props = withDefaults(
     canSettings?: boolean
     canShare?: boolean
     canDelete?: boolean
+    canDuplicate?: boolean
+    canFavorite?: boolean
+    isFavorite?: boolean
   }>(),
   {
     canSettings: true,
     canShare: true,
     canDelete: true,
+    canDuplicate: true,
+    canFavorite: true,
+    isFavorite: false,
   }
 )
 
@@ -100,13 +136,21 @@ const emit = defineEmits<{
   settings: [page: PageTreeItem]
   share: [page: PageTreeItem]
   delete: [page: PageTreeItem]
+  duplicate: [page: PageTreeItem]
+  favorite: [page: PageTreeItem]
 }>()
 
 const menuRef = ref<HTMLElement | null>(null)
 const isOpen = ref(false)
 
 const hasAnyAction = computed(() => {
-  return props.canSettings || props.canShare || props.canDelete
+  return (
+    props.canSettings ||
+    props.canShare ||
+    props.canDelete ||
+    props.canDuplicate ||
+    props.canFavorite
+  )
 })
 
 function toggleMenu() {
@@ -117,7 +161,7 @@ function closeMenu() {
   isOpen.value = false
 }
 
-function selectAction(action: 'settings' | 'share' | 'delete') {
+function selectAction(action: 'settings' | 'share' | 'delete' | 'duplicate' | 'favorite') {
   closeMenu()
 
   if (action === 'settings' && props.canSettings) {
@@ -127,6 +171,16 @@ function selectAction(action: 'settings' | 'share' | 'delete') {
 
   if (action === 'share' && props.canShare) {
     emit('share', props.page)
+    return
+  }
+
+  if (action === 'favorite' && props.canFavorite) {
+    emit('favorite', props.page)
+    return
+  }
+
+  if (action === 'duplicate' && props.canDuplicate) {
+    emit('duplicate', props.page)
     return
   }
 

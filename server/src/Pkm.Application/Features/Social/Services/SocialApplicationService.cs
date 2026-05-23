@@ -446,6 +446,3 @@ public sealed class SocialApplicationService : ISocialApplicationService
     private static int NormalizePage(int pageNumber) => pageNumber <= 0 ? 1 : pageNumber;
     private static int NormalizeSize(int pageSize) => pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 }
-
-
-
