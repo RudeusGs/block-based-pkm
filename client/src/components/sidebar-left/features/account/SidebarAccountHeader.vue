@@ -4,7 +4,7 @@
       <button
         type="button"
         class="lunar-account-card"
-        title="Account"
+        title="Tài khoản"
         @click.stop="isMenuOpen = !isMenuOpen"
       >
         <span class="lunar-account-avatar">
@@ -33,7 +33,7 @@
         </span>
 
         <span class="lunar-account-badge">
-          {{ workspaceRole || 'member' }}
+          {{ roleLabel }}
         </span>
 
         <i
@@ -70,7 +70,7 @@
             </div>
           </div>
 
-          <div class="lunar-menu-section-label">Account</div>
+          <div class="lunar-menu-section-label">Tài khoản</div>
 
           <button
             type="button"
@@ -82,8 +82,8 @@
             </span>
 
             <span class="lunar-menu-content">
-              <strong>Settings</strong>
-              <small>Profile, AI Prioritizer, security</small>
+              <strong>Cài đặt</strong>
+              <small>Hồ sơ, ưu tiên AI, bảo mật</small>
             </span>
           </button>
 
@@ -99,7 +99,7 @@
             </span>
 
             <span class="lunar-menu-content">
-              <strong>Logout</strong>
+              <strong>Đăng xuất</strong>
               <small>Đăng xuất khỏi phiên hiện tại</small>
             </span>
           </button>
@@ -145,6 +145,16 @@ const avatarSrc = computed(() => {
 
 const canShowAvatar = computed(() => {
   return Boolean(avatarSrc.value) && !avatarLoadFailed.value
+})
+
+const roleLabel = computed(() => {
+  const role = props.workspaceRole?.trim().toLowerCase()
+
+  if (role === 'owner') return 'Chủ sở hữu'
+  if (role === 'manager') return 'Quản lý'
+  if (role === 'viewer') return 'Người xem'
+
+  return 'Thành viên'
 })
 
 watch(

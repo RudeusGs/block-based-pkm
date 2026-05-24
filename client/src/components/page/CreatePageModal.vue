@@ -14,22 +14,22 @@
         class="page-drawer-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Create page"
+        aria-label="Tạo trang"
         @click.stop
       >
         <div class="page-drawer-shell">
           <div class="page-drawer-topbar">
             <div class="page-drawer-crumb">
               <i class="bi bi-file-earmark-text"></i>
-              <span>Page</span>
+              <span>Trang</span>
               <i class="bi bi-chevron-right page-crumb-separator"></i>
-              <span>New</span>
+              <span>Mới</span>
             </div>
 
             <button
               class="page-drawer-close"
               type="button"
-              title="Close"
+              title="Đóng"
               :disabled="isCreatingPage || isUploadingCoverImage"
               @click="closeModal"
             >
@@ -44,8 +44,8 @@
               </button>
 
               <p class="page-eyebrow">
-                New page in
-                <span>{{ workspaceName || 'Workspace' }}</span>
+                Trang mới trong
+                <span>{{ workspaceName || 'Không gian' }}</span>
               </p>
 
               <input
@@ -53,14 +53,14 @@
                 v-model="form.title"
                 class="page-title-input"
                 type="text"
-                placeholder="Untitled page"
+                placeholder="Trang chưa đặt tên"
                 maxlength="80"
                 :disabled="isCreatingPage || isUploadingCoverImage"
               />
 
               <div class="page-title-meta">
                 <span :class="{ danger: titleError }">
-                  {{ titleError || 'Page này sẽ được tạo trong workspace đã chọn.' }}
+                  {{ titleError || 'Trang này sẽ được tạo trong không gian đã chọn.' }}
                 </span>
 
                 <span :class="{ danger: form.title.length >= 80 }">
@@ -73,7 +73,7 @@
               <div class="page-property-row">
                 <label class="page-property-label">
                   <i class="bi bi-stars"></i>
-                  <span>Icon</span>
+                  <span>Biểu tượng</span>
                 </label>
 
                 <div class="page-property-value">
@@ -95,7 +95,7 @@
               <div class="page-property-row">
                 <label class="page-property-label">
                   <i class="bi bi-image"></i>
-                  <span>Cover image</span>
+                  <span>Ảnh bìa</span>
                 </label>
 
                 <div class="page-property-value">
@@ -105,7 +105,7 @@
                   >
                     <img
                       :src="coverImagePreviewSrc"
-                      alt="Page cover preview"
+                      alt="Xem trước ảnh bìa trang"
                       referrerpolicy="no-referrer"
                       @error="coverPreviewFailed = true"
                       @load="coverPreviewFailed = false"
@@ -113,7 +113,7 @@
 
                     <button
                       type="button"
-                      title="Remove cover"
+                      title="Gỡ ảnh bìa"
                       :disabled="isCreatingPage || isUploadingCoverImage"
                       @click="clearCoverImage"
                     >
@@ -148,7 +148,7 @@
                       ></i>
 
                       <span>
-                        {{ isUploadingCoverImage ? 'Uploading...' : 'Upload cover' }}
+                        {{ isUploadingCoverImage ? 'Đang tải lên...' : 'Tải ảnh bìa' }}
                       </span>
                     </button>
 
@@ -162,7 +162,7 @@
                   </div>
 
                   <p class="page-property-help">
-                    Upload file ảnh hoặc dán URL. Link upload sẽ được lưu vào coverImage.
+                    Tải file ảnh lên hoặc dán URL. Liên kết tải lên sẽ được lưu làm ảnh bìa.
                   </p>
 
                   <p
@@ -177,7 +177,7 @@
 
             <section class="page-preview-section">
               <div class="page-preview-label">
-                Sidebar preview
+                Xem trước trong sidebar
               </div>
 
               <div class="page-preview-card">
@@ -191,12 +191,12 @@
                   </div>
 
                   <div class="page-preview-subtitle">
-                    Inside {{ workspaceName || 'selected workspace' }}
+                    Trong {{ workspaceName || 'không gian đã chọn' }}
                   </div>
                 </div>
 
                 <div class="page-preview-badge">
-                  Page
+                  Trang
                 </div>
               </div>
             </section>
@@ -209,9 +209,9 @@
 
           <footer class="page-drawer-footer">
             <div class="page-keyboard-hint">
-              <span>Ctrl + Enter to create</span>
+              <span>Ctrl + Enter để tạo</span>
               <span class="page-dot"></span>
-              <span>Esc to close</span>
+              <span>Esc để đóng</span>
             </div>
 
             <div class="page-drawer-actions">
@@ -221,7 +221,7 @@
                 :disabled="isCreatingPage || isUploadingCoverImage"
                 @click="closeModal"
               >
-                Cancel
+                Hủy
               </button>
 
               <button
@@ -231,7 +231,7 @@
                 @click="handleSubmit"
               >
                 <span v-if="isCreatingPage" class="page-btn-spinner"></span>
-                <span>{{ isCreatingPage ? 'Creating...' : 'Create page' }}</span>
+                <span>{{ isCreatingPage ? 'Đang tạo...' : 'Tạo trang' }}</span>
               </button>
             </div>
           </footer>
@@ -301,8 +301,8 @@ const form = reactive<CreatePageForm>({
 const titleError = computed(() => {
   const value = form.title.trim()
 
-  if (!value) return 'Tên page không được để trống.'
-  if (value.length > 80) return 'Tên page không được quá 80 ký tự.'
+  if (!value) return 'Tên trang không được để trống.'
+  if (value.length > 80) return 'Tên trang không được quá 80 ký tự.'
 
   return ''
 })
@@ -312,7 +312,7 @@ const isFormValid = computed(() => {
 })
 
 const previewTitle = computed(() => {
-  return form.title.trim() || 'Untitled page'
+  return form.title.trim() || 'Trang chưa đặt tên'
 })
 
 const previewIcon = computed(() => {
@@ -381,7 +381,7 @@ async function handleCoverImageChange(event: Event) {
     if (!result.isSuccess || !result.data) {
       coverUploadError.value = getApiResultErrorMessage(
         result,
-        'Không thể upload cover image.'
+        'Không thể tải ảnh bìa lên.'
       )
       return
     }
@@ -390,7 +390,7 @@ async function handleCoverImageChange(event: Event) {
   } catch (error) {
     coverUploadError.value = getApiErrorMessage(
       error,
-      'Không thể upload cover image.'
+      'Không thể tải ảnh bìa lên.'
     )
   } finally {
     isUploadingCoverImage.value = false

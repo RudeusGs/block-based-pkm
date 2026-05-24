@@ -45,13 +45,13 @@ export function useLogin() {
           response,
           'Đăng nhập thất bại. Vui lòng thử lại.'
         )
-        toast.error('Login failed', errorMessage.value)
+        toast.error('Đăng nhập thất bại', errorMessage.value)
         return
       }
 
       saveAuthToken(token)
 
-      toast.success('Signed in successfully', 'Welcome back.')
+      toast.success('Đăng nhập thành công', 'Chào mừng bạn trở lại.')
       await router.replace(getSafeAuthRedirect(route.query.redirect))
     } catch (error) {
       console.error('Login failed:', error)
@@ -60,7 +60,7 @@ export function useLogin() {
         error,
         'Đăng nhập thất bại. Vui lòng thử lại.'
       )
-      toast.error('Login failed', errorMessage.value)
+      toast.error('Đăng nhập thất bại', errorMessage.value)
     } finally {
       isSubmitting.value = false
     }

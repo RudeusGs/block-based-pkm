@@ -26,13 +26,13 @@ export interface AiPreferencePreset {
 }
 
 export const preferredDayOptions = [
-  { value: 1, label: 'Mon', title: 'Monday' },
-  { value: 2, label: 'Tue', title: 'Tuesday' },
-  { value: 3, label: 'Wed', title: 'Wednesday' },
-  { value: 4, label: 'Thu', title: 'Thursday' },
-  { value: 5, label: 'Fri', title: 'Friday' },
-  { value: 6, label: 'Sat', title: 'Saturday' },
-  { value: 0, label: 'Sun', title: 'Sunday' },
+  { value: 1, label: 'T2', title: 'Thứ Hai' },
+  { value: 2, label: 'T3', title: 'Thứ Ba' },
+  { value: 3, label: 'T4', title: 'Thứ Tư' },
+  { value: 4, label: 'T5', title: 'Thứ Năm' },
+  { value: 5, label: 'T6', title: 'Thứ Sáu' },
+  { value: 6, label: 'T7', title: 'Thứ Bảy' },
+  { value: 0, label: 'CN', title: 'Chủ Nhật' },
 ]
 
 const WORKDAY_DAYS = [1, 2, 3, 4, 5]
@@ -53,7 +53,7 @@ export const aiPreferencePresets: AiPreferencePreset[] = [
   {
     key: 'balanced',
     label: 'Cân bằng',
-    description: 'Ít spam, ưu tiên deadline + task medium/high. Hợp dùng mặc định.',
+    description: 'Ít gửi liên tục, ưu tiên hạn chót và công việc vừa/cao. Hợp dùng mặc định.',
     icon: 'bi-sliders2',
     values: {
       ...DEFAULT_TASK_PREFERENCE,
@@ -63,7 +63,7 @@ export const aiPreferencePresets: AiPreferencePreset[] = [
   {
     key: 'focused',
     label: 'Tập trung',
-    description: 'Gợi ý ít hơn, chọn task có tín hiệu mạnh hơn để làm ngay.',
+    description: 'Gợi ý ít hơn, chọn công việc có tín hiệu mạnh hơn để làm ngay.',
     icon: 'bi-bullseye',
     values: {
       workDayStartHour: 8,
@@ -79,7 +79,7 @@ export const aiPreferencePresets: AiPreferencePreset[] = [
   {
     key: 'strict',
     label: 'Nghiêm ngặt',
-    description: 'Chỉ đẩy việc high-priority, deadline rõ, tránh gợi ý linh tinh.',
+    description: 'Chỉ đẩy việc ưu tiên cao, hạn chót rõ, tránh gợi ý linh tinh.',
     icon: 'bi-shield-check',
     values: {
       workDayStartHour: 8,
@@ -345,20 +345,20 @@ export function useSidebarSettings() {
       if (!result.isSuccess || !result.data) {
         profileSettingsError.value = getApiResultErrorMessage(
           result,
-          'Không thể upload avatar.'
+          'Không thể tải ảnh đại diện lên.'
         )
         return false
       }
 
       profileForm.fullName = result.data.fullName
       profileForm.avatarUrl = normalizeImageUrl(result.data.avatarUrl) ?? ''
-      profileSettingsSuccess.value = 'Đã upload avatar.'
+      profileSettingsSuccess.value = 'Đã tải ảnh đại diện lên.'
 
       return true
     } catch (error) {
       profileSettingsError.value = getApiErrorMessage(
         error,
-        'Không thể upload avatar.'
+        'Không thể tải ảnh đại diện lên.'
       )
       return false
     } finally {
@@ -477,7 +477,7 @@ export function useSidebarSettings() {
 
       applyTaskPreference(taskPreferenceForm, result.data)
       taskPreferenceSuccess.value =
-        'Đã lưu AI settings. Gợi ý mới sẽ dùng cấu hình này ngay.'
+        'Đã lưu cài đặt AI. Gợi ý mới sẽ dùng cấu hình này ngay.'
 
       return true
     } catch (error) {
@@ -506,7 +506,7 @@ export function useSidebarSettings() {
     }
 
     if (taskPreferenceForm.preferredDaysOfWeek.length <= 1) {
-      taskPreferenceError.value = 'Cần giữ ít nhất 1 ngày cho AI auto.'
+      taskPreferenceError.value = 'Cần giữ ít nhất 1 ngày cho AI tự động.'
       return
     }
 
@@ -520,13 +520,13 @@ export function useSidebarSettings() {
 
     applyTaskPreference(taskPreferenceForm, preset.values)
     taskPreferenceError.value = null
-    taskPreferenceSuccess.value = `Đã áp preset ${preset.label}. Bấm Save để lưu vào workspace.`
+    taskPreferenceSuccess.value = `Đã áp dụng mẫu ${preset.label}. Bấm Lưu để lưu vào không gian.`
   }
 
   function resetTaskPreferenceToDefault() {
     applyTaskPreference(taskPreferenceForm, DEFAULT_TASK_PREFERENCE)
     taskPreferenceError.value = null
-    taskPreferenceSuccess.value = 'Đã đưa AI settings về mặc định. Bấm Save để lưu.'
+    taskPreferenceSuccess.value = 'Đã đưa cài đặt AI về mặc định. Bấm Lưu để lưu.'
   }
 
   return {

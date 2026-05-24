@@ -160,11 +160,11 @@ function sortRecommendations(items: TaskRecommendationViewModel[]) {
 }
 
 function fallbackWorkspaceName(workspaceId: Guid) {
-  return `Workspace ${workspaceId.slice(0, 8)}`
+  return `Không gian ${workspaceId.slice(0, 8)}`
 }
 
 function fallbackPageName(pageId: Guid | null) {
-  return pageId ? `Page ${pageId.slice(0, 8)}` : 'Không gắn page'
+  return pageId ? `Trang ${pageId.slice(0, 8)}` : 'Không gắn trang'
 }
 
 async function resolveWorkspaceName(workspaceId: Guid) {
@@ -188,7 +188,7 @@ async function resolveWorkspaceName(workspaceId: Guid) {
 }
 
 async function resolvePageName(pageId: Guid | null) {
-  if (!pageId) return 'Không gắn page'
+  if (!pageId) return 'Không gắn trang'
 
   const cached = pageNameCache.get(pageId)
   if (cached) return cached
@@ -357,7 +357,7 @@ async function fetchPendingRecommendations(workspaceId?: Guid | null) {
     if (!result.isSuccess || !result.data) {
       taskRecommendationError.value = getApiResultErrorMessage(
         result,
-        'Không thể tải gợi ý task.'
+        'Không thể tải gợi ý công việc.'
       )
       return
     }
@@ -366,7 +366,7 @@ async function fetchPendingRecommendations(workspaceId?: Guid | null) {
   } catch (error) {
     taskRecommendationError.value = getApiErrorMessage(
       error,
-      'Không thể tải gợi ý task.'
+      'Không thể tải gợi ý công việc.'
     )
   } finally {
     isLoadingTaskRecommendations.value = false
@@ -399,7 +399,7 @@ export function useSidebarRecommendations() {
       if (!result.isSuccess || !result.data) {
         taskRecommendationError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải gợi ý task.'
+          'Không thể tải gợi ý công việc.'
         )
         return
       }
@@ -408,7 +408,7 @@ export function useSidebarRecommendations() {
     } catch (error) {
       taskRecommendationError.value = getApiErrorMessage(
         error,
-        'Không thể tải gợi ý task.'
+        'Không thể tải gợi ý công việc.'
       )
     } finally {
       isLoadingTaskRecommendations.value = false
@@ -433,7 +433,7 @@ export function useSidebarRecommendations() {
       if (!result.isSuccess || !result.data) {
         taskRecommendationError.value = getApiResultErrorMessage(
           result,
-          'Không thể tạo gợi ý task.'
+          'Không thể tạo gợi ý công việc.'
         )
         return false
       }
@@ -446,7 +446,7 @@ export function useSidebarRecommendations() {
     } catch (error) {
       taskRecommendationError.value = getApiErrorMessage(
         error,
-        'Không thể tạo gợi ý task.'
+        'Không thể tạo gợi ý công việc.'
       )
 
       return false
@@ -462,7 +462,7 @@ export function useSidebarRecommendations() {
       if (!result.isSuccess) {
         taskRecommendationError.value = getApiResultErrorMessage(
           result,
-          'Không thể chấp nhận gợi ý task.'
+          'Không thể chấp nhận gợi ý công việc.'
         )
         return false
       }
@@ -472,7 +472,7 @@ export function useSidebarRecommendations() {
     } catch (error) {
       taskRecommendationError.value = getApiErrorMessage(
         error,
-        'Không thể chấp nhận gợi ý task.'
+        'Không thể chấp nhận gợi ý công việc.'
       )
 
       return false
@@ -486,7 +486,7 @@ export function useSidebarRecommendations() {
       if (!result.isSuccess) {
         taskRecommendationError.value = getApiResultErrorMessage(
           result,
-          'Không thể từ chối gợi ý task.'
+          'Không thể từ chối gợi ý công việc.'
         )
         return false
       }
@@ -496,7 +496,7 @@ export function useSidebarRecommendations() {
     } catch (error) {
       taskRecommendationError.value = getApiErrorMessage(
         error,
-        'Không thể từ chối gợi ý task.'
+        'Không thể từ chối gợi ý công việc.'
       )
 
       return false
@@ -530,7 +530,7 @@ export function useSidebarRecommendations() {
     } catch (error) {
       realtimeError.value = getApiErrorMessage(
         error,
-        'Không thể kết nối realtime gợi ý task.'
+        'Không thể kết nối thời gian thực cho gợi ý công việc.'
       )
     }
   }
@@ -560,6 +560,5 @@ export function useSidebarRecommendations() {
     stopRecommendationRealtime,
   }
 }
-
 
 

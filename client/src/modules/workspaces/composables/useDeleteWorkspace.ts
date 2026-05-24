@@ -49,7 +49,7 @@ export function useDeleteWorkspace() {
       if (!result.isSuccess) {
         deleteWorkspaceError.value = getApiResultErrorMessage(
           result,
-          'Không thể xóa workspace này.'
+          'Không thể xóa không gian này.'
         )
 
         return null
@@ -62,7 +62,7 @@ export function useDeleteWorkspace() {
     } catch (error) {
       deleteWorkspaceError.value = getApiErrorMessage(
         error,
-        'Không thể xóa workspace này.'
+        'Không thể xóa không gian này.'
       )
 
       return null

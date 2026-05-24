@@ -9,8 +9,8 @@
     <button
       type="button"
       class="lunar-page-menu-trigger"
-      title="Tùy chọn page"
-      aria-label="Tùy chọn page"
+      title="Tùy chọn trang"
+      aria-label="Tùy chọn trang"
       :aria-expanded="isOpen"
       @click.stop="toggleMenu"
     >
@@ -22,7 +22,7 @@
         v-if="isOpen"
         class="lunar-page-menu"
         role="menu"
-        aria-label="Page actions"
+        aria-label="Thao tác trang"
       >
         <button
           v-if="canSettings"
@@ -34,7 +34,7 @@
           <i class="bi bi-gear"></i>
 
           <span>
-            <strong>Cài đặt page</strong>
+            <strong>Cài đặt trang</strong>
             <small>Tên, icon và thuộc tính</small>
           </span>
         </button>
@@ -50,7 +50,7 @@
 
           <span>
             <strong>Chia sẻ</strong>
-            <small>Copy link page</small>
+            <small>Sao chép liên kết trang</small>
           </span>
         </button>
 
@@ -64,8 +64,8 @@
           <i class="bi" :class="isFavorite ? 'bi-star-fill' : 'bi-star'"></i>
 
           <span>
-            <strong>{{ isFavorite ? 'Bỏ favorite' : 'Favorite page' }}</strong>
-            <small>Ghim page vào danh sách nhanh</small>
+            <strong>{{ isFavorite ? 'Bỏ yêu thích' : 'Thêm vào yêu thích' }}</strong>
+            <small>Ghim trang vào danh sách nhanh</small>
           </span>
         </button>
 
@@ -79,8 +79,8 @@
           <i class="bi bi-copy"></i>
 
           <span>
-            <strong>Duplicate</strong>
-            <small>Tạo bản sao page và block</small>
+            <strong>Nhân bản</strong>
+            <small>Tạo bản sao trang và khối</small>
           </span>
         </button>
 
@@ -99,8 +99,8 @@
           <i class="bi bi-trash3"></i>
 
           <span>
-            <strong>Xóa page</strong>
-            <small>Xóa page khỏi workspace</small>
+            <strong>Xóa trang</strong>
+            <small>Xóa trang khỏi không gian</small>
           </span>
         </button>
       </section>

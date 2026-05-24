@@ -17,7 +17,7 @@
       >
         <header class="task-detail-header">
           <div class="task-detail-header-main">
-            <p class="task-detail-kicker mb-1">Task detail</p>
+            <p class="task-detail-kicker mb-1">Chi tiết công việc</p>
             <h2 class="task-detail-title mb-0">
               {{ task.title }}
             </h2>
@@ -26,7 +26,7 @@
           <button
             type="button"
             class="task-detail-close"
-            title="Close"
+            title="Đóng"
             @click="emit('close')"
           >
             <span class="material-symbols-outlined">close</span>
@@ -78,7 +78,7 @@
               v-if="task.overdue"
               class="task-detail-overdue"
             >
-              Overdue
+              Quá hạn
             </span>
           </div>
 
@@ -104,7 +104,7 @@
             <div class="task-done-confirm-copy">
               <h3 id="task-done-confirm-title">Xác nhận hoàn tất task?</h3>
               <p>
-                Sau khi xác nhận Done, task này sẽ bị khóa trạng thái ở giao diện
+                Sau khi xác nhận hoàn tất, công việc này sẽ bị khóa trạng thái ở giao diện
                 để tránh kéo ngược tiến độ nhầm.
               </p>
             </div>
@@ -125,7 +125,7 @@
                 :disabled="isMutatingTask"
                 @click="confirmDoneTask"
               >
-                {{ isMutatingTask ? 'Updating...' : 'Đã xong thật' }}
+                {{ isMutatingTask ? 'Đang cập nhật...' : 'Đã xong thật' }}
               </button>
             </div>
           </section>
@@ -143,7 +143,7 @@
               v-if="canManageAssignees"
               class="task-detail-field task-detail-field--wide"
             >
-              <span class="task-detail-field-label">Assignees</span>
+              <span class="task-detail-field-label">Người phụ trách</span>
 
               <div
                 v-if="task.assignees.length"
@@ -161,7 +161,7 @@
                   <span>{{ assignee.name }}</span>
                   <button
                     type="button"
-                    title="Unassign"
+                    title="Gỡ người phụ trách"
                     :disabled="isMutatingTask"
                     @click="emit('unassign-member', assignee.userId)"
                   >
@@ -174,7 +174,7 @@
                 v-else
                 class="task-detail-muted-line"
               >
-                Chưa assign ai.
+                Chưa giao cho ai.
               </p>
 
               <div class="task-assign-control">
@@ -183,14 +183,14 @@
                   :disabled="isMutatingTask || !availableMembers.length"
                 >
                   <option value="">
-                    {{ availableMembers.length ? 'Thêm assignee...' : 'Không còn member để thêm' }}
+                    {{ availableMembers.length ? 'Thêm người phụ trách...' : 'Không còn thành viên để thêm' }}
                   </option>
                   <option
                     v-for="member in availableMembers"
                     :key="member.userId"
                     :value="member.userId"
                   >
-                    {{ member.displayName }} · {{ member.role }}
+                    {{ member.displayName }} · {{ roleLabel(member.role) }}
                   </option>
                 </select>
 
@@ -199,13 +199,13 @@
                   :disabled="!selectedMemberToAssign || isMutatingTask"
                   @click="assignSelectedMember"
                 >
-                  Add
+                  Thêm
                 </button>
               </div>
             </div>
 
             <div class="task-detail-field">
-              <span class="task-detail-field-label">Due date</span>
+              <span class="task-detail-field-label">Hạn</span>
 
               <span
                 class="task-detail-value"
@@ -216,28 +216,28 @@
             </div>
 
             <div class="task-detail-field">
-              <span class="task-detail-field-label">Linked page</span>
+              <span class="task-detail-field-label">Trang liên kết</span>
 
               <span class="task-detail-value">
-                {{ pageTitle || 'Current page' }}
+                {{ pageTitle || 'Trang hiện tại' }}
               </span>
             </div>
           </div>
 
           <section class="task-detail-section">
             <h3 class="task-detail-section-title">
-              Description
+              Mô tả
             </h3>
 
             <p class="task-detail-description">
-              {{ task.description || 'No description yet.' }}
+              {{ task.description || 'Chưa có mô tả.' }}
             </p>
           </section>
 
           <section class="task-detail-section task-comment-section">
             <div class="task-comment-heading">
               <h3 class="task-detail-section-title mb-0">
-                Comments
+                Bình luận
               </h3>
 
               <span class="task-comment-count">
@@ -265,7 +265,7 @@
               v-else-if="!comments.length"
               class="task-comment-empty"
             >
-              Chưa có comment. Hãy là người đầu tiên trao đổi về task này.
+              Chưa có bình luận. Hãy là người đầu tiên trao đổi về công việc này.
             </div>
 
             <div
@@ -291,7 +291,7 @@
           <img
             class="task-comment-avatar"
             :src="composerAvatarUrl"
-            alt="You"
+            alt="Bạn"
           />
 
           <div class="task-comment-input-wrap">
@@ -299,7 +299,7 @@
               v-model="draftComment"
               class="task-comment-input"
               rows="1"
-              placeholder="Viết comment cho task này..."
+              placeholder="Viết bình luận cho công việc này..."
               :disabled="isAddingComment"
               @keydown.enter.exact.prevent="submitComment"
             ></textarea>
@@ -307,7 +307,7 @@
             <div class="task-comment-composer-actions">
               <button
                 type="button"
-                title="Attach"
+                title="Đính kèm"
                 disabled
               >
                 <span class="material-symbols-outlined">attach_file</span>
@@ -315,7 +315,7 @@
 
               <button
                 type="button"
-                title="Mention"
+                title="Nhắc tên"
                 disabled
               >
                 <span class="material-symbols-outlined">alternate_email</span>
@@ -327,7 +327,7 @@
                 :disabled="!draftComment.trim() || isAddingComment"
                 @click="submitComment"
               >
-                {{ isAddingComment ? 'Sending...' : 'Send' }}
+                {{ isAddingComment ? 'Đang gửi...' : 'Gửi' }}
               </button>
             </div>
           </div>
@@ -338,7 +338,7 @@
           class="task-detail-readonly-footer"
         >
           <span class="material-symbols-outlined">visibility</span>
-          <span>Viewer chỉ được xem task và comment, không thể bình luận hay đổi trạng thái.</span>
+          <span>Người xem chỉ được xem công việc và bình luận, không thể bình luận hay đổi trạng thái.</span>
         </footer>
       </aside>
     </Transition>
@@ -401,9 +401,9 @@ const selectedMemberToAssign = ref<Guid | ''>('')
 const isConfirmDoneOpen = ref(false)
 
 const statusOptions: Array<{ value: WorkTaskStatusRequest; label: string }> = [
-  { value: 'todo', label: 'To Do' },
-  { value: 'doing', label: 'Doing' },
-  { value: 'done', label: 'Done' },
+  { value: 'todo', label: 'Cần làm' },
+  { value: 'doing', label: 'Đang làm' },
+  { value: 'done', label: 'Đã xong' },
 ]
 
 const assignedUserIds = computed(() => {
@@ -440,11 +440,11 @@ const statusPolicyMessage = computed(() => {
   if (!props.task) return ''
 
   if (isDoneLocked.value) {
-    return 'Task đã Done nên trạng thái đã được khóa, không thể chuyển lại To Do/Doing.'
+    return 'Công việc đã hoàn tất nên trạng thái đã được khóa, không thể chuyển lại cần làm/đang làm.'
   }
 
   if (!props.canChangeStatus) {
-    return 'Chỉ owner/manager hoặc người đang được assign task này mới được đổi trạng thái.'
+    return 'Chỉ chủ sở hữu/quản lý hoặc người đang được giao công việc này mới được đổi trạng thái.'
   }
 
   return ''
@@ -552,9 +552,9 @@ function assignSelectedMember() {
 
 function statusLabel(status: NormalizedTaskStatus) {
   return {
-    todo: 'To Do',
-    doing: 'Doing',
-    done: 'Done',
+    todo: 'Cần làm',
+    doing: 'Đang làm',
+    done: 'Đã xong',
   }[status]
 }
 
@@ -568,9 +568,9 @@ function statusClass(status: NormalizedTaskStatus | WorkTaskStatusRequest) {
 
 function priorityLabel(priority: NormalizedTaskPriority) {
   return {
-    low: 'Low',
-    medium: 'Medium',
-    high: 'High',
+    low: 'Thấp',
+    medium: 'Vừa',
+    high: 'Cao',
   }[priority]
 }
 
@@ -586,6 +586,16 @@ function handleEscape(event: KeyboardEvent) {
   if (event.key === 'Escape' && props.open) {
     emit('close')
   }
+}
+
+function roleLabel(role: string | null | undefined) {
+  const normalized = role?.trim().toLowerCase()
+
+  if (normalized === 'owner') return 'Chủ sở hữu'
+  if (normalized === 'manager') return 'Quản lý'
+  if (normalized === 'viewer') return 'Người xem'
+
+  return 'Thành viên'
 }
 
 onMounted(() => {

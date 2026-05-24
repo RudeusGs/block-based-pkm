@@ -19,11 +19,11 @@
         >
           <aside class="settings-modal-sidebar">
             <div class="settings-modal-title-block">
-              <strong>Settings</strong>
+              <strong>Cài đặt</strong>
               <span>Tài khoản, AI và bảo mật</span>
             </div>
 
-            <nav class="settings-modal-tabs" aria-label="Settings tabs">
+            <nav class="settings-modal-tabs" aria-label="Các mục cài đặt">
               <button
                 type="button"
                 class="settings-modal-tab"
@@ -31,7 +31,7 @@
                 @click="activeTab = 'profile'"
               >
                 <i class="bi bi-person-circle"></i>
-                <span>Profile</span>
+                <span>Hồ sơ</span>
                 <small>Tên hiển thị & avatar</small>
               </button>
 
@@ -42,8 +42,8 @@
                 @click="activeTab = 'ai'"
               >
                 <i class="bi bi-stars"></i>
-                <span>AI Prioritizer</span>
-                <small>Luật gợi ý task</small>
+                <span>Ưu tiên AI</span>
+                <small>Luật gợi ý công việc</small>
               </button>
 
               <button
@@ -53,7 +53,7 @@
                 @click="activeTab = 'security'"
               >
                 <i class="bi bi-shield-lock"></i>
-                <span>Security</span>
+                <span>Bảo mật</span>
                 <small>Mật khẩu</small>
               </button>
             </nav>
@@ -74,8 +74,8 @@
               <button
                 type="button"
                 class="settings-modal-close"
-                title="Đóng Settings"
-                aria-label="Đóng Settings"
+                title="Đóng cài đặt"
+                aria-label="Đóng cài đặt"
                 @click="emit('close')"
               >
                 <i class="bi bi-x-lg"></i>
@@ -102,7 +102,7 @@
                         v-if="canPreviewAvatar"
                         :key="profileAvatarPreviewSrc"
                         :src="profileAvatarPreviewSrc"
-                        :alt="profileForm.fullName || 'Avatar'"
+                        :alt="profileForm.fullName || 'Ảnh đại diện'"
                         referrerpolicy="no-referrer"
                         @error="avatarPreviewFailed = true"
                         @load="avatarPreviewFailed = false"
@@ -115,7 +115,7 @@
 
                     <div class="settings-profile-preview-copy">
                       <strong>
-                        {{ profileForm.fullName.trim() || 'Unnamed user' }}
+                        {{ profileForm.fullName.trim() || 'Người dùng chưa đặt tên' }}
                       </strong>
 
                       <span>
@@ -126,7 +126,7 @@
 
                   <div class="settings-form-group">
                     <label class="settings-field">
-                      <span>Full name</span>
+                      <span>Họ tên</span>
 
                       <input
                         v-model="profileForm.fullName"
@@ -138,7 +138,7 @@
                     </label>
 
                     <div class="settings-field">
-                      <span>Avatar image</span>
+                      <span>Ảnh đại diện</span>
 
                       <div class="settings-upload-control">
                         <input
@@ -167,7 +167,7 @@
                           ></i>
 
                           <span>
-                            {{ isUploadingAvatarImage ? 'Uploading...' : 'Upload image' }}
+                            {{ isUploadingAvatarImage ? 'Đang tải lên...' : 'Tải ảnh lên' }}
                           </span>
                         </button>
 
@@ -205,7 +205,7 @@
                       ></span>
 
                       <span>
-                        {{ isSavingProfileSettings ? 'Saving...' : 'Save profile' }}
+                        {{ isSavingProfileSettings ? 'Đang lưu...' : 'Lưu hồ sơ' }}
                       </span>
                     </button>
                   </div>
@@ -224,8 +224,8 @@
                     <i class="bi bi-stars"></i>
                   </div>
                   <div>
-                    <strong>Chọn workspace trước đã bro</strong>
-                    <span>AI settings được lưu riêng cho từng workspace để gợi ý không bị lẫn ngữ cảnh.</span>
+                    <strong>Chọn không gian trước đã</strong>
+                    <span>Cài đặt AI được lưu riêng cho từng không gian để gợi ý không bị lẫn ngữ cảnh.</span>
                   </div>
                 </div>
 
@@ -246,7 +246,7 @@
 
                       <div>
                         <div class="settings-ai-title-row">
-                          <strong>AI Prioritizer Engine</strong>
+                          <strong>Bộ máy ưu tiên công việc AI</strong>
                           <span
                             class="settings-ai-status"
                             :class="aiStatusClass"
@@ -275,8 +275,8 @@
                         độ lọc
                       </span>
                       <span>
-                        <strong>{{ taskPreferenceForm.recommendationIntervalMinutes }}m</strong>
-                        nghỉ auto
+                        <strong>{{ taskPreferenceForm.recommendationIntervalMinutes }} phút</strong>
+                        nghỉ tự động
                       </span>
                     </div>
                   </div>
@@ -284,8 +284,8 @@
                   <div class="settings-form-group settings-ai-presets-group">
                     <div class="settings-group-heading">
                       <div>
-                        <h3>Quick setup</h3>
-                        <p>Chọn preset để AI bớt random, sau đó bấm Save để lưu vào backend.</p>
+                        <h3>Thiết lập nhanh</h3>
+                        <p>Chọn mẫu để AI ổn định hơn, sau đó bấm Lưu để lưu cấu hình.</p>
                       </div>
 
                       <button
@@ -294,7 +294,7 @@
                         :disabled="isSavingTaskPreference"
                         @click="emit('resetTaskPreference')"
                       >
-                        Reset default
+                        Về mặc định
                       </button>
                     </div>
 
@@ -320,15 +320,15 @@
                   <div class="settings-form-group">
                     <div class="settings-group-heading">
                       <div>
-                        <h3>Auto schedule</h3>
-                        <p>Chỉ áp dụng cho auto recommendation. Nút “Phân tích task” vẫn chạy thủ công khi bạn bấm.</p>
+                        <h3>Lịch tự động</h3>
+                        <p>Chỉ áp dụng cho gợi ý tự động. Nút “Phân tích công việc” vẫn chạy thủ công khi bạn bấm.</p>
                       </div>
                     </div>
 
                     <label class="settings-switch-row elevated">
                       <span>
-                        <strong>Auto recommendation</strong>
-                        <small>Bật để hệ thống tự đề xuất theo giờ/ngày và interval bên dưới.</small>
+                        <strong>Gợi ý tự động</strong>
+                        <small>Bật để hệ thống tự đề xuất theo giờ, ngày và khoảng nghỉ bên dưới.</small>
                       </span>
 
                       <input
@@ -340,7 +340,7 @@
 
                     <div class="settings-field-grid">
                       <label class="settings-field compact">
-                        <span>Start hour</span>
+                        <span>Giờ bắt đầu</span>
 
                         <input
                           v-model.number="taskPreferenceForm.workDayStartHour"
@@ -352,7 +352,7 @@
                       </label>
 
                       <label class="settings-field compact">
-                        <span>End hour</span>
+                        <span>Giờ kết thúc</span>
 
                         <input
                           v-model.number="taskPreferenceForm.workDayEndHour"
@@ -365,7 +365,7 @@
                     </div>
 
                     <div class="settings-field settings-field-top">
-                      <span>Preferred days</span>
+                      <span>Ngày ưu tiên</span>
 
                       <div>
                         <div class="settings-day-row">
@@ -385,13 +385,13 @@
                         </div>
 
                         <small class="settings-field-note">
-                          Auto chỉ chạy vào những ngày này. Manual analyze không bị giới hạn.
+                          Tự động chỉ chạy vào những ngày này. Phân tích thủ công không bị giới hạn.
                         </small>
                       </div>
                     </div>
 
                     <label class="settings-field">
-                      <span>Auto interval</span>
+                      <span>Khoảng nghỉ tự động</span>
 
                       <div>
                         <input
@@ -402,7 +402,7 @@
                           :disabled="isSavingTaskPreference"
                         />
                         <small class="settings-field-note">
-                          Khoảng nghỉ để tránh AI spam gợi ý liên tục.
+                          Khoảng nghỉ để tránh AI gửi gợi ý liên tục.
                         </small>
                       </div>
                     </label>
@@ -411,14 +411,14 @@
                   <div class="settings-form-group">
                     <div class="settings-group-heading">
                       <div>
-                        <h3>Recommendation quality</h3>
-                        <p>Những rule này đang được backend dùng khi generate task recommendations.</p>
+                        <h3>Chất lượng gợi ý</h3>
+                        <p>Các luật này được hệ thống dùng khi tạo gợi ý công việc.</p>
                       </div>
                     </div>
 
                     <div class="settings-field-grid">
                       <label class="settings-field compact">
-                        <span>Max per run</span>
+                        <span>Tối đa mỗi lần</span>
 
                         <input
                           v-model.number="taskPreferenceForm.maxRecommendationsPerSession"
@@ -430,21 +430,21 @@
                       </label>
 
                       <label class="settings-field compact">
-                        <span>Min priority</span>
+                        <span>Ưu tiên tối thiểu</span>
 
                         <select
                           v-model="taskPreferenceForm.minPriorityForRecommendation"
                           :disabled="isSavingTaskPreference"
                         >
-                          <option value="low">Low - rộng hơn</option>
-                          <option value="medium">Medium - cân bằng</option>
-                          <option value="high">High - nghiêm ngặt</option>
+                          <option value="low">Thấp - rộng hơn</option>
+                          <option value="medium">Vừa - cân bằng</option>
+                          <option value="high">Cao - nghiêm ngặt</option>
                         </select>
                       </label>
                     </div>
 
                     <label class="settings-field settings-field-top">
-                      <span>Quality threshold</span>
+                      <span>Ngưỡng chất lượng</span>
 
                       <div>
                         <div class="settings-range-head">
@@ -470,7 +470,7 @@
                   <div class="settings-ai-explain-card">
                     <i class="bi bi-info-circle"></i>
                     <span>
-                      AI sẽ lọc task theo priority, deadline, assignee, trạng thái đang làm, duplicate title và độ rõ của tiêu đề.
+                      AI sẽ lọc công việc theo ưu tiên, hạn chót, người phụ trách, trạng thái đang làm, tiêu đề trùng và độ rõ của tiêu đề.
                     </span>
                   </div>
 
@@ -513,7 +513,7 @@
                       ></i>
 
                       <span>
-                        {{ isSavingTaskPreference ? 'Saving...' : 'Save AI settings' }}
+                        {{ isSavingTaskPreference ? 'Đang lưu...' : 'Lưu cài đặt AI' }}
                       </span>
                     </button>
                   </div>
@@ -525,10 +525,10 @@
                 class="settings-modal-section"
               >
                 <div class="settings-form-group">
-                  <h3>Password</h3>
+                  <h3>Mật khẩu</h3>
 
                   <label class="settings-field">
-                    <span>Current password</span>
+                    <span>Mật khẩu hiện tại</span>
 
                     <input
                       v-model="passwordForm.currentPassword"
@@ -539,7 +539,7 @@
                   </label>
 
                   <label class="settings-field">
-                    <span>New password</span>
+                    <span>Mật khẩu mới</span>
 
                     <input
                       v-model="passwordForm.newPassword"
@@ -577,7 +577,7 @@
                     ></span>
 
                     <span>
-                      {{ isChangingPassword ? 'Updating...' : 'Change password' }}
+                      {{ isChangingPassword ? 'Đang cập nhật...' : 'Đổi mật khẩu' }}
                     </span>
                   </button>
                 </div>
@@ -680,17 +680,17 @@ const avatarPreviewHint = computed(() => {
   }
 
   if (avatarPreviewFailed.value) {
-    return 'Không load được ảnh.'
+    return 'Không tải được ảnh.'
   }
 
-  return 'Avatar preview.'
+  return 'Xem trước ảnh đại diện.'
 })
 
 const activeTabTitle = computed(() => {
-  if (activeTab.value === 'profile') return 'Profile'
-  if (activeTab.value === 'ai') return 'AI Prioritizer'
+  if (activeTab.value === 'profile') return 'Hồ sơ'
+  if (activeTab.value === 'ai') return 'Ưu tiên AI'
 
-  return 'Security'
+  return 'Bảo mật'
 })
 
 const activeTabDescription = computed(() => {
@@ -699,7 +699,7 @@ const activeTabDescription = computed(() => {
   }
 
   if (activeTab.value === 'ai') {
-    return 'Cấu hình cách AI chọn task đáng làm, giảm gợi ý trùng và hạn chế spam.'
+    return 'Cấu hình cách AI chọn công việc đáng làm, giảm gợi ý trùng và hạn chế gửi liên tục.'
   }
 
   return 'Cập nhật mật khẩu tài khoản.'
@@ -708,10 +708,10 @@ const activeTabDescription = computed(() => {
 const priorityDisplayLabel = computed(() => {
   const priority = props.taskPreferenceForm.minPriorityForRecommendation
 
-  if (priority === 'high') return 'High'
-  if (priority === 'low') return 'Low'
+  if (priority === 'high') return 'Cao'
+  if (priority === 'low') return 'Thấp'
 
-  return 'Medium'
+  return 'Vừa'
 })
 
 const sensitivityLabel = computed(() => {
@@ -725,11 +725,11 @@ const sensitivityLabel = computed(() => {
 })
 
 const aiStatusLabel = computed(() => {
-  if (!props.workspaceId) return 'Chưa chọn workspace'
+  if (!props.workspaceId) return 'Chưa chọn không gian'
 
   return props.taskPreferenceForm.enableAutoRecommendation
-    ? 'Auto đang bật'
-    : 'Auto đang tắt'
+    ? 'Tự động đang bật'
+    : 'Tự động đang tắt'
 })
 
 const aiStatusClass = computed(() => {
@@ -741,14 +741,14 @@ const aiStatusClass = computed(() => {
 
 const aiStatusDescription = computed(() => {
   if (!props.workspaceId) {
-    return 'AI settings được lưu theo từng workspace, nên hãy chọn workspace trước khi chỉnh.'
+    return 'Cài đặt AI được lưu theo từng không gian, nên hãy chọn không gian trước khi chỉnh.'
   }
 
   if (!props.taskPreferenceForm.enableAutoRecommendation) {
-    return 'Auto recommendation đang tắt. Nút “Phân tích task” vẫn dùng các rule chất lượng bên dưới khi chạy thủ công.'
+    return 'Gợi ý tự động đang tắt. Nút “Phân tích công việc” vẫn dùng các luật chất lượng bên dưới khi chạy thủ công.'
   }
 
-  return 'Auto recommendation sẽ chạy theo khung giờ/ngày bạn chọn. Manual analyze vẫn chạy ngay khi bạn bấm.'
+  return 'Gợi ý tự động sẽ chạy theo khung giờ và ngày bạn chọn. Phân tích thủ công vẫn chạy ngay khi bạn bấm.'
 })
 
 const aiValidationMessage = computed(() => {
@@ -759,7 +759,7 @@ const aiValidationMessage = computed(() => {
     form.workDayStartHour < 0 ||
     form.workDayStartHour > 23
   ) {
-    return 'Start hour phải nằm trong khoảng 0-23.'
+    return 'Giờ bắt đầu phải nằm trong khoảng 0-23.'
   }
 
   if (
@@ -767,15 +767,15 @@ const aiValidationMessage = computed(() => {
     form.workDayEndHour < 0 ||
     form.workDayEndHour > 23
   ) {
-    return 'End hour phải nằm trong khoảng 0-23.'
+    return 'Giờ kết thúc phải nằm trong khoảng 0-23.'
   }
 
   if (form.workDayStartHour >= form.workDayEndHour) {
-    return 'Start hour phải nhỏ hơn End hour.'
+    return 'Giờ bắt đầu phải nhỏ hơn giờ kết thúc.'
   }
 
   if (!form.preferredDaysOfWeek.length) {
-    return 'Cần chọn ít nhất 1 ngày cho auto recommendation.'
+    return 'Cần chọn ít nhất 1 ngày cho gợi ý tự động.'
   }
 
   if (
@@ -783,7 +783,7 @@ const aiValidationMessage = computed(() => {
     form.maxRecommendationsPerSession < 1 ||
     form.maxRecommendationsPerSession > 20
   ) {
-    return 'Max per run phải nằm trong khoảng 1-20.'
+    return 'Số gợi ý tối đa mỗi lần phải nằm trong khoảng 1-20.'
   }
 
   if (
@@ -791,7 +791,7 @@ const aiValidationMessage = computed(() => {
     form.recommendationSensitivity < 0 ||
     form.recommendationSensitivity > 100
   ) {
-    return 'Quality threshold phải nằm trong khoảng 0-100.'
+    return 'Ngưỡng chất lượng phải nằm trong khoảng 0-100.'
   }
 
   if (
@@ -799,7 +799,7 @@ const aiValidationMessage = computed(() => {
     form.recommendationIntervalMinutes < 1 ||
     form.recommendationIntervalMinutes > 1440
   ) {
-    return 'Auto interval phải nằm trong khoảng 1-1440 phút.'
+    return 'Khoảng nghỉ tự động phải nằm trong khoảng 1-1440 phút.'
   }
 
   return null

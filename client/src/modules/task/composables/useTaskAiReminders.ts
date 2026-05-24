@@ -92,7 +92,7 @@ function daysBetween(left: Date, right: Date) {
 }
 
 function formatDueDistance(dueDate: Date | null, now: Date) {
-  if (!dueDate) return 'No due date'
+  if (!dueDate) return 'Chưa đặt hạn'
 
   const hours = diffHours(dueDate, now)
   const absHours = Math.abs(hours)
@@ -185,8 +185,8 @@ function buildTaskReminders(
         'overdue',
         'critical',
         'priority_high',
-        'Task đã quá hạn, xử lý trước nha',
-        `Deadline là ${dueDisplay}. AI thấy task này đang trễ nên nên ưu tiên clear hoặc đổi hạn ngay.`,
+        'Công việc đã quá hạn, xử lý trước nha',
+        `Hạn là ${dueDisplay}. AI thấy công việc này đang trễ nên hãy ưu tiên xử lý hoặc đổi hạn ngay.`,
         'Xử lý / cập nhật hạn',
         score,
         dueLabel,
@@ -201,7 +201,7 @@ function buildTaskReminders(
         'critical',
         'timer',
         'Sắp tới hạn cực gần',
-        `Task này tới hạn lúc ${dueDisplay}. Nên làm ngay hoặc ping người phụ trách trước khi cháy.`,
+        `Công việc này tới hạn lúc ${dueDisplay}. Nên làm ngay hoặc nhắn người phụ trách trước khi trễ.`,
         'Làm ngay',
         96,
         dueLabel,
@@ -215,8 +215,8 @@ function buildTaskReminders(
         'due-today',
         'warning',
         'today',
-        'Task cần xong trong hôm nay',
-        `Hạn là ${dueDisplay}. AI gợi ý đưa task này vào danh sách focus hôm nay.`,
+        'Công việc cần xong trong hôm nay',
+        `Hạn là ${dueDisplay}. AI gợi ý đưa công việc này vào danh sách tập trung hôm nay.`,
         'Đưa vào hôm nay',
         82,
         dueLabel,
@@ -230,7 +230,7 @@ function buildTaskReminders(
         'due-week',
         'info',
         'event_upcoming',
-        'Task sắp đến hạn trong vài ngày tới',
+        'Công việc sắp đến hạn trong vài ngày tới',
         `Còn không nhiều thời gian trước hạn ${dueDisplay}. Nên chuẩn bị trước để khỏi dồn việc.`,
         'Lên lịch làm',
         62,
@@ -247,11 +247,11 @@ function buildTaskReminders(
         'high-priority',
         dueDate && dueHours !== null && dueHours <= 24 ? 'warning' : 'info',
         'flag',
-        'Task priority cao cần để mắt',
+        'Công việc ưu tiên cao cần để mắt',
         task.dueDate
-          ? `Task này có priority cao và hạn ${dueDisplay}. Nên kiểm tra tiến độ thường xuyên.`
-          : 'Task này có priority cao nhưng chưa có deadline rõ ràng. Nên thêm hạn để AI nhắc chuẩn hơn.',
-        'Kiểm tra priority',
+          ? `Công việc này có ưu tiên cao và hạn ${dueDisplay}. Nên kiểm tra tiến độ thường xuyên.`
+          : 'Công việc này có ưu tiên cao nhưng chưa có hạn rõ ràng. Nên thêm hạn để AI nhắc chuẩn hơn.',
+        'Kiểm tra ưu tiên',
         task.dueDate ? 58 : 54,
         dueLabel,
         source
@@ -270,8 +270,8 @@ function buildTaskReminders(
           'in-progress',
           'warning',
           'running_with_errors',
-          'Task đang làm nhưng lâu chưa cập nhật',
-          `Đã khoảng ${inactiveDays} ngày chưa thấy cập nhật. Nên comment tiến độ hoặc chuyển trạng thái nếu đã xong.`,
+          'Công việc đang làm nhưng lâu chưa cập nhật',
+          `Đã khoảng ${inactiveDays} ngày chưa thấy cập nhật. Nên bình luận tiến độ hoặc chuyển trạng thái nếu đã xong.`,
           'Cập nhật tiến độ',
           72 + Math.min(16, inactiveDays * 2),
           `${inactiveDays} ngày im lặng`,
@@ -288,9 +288,9 @@ function buildTaskReminders(
         'unscheduled',
         'gentle',
         'calendar_add_on',
-        'Task quan trọng nhưng chưa có hạn',
-        'AI không thể nhắc đúng thời điểm nếu task quan trọng mà chưa có due date. Thêm hạn sẽ đỡ quên hơn.',
-        'Thêm due date',
+        'Công việc quan trọng nhưng chưa có hạn',
+        'AI không thể nhắc đúng thời điểm nếu công việc quan trọng mà chưa có hạn. Thêm hạn sẽ đỡ quên hơn.',
+        'Thêm hạn',
         46,
         'Chưa đặt hạn',
         source
@@ -461,11 +461,11 @@ export function useTaskAiReminders(currentWorkspaceId: WorkspaceIdRef) {
         assignedTasks.value = response.data.items ?? []
       } else {
         assignedTasks.value = []
-        errors.push(getApiResultErrorMessage(response, 'Không tải được task được giao cho bạn.'))
+        errors.push(getApiResultErrorMessage(response, 'Không tải được công việc được giao cho bạn.'))
       }
     } else {
       assignedTasks.value = []
-      errors.push(getApiErrorMessage(assignedResult.reason, 'Không tải được task được giao cho bạn.'))
+      errors.push(getApiErrorMessage(assignedResult.reason, 'Không tải được công việc được giao cho bạn.'))
     }
 
     if (workspaceResult.status === 'fulfilled') {
@@ -477,11 +477,11 @@ export function useTaskAiReminders(currentWorkspaceId: WorkspaceIdRef) {
         workspaceTasks.value = response.data.items ?? []
       } else {
         workspaceTasks.value = []
-        errors.push(getApiResultErrorMessage(response, 'Không tải được task trong workspace hiện tại.'))
+        errors.push(getApiResultErrorMessage(response, 'Không tải được công việc trong không gian hiện tại.'))
       }
     } else {
       workspaceTasks.value = []
-      errors.push(getApiErrorMessage(workspaceResult.reason, 'Không tải được task trong workspace hiện tại.'))
+      errors.push(getApiErrorMessage(workspaceResult.reason, 'Không tải được công việc trong không gian hiện tại.'))
     }
 
     generatedAt.value = new Date()

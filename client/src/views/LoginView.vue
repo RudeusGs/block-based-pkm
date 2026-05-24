@@ -2,7 +2,7 @@
   <div class="auth-wrapper vh-100 overflow-hidden d-flex align-items-center justify-content-center">
     <router-link to="/" class="btn-back animate-fade-down">
       <span class="material-symbols-outlined">arrow_back</span>
-      <span class="ms-2 fw-semibold small">Back to home</span>
+      <span class="ms-2 fw-semibold small">Về trang chủ</span>
     </router-link>
 
     <div class="bg-decorations">
@@ -22,13 +22,13 @@
       <div class="card border-0 shadow-premium animate-fade-up">
         <div class="card-body p-4 p-md-5">
           <div class="mb-4 text-center">
-            <h4 class="fw-bold mb-1">Welcome back</h4>
-            <p class="text-muted small">Access your workspace</p>
+            <h4 class="fw-bold mb-1">Chào mừng trở lại</h4>
+            <p class="text-muted small">Đăng nhập để vào không gian làm việc</p>
           </div>
 
           <form @submit.prevent="handleLogin">
             <div class="mb-3">
-              <label for="userName" class="form-label-custom">User Name</label>
+              <label for="userName" class="form-label-custom">Tên đăng nhập</label>
 
               <div class="input-group-custom">
                 <span class="material-symbols-outlined icon">person</span>
@@ -38,7 +38,7 @@
                   type="text"
                   id="userName"
                   class="form-control-custom"
-                  placeholder="Your user name"
+                  placeholder="Tên đăng nhập của bạn"
                   autocomplete="username"
                   :disabled="isSubmitting"
                   required
@@ -48,10 +48,10 @@
 
             <div class="mb-3">
               <div class="d-flex justify-content-between">
-                <label for="password" class="form-label-custom">Password</label>
+                <label for="password" class="form-label-custom">Mật khẩu</label>
 
                 <router-link to="/forgot-password" class="text-link small">
-                  Forgot?
+                  Quên?
                 </router-link>
               </div>
 
@@ -74,7 +74,7 @@
                   class="btn-toggle-pass"
                   @click="togglePassword"
                   :disabled="isSubmitting"
-                  aria-label="Toggle password visibility"
+                  aria-label="Ẩn hoặc hiện mật khẩu"
                 >
                   <span class="material-symbols-outlined">
                     {{ showPassword ? 'visibility_off' : 'visibility' }}
@@ -88,7 +88,7 @@
               class="btn btn-black w-100 py-3 fw-bold rounded-3 mb-4"
               :disabled="isSubmitting || !canSubmit"
             >
-              <span v-if="!isSubmitting">Sign In</span>
+              <span v-if="!isSubmitting">Đăng nhập</span>
 
               <span
                 v-else
@@ -100,7 +100,7 @@
           </form>
 
           <div class="divider mb-4">
-            <span>Or</span>
+            <span>Hoặc</span>
           </div>
 
           <div class="row g-2">
@@ -133,13 +133,13 @@
 
         <div class="card-footer border-0 bg-light-soft py-3 text-center">
           <p class="mb-0 small text-muted">
-            New here?
+            Bạn chưa có tài khoản?
 
             <router-link
               to="/register"
               class="text-black fw-bold text-decoration-none border-bottom border-dark ms-1"
             >
-              Create account
+              Tạo tài khoản
             </router-link>
           </p>
         </div>

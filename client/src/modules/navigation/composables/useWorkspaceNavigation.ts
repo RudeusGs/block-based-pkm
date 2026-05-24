@@ -59,7 +59,7 @@ function upsertPageTab(page: WorkspaceNavigationPage) {
     state.workspace?.id === page.workspaceId
       ? state.workspace.name
       : state.pageTabs.find((tab) => tab.workspaceId === page.workspaceId)?.workspaceName ??
-        'Workspace'
+        'Không gian'
 
   const tab: WorkspaceNavigationPageTab = {
     ...page,
@@ -159,8 +159,8 @@ export function useWorkspaceNavigation() {
     page: computed(() => state.page),
     pageTabs: computed(() => state.pageTabs),
 
-    workspaceName: computed(() => state.workspace?.name || 'No workspace'),
-    pageName: computed(() => state.page?.title || 'No page'),
+    workspaceName: computed(() => state.workspace?.name || 'Chưa chọn không gian'),
+    pageName: computed(() => state.page?.title || 'Chưa chọn trang'),
     pageIcon: computed(() => state.page?.icon || '📄'),
     pageCoverImage: computed(() => state.page?.coverImage || null),
     pageRevision: computed(() => state.page?.currentRevision ?? null),

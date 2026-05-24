@@ -20,7 +20,7 @@
         >
           <header class="invite-modal-header">
             <div>
-              <span>Workspace</span>
+              <span>Không gian</span>
               <h2>Mời thành viên</h2>
             </div>
 
@@ -36,7 +36,7 @@
 
           <main class="invite-modal-body">
             <p class="invite-description">
-              Nhập Gmail của thành viên bạn muốn mời vào workspace
+              Nhập Gmail của thành viên bạn muốn mời vào không gian
               <strong>{{ workspaceName }}</strong>. Người được mời sẽ nhận email xác nhận.
             </p>
 
@@ -140,18 +140,18 @@ const roleOptions: Array<{
 }> = [
   {
     value: 'manager',
-    label: 'Manager',
+    label: 'Quản lý',
     description: 'Quản lý nội dung và thành viên.',
   },
   {
     value: 'member',
-    label: 'Member',
+    label: 'Thành viên',
     description: 'Tạo, chỉnh sửa và làm việc chung.',
   },
   {
     value: 'viewer',
-    label: 'Viewer',
-    description: 'Chỉ xem nội dung workspace.',
+    label: 'Người xem',
+    description: 'Chỉ xem nội dung không gian.',
   },
 ]
 </script>

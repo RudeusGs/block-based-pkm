@@ -169,7 +169,7 @@ export function useWorkspaceMembersSidebar(
   const memberCountLabel = computed(() => {
     const total = members.value.length
 
-    return total === 1 ? '1 member' : `${total} members`
+    return `${total} thành viên`
   })
 
   const currentWorkspaceMember = computed(() => {
@@ -375,7 +375,7 @@ export function useWorkspaceMembersSidebar(
     } catch (realtimeConnectError) {
       realtimeError.value = getApiErrorMessage(
         realtimeConnectError,
-        'Không thể kết nối realtime workspace.'
+        'Không thể kết nối thời gian thực cho không gian.'
       )
     }
   }
@@ -410,7 +410,7 @@ export function useWorkspaceMembersSidebar(
       loadedWorkspaceId.value = null
 
       if (!options.silent) {
-        error.value = 'Không tìm thấy workspace hiện tại.'
+        error.value = 'Không tìm thấy không gian hiện tại.'
       }
 
       return
@@ -483,22 +483,22 @@ export function useWorkspaceMembersSidebar(
 
   function assertCanMutateMember(targetMember: WorkspaceMemberListItem) {
     if (!workspaceId.value) {
-      memberActionError.value = 'Không tìm thấy workspace hiện tại.'
+      memberActionError.value = 'Không tìm thấy không gian hiện tại.'
       return false
     }
 
     if (!canManageMembers.value) {
-      memberActionError.value = 'Bạn không có quyền quản lý thành viên workspace này.'
+      memberActionError.value = 'Bạn không có quyền quản lý thành viên trong không gian này.'
       return false
     }
 
     if (targetMember.isCurrentUser) {
-      memberActionError.value = 'Bạn không thể tự thay đổi quyền hoặc xóa chính mình khỏi workspace.'
+      memberActionError.value = 'Bạn không thể tự thay đổi quyền hoặc xóa chính mình khỏi không gian.'
       return false
     }
 
     if (targetMember.isOwner) {
-      memberActionError.value = 'Không thể thay đổi hoặc xóa owner của workspace.'
+      memberActionError.value = 'Không thể thay đổi hoặc xóa chủ sở hữu của không gian.'
       return false
     }
 
@@ -538,7 +538,7 @@ export function useWorkspaceMembersSidebar(
       if (!result.isSuccess || !result.data) {
         memberActionError.value = getApiResultErrorMessage(
           result,
-          'Không thể thay đổi role của thành viên.'
+          'Không thể thay đổi vai trò của thành viên.'
         )
         return
       }
@@ -566,7 +566,7 @@ export function useWorkspaceMembersSidebar(
     } catch (mutationError) {
       memberActionError.value = getApiErrorMessage(
         mutationError,
-        'Không thể thay đổi role của thành viên.'
+        'Không thể thay đổi vai trò của thành viên.'
       )
     } finally {
       isMutatingMember.value = false
@@ -578,17 +578,17 @@ export function useWorkspaceMembersSidebar(
     const targetWorkspaceId = workspaceId.value ?? targetMember.workspaceId
 
     if (!targetWorkspaceId) {
-      memberActionError.value = 'Không tìm thấy workspace hiện tại.'
+      memberActionError.value = 'Không tìm thấy không gian hiện tại.'
       return null
     }
 
     if (!canTransferOwnership.value) {
-      memberActionError.value = 'Chỉ owner mới được chuyển quyền sở hữu workspace.'
+      memberActionError.value = 'Chỉ chủ sở hữu mới được chuyển quyền sở hữu không gian.'
       return null
     }
 
     if (targetMember.isCurrentUser || targetMember.isOwner) {
-      memberActionError.value = 'Người này đã là owner của workspace.'
+      memberActionError.value = 'Người này đã là chủ sở hữu của không gian.'
       return null
     }
 
@@ -607,7 +607,7 @@ export function useWorkspaceMembersSidebar(
       if (!result.isSuccess || !result.data) {
         memberActionError.value = getApiResultErrorMessage(
           result,
-          'Không thể chuyển quyền owner.'
+          'Không thể chuyển quyền chủ sở hữu.'
         )
         return null
       }
@@ -649,7 +649,7 @@ export function useWorkspaceMembersSidebar(
     } catch (mutationError) {
       memberActionError.value = getApiErrorMessage(
         mutationError,
-        'Không thể chuyển quyền owner.'
+        'Không thể chuyển quyền chủ sở hữu.'
       )
       return null
     } finally {
@@ -676,7 +676,7 @@ export function useWorkspaceMembersSidebar(
       if (!result.isSuccess) {
         memberActionError.value = getApiResultErrorMessage(
           result,
-          'Không thể xóa thành viên khỏi workspace.'
+          'Không thể xóa thành viên khỏi không gian.'
         )
         return
       }
@@ -699,7 +699,7 @@ export function useWorkspaceMembersSidebar(
     } catch (mutationError) {
       memberActionError.value = getApiErrorMessage(
         mutationError,
-        'Không thể xóa thành viên khỏi workspace.'
+        'Không thể xóa thành viên khỏi không gian.'
       )
     } finally {
       isMutatingMember.value = false

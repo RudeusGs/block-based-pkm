@@ -76,10 +76,10 @@ export function useSidebarWorkspaceTree() {
     const page = pageToDelete.value
 
     if (!page) {
-      return 'Bạn có chắc muốn archive page này không?'
+      return 'Bạn có chắc muốn lưu trữ trang này không?'
     }
 
-    return `Bạn sắp chuyển page "${page.title}" và toàn bộ subpage bên trong vào Trash. Bạn có thể restore lại sau.`
+    return `Bạn sắp chuyển trang "${page.title}" và toàn bộ trang con bên trong vào thùng rác. Bạn có thể khôi phục lại sau.`
   })
 
   const {
@@ -103,7 +103,7 @@ export function useSidebarWorkspaceTree() {
   })
 
   const selectedWorkspaceName = computed(() => {
-    return selectedWorkspace.value?.name || 'No workspace'
+    return selectedWorkspace.value?.name || 'Chưa chọn không gian'
   })
 
   const selectedWorkspaceRole = computed(() => {
@@ -341,7 +341,7 @@ export function useSidebarWorkspaceTree() {
           ...pageListErrorsByWorkspaceId.value,
           [workspaceId]: getApiResultErrorMessage(
             result,
-            'Không thể tải danh sách page.'
+            'Không thể tải danh sách trang.'
           ),
         }
 
@@ -375,7 +375,7 @@ export function useSidebarWorkspaceTree() {
         ...pageListErrorsByWorkspaceId.value,
         [workspaceId]: getApiErrorMessage(
           error,
-          'Không thể tải danh sách page.'
+          'Không thể tải danh sách trang.'
         ),
       }
     } finally {
@@ -406,7 +406,7 @@ export function useSidebarWorkspaceTree() {
       } else {
         quickAccessError.value = getApiResultErrorMessage(
           favoritesResult,
-          'Không thể tải favorite pages.'
+          'Không thể tải trang yêu thích.'
         )
       }
 
@@ -415,7 +415,7 @@ export function useSidebarWorkspaceTree() {
       } else {
         quickAccessError.value = getApiResultErrorMessage(
           recentResult,
-          'Không thể tải recent pages.'
+          'Không thể tải trang gần đây.'
         )
       }
     } catch (error) {
@@ -423,7 +423,7 @@ export function useSidebarWorkspaceTree() {
 
       quickAccessError.value = getApiErrorMessage(
         error,
-        'Không thể tải quick access pages.'
+        'Không thể tải danh sách truy cập nhanh.'
       )
     } finally {
       if (requestSerial === quickAccessRequestSerial) {
@@ -460,7 +460,7 @@ export function useSidebarWorkspaceTree() {
       if (!result.isSuccess || !result.data) {
         trashError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải thùng rác page.'
+          'Không thể tải thùng rác trang.'
         )
         return
       }
@@ -475,7 +475,7 @@ export function useSidebarWorkspaceTree() {
 
       trashError.value = getApiErrorMessage(
         error,
-        'Không thể tải thùng rác page.'
+        'Không thể tải thùng rác trang.'
       )
     } finally {
       if (requestSerial === trashRequestSerial && trashWorkspaceId.value === workspaceId) {
@@ -624,7 +624,7 @@ export function useSidebarWorkspaceTree() {
         if (!result.isSuccess) {
           quickAccessError.value = getApiResultErrorMessage(
             result,
-            'Không thể bỏ favorite page.'
+            'Không thể bỏ trang khỏi yêu thích.'
           )
           return null
         }
@@ -634,7 +634,7 @@ export function useSidebarWorkspaceTree() {
         if (!result.isSuccess) {
           quickAccessError.value = getApiResultErrorMessage(
             result,
-            'Không thể favorite page.'
+            'Không thể thêm trang vào yêu thích.'
           )
           return null
         }
@@ -646,8 +646,8 @@ export function useSidebarWorkspaceTree() {
       quickAccessError.value = getApiErrorMessage(
         error,
         isAlreadyFavorite
-          ? 'Không thể bỏ favorite page.'
-          : 'Không thể favorite page.'
+          ? 'Không thể bỏ trang khỏi yêu thích.'
+          : 'Không thể thêm trang vào yêu thích.'
       )
       return null
     }
@@ -662,7 +662,7 @@ export function useSidebarWorkspaceTree() {
           ...pageListErrorsByWorkspaceId.value,
           [selectedWorkspaceId.value ?? 'unknown']: getApiResultErrorMessage(
             result,
-            'Không thể duplicate page.'
+            'Không thể nhân bản trang.'
           ),
         }
         return null
@@ -676,7 +676,7 @@ export function useSidebarWorkspaceTree() {
         ...pageListErrorsByWorkspaceId.value,
         [selectedWorkspaceId.value ?? 'unknown']: getApiErrorMessage(
           error,
-          'Không thể duplicate page.'
+          'Không thể nhân bản trang.'
         ),
       }
       return null
@@ -690,7 +690,7 @@ export function useSidebarWorkspaceTree() {
       if (!result.isSuccess || !result.data) {
         trashError.value = getApiResultErrorMessage(
           result,
-          'Không thể restore page.'
+          'Không thể khôi phục trang.'
         )
         return null
       }
@@ -700,7 +700,7 @@ export function useSidebarWorkspaceTree() {
       await fetchQuickAccessPages()
       return result.data
     } catch (error) {
-      trashError.value = getApiErrorMessage(error, 'Không thể restore page.')
+      trashError.value = getApiErrorMessage(error, 'Không thể khôi phục trang.')
       return null
     }
   }
@@ -786,7 +786,7 @@ export function useSidebarWorkspaceTree() {
       if (!result.isSuccess) {
         deletePageError.value = getApiResultErrorMessage(
           result,
-          'Không thể archive page này.'
+          'Không thể lưu trữ trang này.'
         )
 
         return null
@@ -830,7 +830,7 @@ export function useSidebarWorkspaceTree() {
     } catch (error) {
       deletePageError.value = getApiErrorMessage(
         error,
-        'Không thể archive page này.'
+        'Không thể lưu trữ trang này.'
       )
 
       return null

@@ -653,16 +653,16 @@ export function usePageEditor(props: PageEditorProps) {
 
   const fontFamilies = [
     {
-      label: 'Default',
+      label: 'Mặc định',
       value:
         'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
     },
     {
-      label: 'Serif',
+      label: 'Có chân',
       value: 'Georgia, Cambria, "Times New Roman", Times, serif',
     },
     {
-      label: 'Mono',
+      label: 'Đơn cách',
       value:
         '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", monospace',
     },
@@ -916,7 +916,7 @@ export function usePageEditor(props: PageEditorProps) {
     }
 
     if (remoteEditorsByBlock.has(blockId)) {
-      throw new Error(`${remoteEditorsByBlock.get(blockId)} đang sửa block này.`)
+      throw new Error(`${remoteEditorsByBlock.get(blockId)} đang sửa khối này.`)
     }
 
     const editorSessionId = getEditorSessionId()
@@ -929,8 +929,8 @@ export function usePageEditor(props: PageEditorProps) {
     if (!result.isSuccess || !result.data?.granted) {
       throw new Error(
         result.data?.holderDisplayName
-          ? `${result.data.holderDisplayName} đang sửa block này.`
-          : getApiResultErrorMessage(result, 'Block này đang được người khác sửa.')
+          ? `${result.data.holderDisplayName} đang sửa khối này.`
+          : getApiResultErrorMessage(result, 'Khối này đang được người khác sửa.')
       )
     }
 
@@ -1182,7 +1182,7 @@ export function usePageEditor(props: PageEditorProps) {
       autofocus: false,
       placeholder: canEditDocument.value
         ? 'Viết gì đó đi bro...'
-        : 'Bạn chỉ có quyền xem page này.',
+          : 'Bạn chỉ có quyền xem trang này.',
       readOnly: !canEditDocument.value,
       minHeight: 220,
       onReady: () => {
@@ -1333,7 +1333,7 @@ export function usePageEditor(props: PageEditorProps) {
         })
 
         if (!result.isSuccess || !result.data?.block) {
-          throw new Error(getApiResultErrorMessage(result, 'Không tạo được block.'))
+          throw new Error(getApiResultErrorMessage(result, 'Không tạo được khối.'))
         }
 
         currentRevision.value = result.data.appliedRevision
@@ -1363,7 +1363,7 @@ export function usePageEditor(props: PageEditorProps) {
         })
 
         if (!result.isSuccess || !result.data?.block) {
-          throw new Error(getApiResultErrorMessage(result, 'Không lưu được block.'))
+          throw new Error(getApiResultErrorMessage(result, 'Không lưu được khối.'))
         }
 
         markLeaseHeld(result.data.block.id, activeSessionId)
@@ -1383,7 +1383,7 @@ export function usePageEditor(props: PageEditorProps) {
         })
 
         if (!result.isSuccess) {
-          throw new Error(getApiResultErrorMessage(result, 'Không xóa được block.'))
+          throw new Error(getApiResultErrorMessage(result, 'Không xóa được khối.'))
         }
 
         removeServerBlock(
@@ -1418,7 +1418,7 @@ export function usePageEditor(props: PageEditorProps) {
       if (saveError?.status === 409 || saveError?.data?.statusCode === 409) {
         error.value = getApiErrorMessage(
           saveError,
-          'Block đang bị khóa hoặc lease đã hết hạn.'
+          'Khối đang bị khóa hoặc phiên chỉnh sửa đã hết hạn.'
         )
 
         const activeServerBlockId = getActiveServerBlockId()
@@ -1431,7 +1431,7 @@ export function usePageEditor(props: PageEditorProps) {
         return
       }
 
-      error.value = getApiErrorMessage(saveError, 'Không lưu được nội dung page.')
+      error.value = getApiErrorMessage(saveError, 'Không lưu được nội dung trang.')
     }
   }
 
@@ -1466,7 +1466,7 @@ export function usePageEditor(props: PageEditorProps) {
 
     if (isRemoteEditing(serverBlockId)) {
       if (!silent) {
-        error.value = `${remoteEditorsByBlock.get(serverBlockId)} đang sửa block này.`
+        error.value = `${remoteEditorsByBlock.get(serverBlockId)} đang sửa khối này.`
       }
 
       return
@@ -1476,7 +1476,7 @@ export function usePageEditor(props: PageEditorProps) {
       if (!silent) {
         error.value = getApiErrorMessage(
           leaseError,
-          'Block này đang được người khác chỉnh sửa.'
+          'Khối này đang được người khác chỉnh sửa.'
         )
       }
     })
@@ -1568,8 +1568,8 @@ export function usePageEditor(props: PageEditorProps) {
       event.preventDefault()
       const serverBlockId = resolveServerBlockId(blockId)
       error.value = serverBlockId
-        ? `${remoteEditorsByBlock.get(serverBlockId)} đang sửa block này.`
-        : 'Block này đang được người khác sửa.'
+        ? `${remoteEditorsByBlock.get(serverBlockId)} đang sửa khối này.`
+        : 'Khối này đang được người khác sửa.'
       return
     }
 
@@ -1587,8 +1587,8 @@ export function usePageEditor(props: PageEditorProps) {
       event.preventDefault()
       const serverBlockId = resolveServerBlockId(blockId)
       error.value = serverBlockId
-        ? `${remoteEditorsByBlock.get(serverBlockId)} đang sửa block này.`
-        : 'Block này đang được người khác sửa.'
+        ? `${remoteEditorsByBlock.get(serverBlockId)} đang sửa khối này.`
+        : 'Khối này đang được người khác sửa.'
       return
     }
 
@@ -2214,7 +2214,7 @@ export function usePageEditor(props: PageEditorProps) {
         void realtimeClient.heartbeatPage(props.pageId).catch(() => {})
       }, HEARTBEAT_INTERVAL_MS)
     } catch (realtimeError) {
-      error.value = getApiErrorMessage(realtimeError, 'Không kết nối được realtime.')
+      error.value = getApiErrorMessage(realtimeError, 'Không kết nối được thời gian thực.')
     }
   }
 
@@ -2239,7 +2239,7 @@ export function usePageEditor(props: PageEditorProps) {
       const result = await blockController.listByPage(pageId)
 
       if (!result.isSuccess || !result.data) {
-        throw new Error(getApiResultErrorMessage(result, 'Không tải được nội dung page.'))
+        throw new Error(getApiResultErrorMessage(result, 'Không tải được nội dung trang.'))
       }
 
       hydrateServerSnapshot(result.data)
@@ -2247,7 +2247,7 @@ export function usePageEditor(props: PageEditorProps) {
       await joinRealtimePage(pageId)
       startLeaseRenewal()
     } catch (loadError) {
-      error.value = getApiErrorMessage(loadError, 'Không tải được nội dung page.')
+      error.value = getApiErrorMessage(loadError, 'Không tải được nội dung trang.')
       await createEditor(defaultEditorData())
     } finally {
       isLoading.value = false

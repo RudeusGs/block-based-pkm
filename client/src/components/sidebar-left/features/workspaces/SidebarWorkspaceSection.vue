@@ -12,7 +12,7 @@
           :class="{ open: isOpen }"
         ></i>
 
-        <span>Workspaces</span>
+        <span>Không gian</span>
       </button>
 
       <div class="lunar-section-actions">
@@ -21,7 +21,7 @@
           class="lunar-section-action"
           :class="{ refreshing: isRefreshingTree || isLoadingWorkspaces }"
           :disabled="isRefreshingTree || isLoadingWorkspaces"
-          title="Đồng bộ workspace/page"
+          title="Đồng bộ không gian/trang"
           @click.stop="emit('refreshTree')"
         >
           <i
@@ -37,7 +37,7 @@
         <button
           type="button"
           class="lunar-section-action"
-          title="Tạo workspace"
+          title="Tạo không gian"
           @click.stop="emit('createWorkspace')"
         >
           <i class="bi bi-plus-lg"></i>
@@ -68,7 +68,7 @@
           >
             <div class="lunar-quick-title">
               <i class="bi bi-star-fill"></i>
-              <span>Favorites</span>
+              <span>Yêu thích</span>
             </div>
 
             <div
@@ -86,7 +86,7 @@
               <button
                 type="button"
                 class="lunar-quick-action"
-                title="Bỏ favorite"
+                title="Bỏ yêu thích"
                 @click.stop="emit('toggleFavoritePage', page)"
               >
                 <i class="bi bi-star-fill"></i>
@@ -100,7 +100,7 @@
           >
             <div class="lunar-quick-title">
               <i class="bi bi-clock-history"></i>
-              <span>Recent</span>
+              <span>Gần đây</span>
             </div>
 
             <button
@@ -120,8 +120,8 @@
           <section class="lunar-quick-group lunar-trash-group">
             <div class="lunar-quick-title">
               <i class="bi bi-archive"></i>
-              <span>Trash</span>
-              <small v-if="isLoadingTrash">Syncing…</small>
+              <span>Thùng rác</span>
+              <small v-if="isLoadingTrash">Đang đồng bộ...</small>
             </div>
 
             <div
@@ -142,7 +142,7 @@
               v-else-if="!archivedPages.length"
               class="lunar-empty compact lunar-trash-empty"
             >
-              Trash đang trống. Page đã xóa sẽ nằm ở đây.
+              Thùng rác đang trống. Trang đã xóa sẽ nằm ở đây.
             </div>
 
             <template v-else>
@@ -166,7 +166,7 @@
           v-if="isLoadingWorkspaces"
           class="lunar-empty"
         >
-          Đang tải workspace…
+          Đang tải không gian...
         </div>
 
         <div
@@ -187,7 +187,7 @@
           v-else-if="!hasWorkspaces"
           class="lunar-empty"
         >
-          Chưa có workspace. Nhấn <strong>+</strong> để tạo mới.
+          Chưa có không gian. Nhấn <strong>+</strong> để tạo mới.
         </div>
 
         <template v-else>
@@ -229,7 +229,7 @@
                   v-if="workspace.currentUserRole"
                   class="lunar-role-chip"
                 >
-                  {{ workspace.currentUserRole }}
+                  {{ roleLabel(workspace) }}
                 </span>
 
                 <span
@@ -245,7 +245,7 @@
                 v-if="canCreatePages(workspace)"
                 type="button"
                 class="lunar-row-action"
-                title="Tạo page"
+                title="Tạo trang"
                 @click.stop="emit('createPage', workspace, null)"
               >
                 <i class="bi bi-plus-lg"></i>
@@ -261,7 +261,7 @@
                   v-if="isLoadingPages(workspace.id)"
                   class="lunar-empty compact"
                 >
-                  Đang tải page…
+                  Đang tải trang...
                 </div>
 
                 <div
@@ -274,7 +274,7 @@
                     type="button"
                     @click.stop="emit('retryPages', workspace.id)"
                   >
-                    Tải lại page
+                    Tải lại trang
                   </button>
                 </div>
 
@@ -282,7 +282,7 @@
                   v-else-if="!getWorkspacePages(workspace.id).length"
                   class="lunar-empty compact"
                 >
-                  {{ canCreatePages(workspace) ? 'Chưa có page.' : 'Chưa có page để xem.' }}
+                  {{ canCreatePages(workspace) ? 'Chưa có trang.' : 'Chưa có trang để xem.' }}
                 </div>
 
                 <SidebarPageTree
@@ -379,14 +379,24 @@ function canManagePages(workspace: WorkspaceSidebarItem) {
   return role === 'owner' || role === 'manager'
 }
 
+function roleLabel(workspace: WorkspaceSidebarItem) {
+  const role = normalizeRole(workspace)
+
+  if (role === 'owner') return 'Owner'
+  if (role === 'manager') return 'Manager'
+  if (role === 'viewer') return 'Viewer'
+
+  return 'Thành viên'
+}
+
 function normalizeVisibility(value: string | null | undefined) {
   return value?.trim().toLowerCase() === 'public' ? 'public' : 'private'
 }
 
 function visibilityLabel(value: string | null | undefined) {
   return normalizeVisibility(value) === 'public'
-    ? 'Public workspace: người có tài khoản đều có thể xem'
-    : 'Private workspace: chỉ member trong workspace xem được'
+    ? 'Không gian công khai: người có tài khoản đều có thể xem'
+    : 'Không gian riêng tư: chỉ thành viên trong không gian xem được'
 }
 
 function visibilityShortLabel(value: string | null | undefined) {

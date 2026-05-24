@@ -286,7 +286,8 @@ export function useTaskRealtime(options: UseTaskRealtimeOptions) {
         joinedPageId = pageId
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Không kết nối được realtime task.'
+      const message =
+        error instanceof Error ? error.message : 'Không kết nối được thời gian thực cho công việc.'
       options.onRealtimeError?.(message)
     }
   }

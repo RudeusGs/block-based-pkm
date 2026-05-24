@@ -14,7 +14,7 @@
         class="notion-ai-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="AI task suggestions"
+        aria-label="Gợi ý công việc AI"
         @click.stop
       >
         <header class="notion-ai-header">
@@ -24,8 +24,8 @@
             </div>
 
             <div class="notion-ai-title-content">
-              <span>AI Prioritizer</span>
-              <h2>Task nên ưu tiên</h2>
+              <span>AI ưu tiên công việc</span>
+              <h2>Công việc nên ưu tiên</h2>
             </div>
           </div>
 
@@ -33,7 +33,7 @@
             type="button"
             class="notion-ai-icon-btn"
             title="Đóng"
-            aria-label="Đóng AI Prioritizer"
+            aria-label="Đóng gợi ý AI"
             @click="emit('close')"
           >
             <i class="bi bi-x-lg"></i>
@@ -46,7 +46,7 @@
               <i class="bi bi-grid-1x2"></i>
               <div>
                 <span>Bộ lọc thông minh</span>
-                <strong>Gộp task trùng nội dung</strong>
+                <strong>Gộp công việc trùng nội dung</strong>
               </div>
             </div>
 
@@ -54,7 +54,7 @@
               <i class="bi bi-broadcast-pin"></i>
               <div>
                 <span>Cách xếp hạng</span>
-                <strong>Deadline · assignee · priority</strong>
+                <strong>Hạn chót · người phụ trách · ưu tiên</strong>
               </div>
             </div>
           </section>
@@ -71,7 +71,7 @@
             <div>
               <h3>Cố vấn ưu tiên công việc</h3>
               <p>
-                AI lọc task đang mở, gộp các việc trùng nội dung như “học bài” và “học bài 1”, rồi chỉ đề xuất việc đáng làm nhất.
+                AI lọc công việc đang mở, gộp các việc trùng nội dung như “học bài” và “học bài 1”, rồi chỉ đề xuất việc đáng làm nhất.
               </p>
             </div>
 
@@ -91,14 +91,14 @@
                 class="bi bi-magic"
               ></i>
 
-              {{ isGenerating ? 'Đang phân tích' : 'Phân tích task' }}
+              {{ isGenerating ? 'Đang phân tích' : 'Phân tích công việc' }}
             </button>
           </section>
 
           <section class="notion-ai-list-head">
             <div>
               <strong>{{ recommendations.length }}</strong>
-              <span>task ưu tiên</span>
+              <span>công việc ưu tiên</span>
             </div>
 
             <button
@@ -159,9 +159,9 @@
                 <i class="bi bi-lightbulb"></i>
               </div>
 
-              <h3>Chưa có task nên ưu tiên</h3>
+              <h3>Chưa có công việc nên ưu tiên</h3>
               <p>
-                AI chưa thấy task nào đủ tín hiệu để đề xuất. Hãy thêm deadline, priority hoặc assignee để gợi ý chính xác hơn.
+                AI chưa thấy công việc nào đủ tín hiệu để đề xuất. Hãy thêm hạn chót, mức ưu tiên hoặc người phụ trách để gợi ý chính xác hơn.
               </p>
             </div>
 
@@ -270,11 +270,11 @@ const emit = defineEmits<{
 function priorityLabel(priority: string) {
   const normalized = priority.trim().toLowerCase()
 
-  if (normalized === 'high') return 'High'
-  if (normalized === 'medium') return 'Medium'
-  if (normalized === 'low') return 'Low'
+  if (normalized === 'high') return 'Cao'
+  if (normalized === 'medium') return 'Vừa'
+  if (normalized === 'low') return 'Thấp'
 
-  return priority || 'Priority'
+  return priority || 'Ưu tiên'
 }
 
 function priorityClass(priority: string) {
@@ -933,6 +933,5 @@ function scoreLabel(score: number) {
   }
 }
 </style>
-
 
 

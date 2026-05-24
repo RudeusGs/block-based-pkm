@@ -6,12 +6,12 @@
         class="social-hub-layer"
         role="dialog"
         aria-modal="true"
-        aria-label="Social hub"
+        aria-label="Trung tâm xã hội"
       >
         <button
           class="social-hub-scrim"
           type="button"
-          aria-label="Đóng social hub"
+          aria-label="Đóng trung tâm xã hội"
           @click="close"
         ></button>
 
@@ -22,8 +22,8 @@
         >
           <header class="social-hub-header">
             <div>
-              <p>Social workspace</p>
-              <h2>Friends & profiles</h2>
+              <p>Kết nối trong không gian</p>
+              <h2>Bạn bè và hồ sơ</h2>
             </div>
 
             <button
@@ -35,7 +35,7 @@
             </button>
           </header>
 
-          <nav class="social-tabs" aria-label="Social tabs">
+          <nav class="social-tabs" aria-label="Các mục xã hội">
             <button
               v-for="tab in tabs"
               :key="tab.value"
@@ -64,7 +64,7 @@
                   ref="searchInputRef"
                   v-model="searchKeyword"
                   type="search"
-                  placeholder="Tìm người theo tên hoặc username..."
+                  placeholder="Tìm người theo tên hoặc tên đăng nhập..."
                   autocomplete="off"
                 />
 
@@ -103,7 +103,7 @@
               >
                 <span class="material-symbols-outlined">person_search</span>
                 <strong>Không tìm thấy ai</strong>
-                <p>Thử nhập tên hoặc username khác nha.</p>
+                <p>Thử nhập tên hoặc tên đăng nhập khác.</p>
               </div>
 
               <div
@@ -144,7 +144,7 @@
                       :disabled="mutatingUserId === user.id"
                       @click="sendRequest(user.id)"
                     >
-                      Add
+                      Thêm bạn
                     </button>
 
                     <button
@@ -152,7 +152,7 @@
                       type="button"
                       @click="emit('open-chat', user.id)"
                     >
-                      Message
+                      Nhắn tin
                     </button>
 
                     <button
@@ -160,7 +160,7 @@
                       type="button"
                       @click="activeTab = 'requests'"
                     >
-                      Reply
+                      Trả lời
                     </button>
 
                     <button
@@ -181,7 +181,7 @@
             >
               <div class="social-section-head">
                 <div>
-                  <strong>{{ friends.length }} friends</strong>
+                  <strong>{{ friends.length }} bạn bè</strong>
                   <span>Chỉ bạn bè mới tạo được cuộc trò chuyện riêng.</span>
                 </div>
 
@@ -215,7 +215,7 @@
               >
                 <span class="material-symbols-outlined">group_add</span>
                 <strong>Chưa có bạn bè</strong>
-                <p>Qua tab Search để gửi lời mời kết bạn.</p>
+                <p>Qua tab Tìm kiếm để gửi lời mời kết bạn.</p>
               </div>
 
               <div
@@ -254,7 +254,7 @@
                       type="button"
                       @click="emit('open-chat', friend.userId)"
                     >
-                      Message
+                      Nhắn tin
                     </button>
 
                     <button
@@ -263,7 +263,7 @@
                       :disabled="mutatingUserId === friend.userId"
                       @click="removeFriend(friend.userId)"
                     >
-                      Unfriend
+                      Hủy kết bạn
                     </button>
                   </div>
                 </article>
@@ -276,7 +276,7 @@
             >
               <div class="social-section-head">
                 <div>
-                  <strong>Friend requests</strong>
+                  <strong>Lời mời kết bạn</strong>
                 </div>
 
                 <button
@@ -304,7 +304,7 @@
               </div>
 
               <template v-else>
-                <h3 class="social-subtitle">Incoming</h3>
+                <h3 class="social-subtitle">Đã nhận</h3>
 
                 <div
                   v-if="!incomingRequests.length"
@@ -346,7 +346,7 @@
                       :disabled="mutatingRequestId === request.id"
                       @click="acceptRequest(request.id)"
                     >
-                      Accept
+                      Chấp nhận
                     </button>
 
                     <button
@@ -355,12 +355,12 @@
                       :disabled="mutatingRequestId === request.id"
                       @click="rejectRequest(request.id)"
                     >
-                      Reject
+                      Từ chối
                     </button>
                   </div>
                 </article>
 
-                <h3 class="social-subtitle mt">Outgoing</h3>
+                <h3 class="social-subtitle mt">Đã gửi</h3>
 
                 <div
                   v-if="!outgoingRequests.length"
@@ -392,7 +392,7 @@
 
                     <span>
                       <strong>{{ request.otherUser.fullName }}</strong>
-                      <small>@{{ request.otherUser.userName }} · Pending</small>
+                      <small>@{{ request.otherUser.userName }} · Đang chờ</small>
                     </span>
                   </button>
 
@@ -403,7 +403,7 @@
                       :disabled="mutatingRequestId === request.id"
                       @click="cancelRequest(request.id)"
                     >
-                      Cancel
+                      Hủy
                     </button>
                   </div>
                 </article>
@@ -416,8 +416,8 @@
             >
               <div class="social-section-head">
                 <div>
-                  <strong>My profile page</strong>
-                  <span>Trang cá nhân gắn với workspace public/private.</span>
+                  <strong>Trang hồ sơ của tôi</strong>
+                  <span>Trang cá nhân gắn với không gian công khai/riêng tư.</span>
                 </div>
 
                 <button
@@ -451,8 +451,8 @@
                 class="social-empty-state"
               >
                 <span class="material-symbols-outlined">badge</span>
-                <strong>Chưa mở profile</strong>
-                <p>Bấm refresh để mở trang cá nhân của bạn hoặc chọn user ở tab Search.</p>
+                <strong>Chưa mở hồ sơ</strong>
+                <p>Bấm tải lại để mở trang cá nhân của bạn hoặc chọn người dùng ở tab Tìm kiếm.</p>
               </div>
 
               <article
@@ -466,7 +466,7 @@
                   <img
                     v-if="coverUrl(selectedProfile.coverImageUrl)"
                     :src="coverUrl(selectedProfile.coverImageUrl) || ''"
-                    alt="Profile cover"
+                    alt="Ảnh bìa hồ sơ"
                     referrerpolicy="no-referrer"
                   />
 
@@ -497,7 +497,7 @@
                     @click.stop
                   >
                     <span class="material-symbols-outlined">image</span>
-                    {{ isUploadingCover ? 'Uploading...' : 'Cover' }}
+                    {{ isUploadingCover ? 'Đang tải lên...' : 'Ảnh bìa' }}
                   </label>
                 </div>
 
@@ -522,12 +522,12 @@
                     <div class="profile-meta-row">
                       <span>
                         <span class="material-symbols-outlined">group</span>
-                        {{ selectedProfile.friendCount }} friends
+                        {{ selectedProfile.friendCount }} bạn bè
                       </span>
 
                       <span>
                         <span class="material-symbols-outlined">workspaces</span>
-                        {{ selectedProfile.workspaces.length }} workspaces
+                        {{ selectedProfile.workspaces.length }} không gian
                       </span>
                     </div>
                   </div>
@@ -539,14 +539,14 @@
                   class="profile-bio-editor"
                   rows="4"
                   maxlength="500"
-                  placeholder="Viết vài dòng về bạn và workspace của bạn..."
+                  placeholder="Viết vài dòng về bạn và không gian của bạn..."
                 ></textarea>
 
                 <p
                   v-else
                   class="profile-bio"
                 >
-                  {{ selectedProfile.bio || 'Người dùng này chưa viết bio.' }}
+                  {{ selectedProfile.bio || 'Người dùng này chưa viết tiểu sử.' }}
                 </p>
 
                 <div
@@ -558,18 +558,18 @@
                     :disabled="isSavingProfile"
                     @click="saveMyProfile"
                   >
-                    {{ isSavingProfile ? 'Saving...' : 'Save profile' }}
+                    {{ isSavingProfile ? 'Đang lưu...' : 'Lưu hồ sơ' }}
                   </button>
                 </div>
 
                 <section class="profile-workspaces">
-                  <h4>Workspace public/private</h4>
+                  <h4>Không gian công khai/riêng tư</h4>
 
                   <div
                     v-if="!selectedProfile.workspaces.length"
                     class="social-empty-row"
                   >
-                    Chưa có workspace hiển thị ở trang cá nhân.
+                    Chưa có không gian hiển thị ở trang cá nhân.
                   </div>
 
                   <button
@@ -587,12 +587,12 @@
 
                     <span class="profile-workspace-copy">
                       <strong>{{ workspace.name }}</strong>
-                      <p>{{ workspace.description || 'No description' }}</p>
+                      <p>{{ workspace.description || 'Chưa có mô tả' }}</p>
                     </span>
 
                     <span class="profile-workspace-side">
                       <span :class="visibilityClass(workspace.visibility)">
-                        {{ workspace.visibility }}
+                        {{ visibilityLabel(workspace.visibility) }}
                       </span>
 
                       <small>
@@ -655,10 +655,10 @@ const tabs: Array<{
   label: string
   icon: string
 }> = [
-  { value: 'search', label: 'Search', icon: 'search' },
-  { value: 'friends', label: 'Friends', icon: 'group' },
-  { value: 'requests', label: 'Requests', icon: 'person_add' },
-  { value: 'profile', label: 'Profile', icon: 'badge' },
+  { value: 'search', label: 'Tìm kiếm', icon: 'search' },
+  { value: 'friends', label: 'Bạn bè', icon: 'group' },
+  { value: 'requests', label: 'Lời mời', icon: 'person_add' },
+  { value: 'profile', label: 'Hồ sơ', icon: 'badge' },
 ]
 
 const activeTab = ref<SocialTab>('search')
@@ -767,15 +767,19 @@ function friendshipLabel(status: FriendshipStatus) {
 function friendshipActionLabel(status: FriendshipStatus) {
   const value = normalizeFriendship(status)
 
-  if (value === 'self') return 'You'
-  if (value === 'request_sent') return 'Pending'
-  if (value === 'request_received') return 'Reply'
+  if (value === 'self') return 'Bạn'
+  if (value === 'request_sent') return 'Đang chờ'
+  if (value === 'request_received') return 'Trả lời'
 
-  return 'Pending'
+  return 'Đang chờ'
 }
 
 function visibilityClass(value: string) {
   return value.trim().toLowerCase() === 'public' ? 'public' : 'private'
+}
+
+function visibilityLabel(value: string) {
+  return value.trim().toLowerCase() === 'public' ? 'Công khai' : 'Riêng tư'
 }
 
 function workspaceActionLabel(workspace: ProfileWorkspaceResponse) {
@@ -785,11 +789,21 @@ function workspaceActionLabel(workspace: ProfileWorkspaceResponse) {
     ? normalizeFriendship(selectedProfile.value.friendshipStatus) === 'self'
     : false
 
-  if (isSelf) return 'Open'
+  if (isSelf) return 'Mở'
 
   return workspace.visibility.trim().toLowerCase() === 'public'
-    ? 'Join as viewer'
-    : 'Open'
+    ? 'Tham gia để xem'
+    : 'Mở'
+}
+
+function workspaceRoleLabel(value: string | null | undefined) {
+  const normalized = value?.trim().toLowerCase()
+
+  if (normalized === 'owner') return 'chủ sở hữu'
+  if (normalized === 'manager') return 'quản lý'
+  if (normalized === 'member') return 'thành viên'
+
+  return 'người xem'
 }
 
 async function joinProfileWorkspace(workspace: ProfileWorkspaceResponse) {
@@ -802,24 +816,24 @@ async function joinProfileWorkspace(workspace: ProfileWorkspaceResponse) {
 
     if (!result.isSuccess || !result.data) {
       toast.warning(
-        'Không mở được workspace',
-        getApiResultErrorMessage(result, 'Workspace này không còn public hoặc bạn chưa có quyền vào.')
+        'Không mở được không gian',
+        getApiResultErrorMessage(result, 'Không gian này không còn công khai hoặc bạn chưa có quyền vào.')
       )
       return
     }
 
-    const role = result.data.currentUserRole?.toString() || 'Viewer'
+    const role = workspaceRoleLabel(result.data.currentUserRole?.toString())
 
     toast.success(
-      'Đã mở workspace',
+      'Đã mở không gian',
       `Bạn đang vào “${result.data.name}” với quyền ${role}.`
     )
 
     emit('workspace-opened', result.data)
   } catch (error) {
     toast.warning(
-      'Không mở được workspace',
-      getApiErrorMessage(error, 'Workspace này không còn public hoặc bạn chưa có quyền vào.')
+      'Không mở được không gian',
+      getApiErrorMessage(error, 'Không gian này không còn công khai hoặc bạn chưa có quyền vào.')
     )
   } finally {
     isJoiningProfileWorkspaceId.value = null
@@ -848,7 +862,7 @@ async function searchUsers() {
     if (!result.isSuccess || !result.data) {
       searchError.value = getApiResultErrorMessage(
         result,
-        'Không thể tìm user.'
+        'Không thể tìm người dùng.'
       )
       searchResults.value = []
       return
@@ -856,7 +870,7 @@ async function searchUsers() {
 
     searchResults.value = result.data
   } catch (error) {
-    searchError.value = getApiErrorMessage(error, 'Không thể tìm user.')
+    searchError.value = getApiErrorMessage(error, 'Không thể tìm người dùng.')
     searchResults.value = []
   } finally {
     isSearching.value = false
@@ -942,7 +956,7 @@ async function loadMyProfile() {
     if (!meResult.isSuccess || !meResult.data) {
       profileError.value = getApiResultErrorMessage(
         meResult,
-        'Không lấy được thông tin user hiện tại.'
+        'Không lấy được thông tin người dùng hiện tại.'
       )
       return
     }
@@ -951,7 +965,7 @@ async function loadMyProfile() {
   } catch (error) {
     profileError.value = getApiErrorMessage(
       error,
-      'Không lấy được thông tin user hiện tại.'
+      'Không lấy được thông tin người dùng hiện tại.'
     )
   } finally {
     isLoadingProfile.value = false
@@ -999,7 +1013,7 @@ async function sendRequest(userId: Guid) {
       return
     }
 
-    toast.success('Đã gửi lời mời', 'Người kia sẽ nhận thông báo realtime.')
+    toast.success('Đã gửi lời mời', 'Người kia sẽ nhận thông báo thời gian thực.')
     await Promise.all([searchUsers(), loadRequests()])
   } catch (error) {
     toast.error('Không gửi được lời mời', getApiErrorMessage(error))
@@ -1102,16 +1116,16 @@ async function saveMyProfile() {
     if (!result.isSuccess || !result.data) {
       profileError.value = getApiResultErrorMessage(
         result,
-        'Không thể lưu profile.'
+        'Không thể lưu hồ sơ.'
       )
       return
     }
 
     selectedProfile.value = result.data
     profileBioDraft.value = result.data.bio ?? ''
-    toast.success('Đã lưu profile', 'Trang cá nhân của bạn đã được cập nhật.')
+    toast.success('Đã lưu hồ sơ', 'Trang cá nhân của bạn đã được cập nhật.')
   } catch (error) {
-    profileError.value = getApiErrorMessage(error, 'Không thể lưu profile.')
+    profileError.value = getApiErrorMessage(error, 'Không thể lưu hồ sơ.')
   } finally {
     isSavingProfile.value = false
   }
@@ -1134,16 +1148,16 @@ async function handleCoverSelected(event: Event) {
     if (!result.isSuccess || !result.data) {
       profileError.value = getApiResultErrorMessage(
         result,
-        'Không thể upload ảnh bìa.'
+        'Không thể tải ảnh bìa lên.'
       )
       return
     }
 
     selectedProfile.value = result.data
     profileBioDraft.value = result.data.bio ?? ''
-    toast.success('Đã đổi ảnh bìa', 'Profile nhìn xịn hơn rồi đó.')
+    toast.success('Đã đổi ảnh bìa', 'Ảnh bìa hồ sơ đã được cập nhật.')
   } catch (error) {
-    profileError.value = getApiErrorMessage(error, 'Không thể upload ảnh bìa.')
+    profileError.value = getApiErrorMessage(error, 'Không thể tải ảnh bìa lên.')
   } finally {
     isUploadingCover.value = false
   }
@@ -1188,7 +1202,7 @@ function bindRealtime() {
 
   unsubscribeRealtimeHandlers.push(
     realtimeClient.on('FriendRemoved', async () => {
-      toast.info('Friendship updated', 'Danh sách bạn bè đã thay đổi.')
+      toast.info('Bạn bè đã cập nhật', 'Danh sách bạn bè đã thay đổi.')
       await refreshSocial()
     })
   )
@@ -1204,7 +1218,7 @@ function formatShortDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString('vi-VN')
 }
 
 function formatRelativeTime(value: string) {
@@ -1214,13 +1228,13 @@ function formatRelativeTime(value: string) {
   const diffMs = Date.now() - date.getTime()
   const minutes = Math.max(0, Math.floor(diffMs / 60000))
 
-  if (minutes < 1) return 'Just now'
-  if (minutes < 60) return `${minutes}m ago`
+  if (minutes < 1) return 'Vừa xong'
+  if (minutes < 60) return `${minutes} phút trước`
 
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h ago`
+  if (hours < 24) return `${hours} giờ trước`
 
-  return `${Math.floor(hours / 24)}d ago`
+  return `${Math.floor(hours / 24)} ngày trước`
 }
 
 onMounted(() => {

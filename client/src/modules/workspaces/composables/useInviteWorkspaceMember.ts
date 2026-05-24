@@ -34,7 +34,7 @@ export function useInviteWorkspaceMember() {
 
   async function inviteMember(workspaceId: Guid | null) {
     if (!workspaceId) {
-      inviteError.value = 'Không tìm thấy workspace hiện tại.'
+      inviteError.value = 'Không tìm thấy không gian hiện tại.'
       return null
     }
 

@@ -7,13 +7,13 @@
       <div>
         <h2 class="section-title d-flex align-items-center gap-2 mb-1">
           <span class="material-symbols-outlined">table_chart</span>
-          Tasks
+          Công việc
         </h2>
 
         <p class="section-subtitle d-flex flex-wrap align-items-center gap-2 mb-0 small text-on-surface-variant">
-          <span>{{ tasks.length }} items</span>
+          <span>{{ tasks.length }} mục</span>
           <span class="tiny-separator"></span>
-          <span>{{ pageId ? 'Page database' : 'Select a page' }}</span>
+          <span>{{ pageId ? 'Danh sách việc của trang' : 'Chọn một trang' }}</span>
 
           <template v-if="pageId && !canManageTasks">
             <span class="tiny-separator"></span>
@@ -22,7 +22,7 @@
 
           <template v-if="realtimeError">
             <span class="tiny-separator"></span>
-            <span class="task-realtime-warning">Sync issue: {{ realtimeError }}</span>
+            <span class="task-realtime-warning">Lỗi đồng bộ: {{ realtimeError }}</span>
           </template>
         </p>
       </div>
@@ -32,11 +32,11 @@
           class="task-action-btn btn btn-sm d-flex align-items-center gap-1"
           type="button"
           :disabled="!pageId || isLoadingTasks"
-          title="Refresh tasks"
+          title="Tải lại công việc"
           @click="refreshTasks"
         >
           <span class="material-symbols-outlined">refresh</span>
-          Sync
+          Đồng bộ
         </button>
 
         <button
@@ -47,7 +47,7 @@
           @click="openCreateTaskPanel"
         >
           <span class="material-symbols-outlined">add</span>
-          New
+          Tạo mới
         </button>
       </div>
     </div>
@@ -55,17 +55,17 @@
     <div class="task-summary d-flex flex-wrap gap-3 small fw-medium text-on-surface-variant mb-3">
       <span class="d-inline-flex align-items-center gap-2">
         <span class="summary-dot summary-todo"></span>
-        {{ taskSummary.todo }} To Do
+        {{ taskSummary.todo }} Cần làm
       </span>
 
       <span class="d-inline-flex align-items-center gap-2">
         <span class="summary-dot summary-doing"></span>
-        {{ taskSummary.doing }} Doing
+        {{ taskSummary.doing }} Đang làm
       </span>
 
       <span class="d-inline-flex align-items-center gap-2">
         <span class="summary-dot summary-done"></span>
-        {{ taskSummary.done }} Done
+        {{ taskSummary.done }} Đã xong
       </span>
     </div>
 
@@ -75,8 +75,8 @@
         class="task-empty-state"
       >
         <span class="material-symbols-outlined">select</span>
-        <h3>Chọn page trước đã</h3>
-        <p>Task mới sẽ được gắn với page đang mở, nên cần chọn page ở sidebar trước nha.</p>
+        <h3>Chọn trang trước đã</h3>
+        <p>Công việc mới sẽ được gắn với trang đang mở, nên cần chọn trang ở thanh bên trước nha.</p>
       </div>
 
       <div
@@ -94,7 +94,7 @@
       >
         <i class="bi bi-exclamation-triangle"></i>
         <div>
-          <strong>Không tải được task.</strong>
+          <strong>Không tải được công việc.</strong>
           <p>{{ tasksError }}</p>
         </div>
 
@@ -114,11 +114,11 @@
           <table class="table task-table align-middle mb-0">
             <thead>
               <tr>
-                <th class="fw-normal ps-4">Task</th>
-                <th class="fw-normal">Status</th>
-                <th class="fw-normal">Priority</th>
-                <th class="fw-normal">Due Date</th>
-                <th class="fw-normal">Assignees</th>
+                <th class="fw-normal ps-4">Công việc</th>
+                <th class="fw-normal">Trạng thái</th>
+                <th class="fw-normal">Ưu tiên</th>
+                <th class="fw-normal">Hạn</th>
+                <th class="fw-normal">Người phụ trách</th>
               </tr>
             </thead>
 
@@ -147,7 +147,7 @@
                   </div>
 
                   <div class="task-description small mt-1 ms-4 text-truncate">
-                    {{ task.description || 'No description' }}
+                    {{ task.description || 'Chưa có mô tả' }}
                   </div>
                 </td>
 
@@ -204,7 +204,7 @@
                     v-else
                     class="task-unassigned-label"
                   >
-                    Unassigned
+                    Chưa giao
                   </span>
                 </td>
               </tr>
@@ -217,7 +217,7 @@
           class="task-empty-state"
         >
           <span class="material-symbols-outlined">playlist_add_check</span>
-          <h3>Page này chưa có task</h3>
+          <h3>Trang này chưa có công việc</h3>
           <p>{{ emptyTaskDescription }}</p>
         </div>
 
@@ -229,7 +229,7 @@
           @click="openCreateTaskPanel"
         >
           <span class="material-symbols-outlined">add</span>
-          Add a row
+          Thêm công việc
         </button>
       </template>
     </div>
@@ -386,25 +386,25 @@ const selectedTaskCanChangeStatus = computed(() => {
 })
 
 const taskPermissionLabel = computed(() => {
-  if (isLoadingMembers.value) return 'Checking permissions...'
-  if (membersError.value) return 'Permission unknown'
+  if (isLoadingMembers.value) return 'Đang kiểm tra quyền...'
+  if (membersError.value) return 'Chưa xác định quyền'
 
-  if (canManageTasks.value) return 'Can edit'
-  if (canCommentTasks.value) return 'Can comment'
+  if (canManageTasks.value) return 'Có thể chỉnh sửa'
+  if (canCommentTasks.value) return 'Có thể bình luận'
 
-  return 'View only'
+  return 'Chỉ xem'
 })
 
 const emptyTaskDescription = computed(() => {
   if (canManageTasks.value) {
-    return 'Bấm New để tạo task đầu tiên, assign nhiều người ngay nếu cần.'
+    return 'Bấm Tạo mới để tạo công việc đầu tiên, giao cho nhiều người ngay nếu cần.'
   }
 
   if (canCommentTasks.value) {
-    return 'Bạn có thể xem và comment task. Việc tạo task mới chỉ dành cho owner hoặc manager.'
+    return 'Bạn có thể xem và bình luận công việc. Việc tạo công việc mới chỉ dành cho chủ sở hữu hoặc quản lý.'
   }
 
-  return 'Bạn đang ở quyền Viewer nên chỉ có thể xem task.'
+  return 'Bạn đang ở quyền người xem nên chỉ có thể xem công việc.'
 })
 
 const assignableMembers = computed(() => {
@@ -584,7 +584,7 @@ async function fetchMembers(
     if (!result.isSuccess || !result.data) {
       membersError.value = getApiResultErrorMessage(
         result,
-        'Không thể tải danh sách member.'
+        'Không thể tải danh sách thành viên.'
       )
       members.value = []
       return
@@ -605,7 +605,7 @@ async function fetchMembers(
     if (!options.silent) {
       membersError.value = getApiErrorMessage(
         error,
-        'Không thể tải danh sách member.'
+        'Không thể tải danh sách thành viên.'
       )
       members.value = []
     }
@@ -636,7 +636,7 @@ async function fetchTasks(targetPageId = props.pageId) {
     if (!result.isSuccess || !result.data) {
       tasksError.value = getApiResultErrorMessage(
         result,
-        'Không thể tải danh sách task.'
+        'Không thể tải danh sách công việc.'
       )
       rawTasks.value = []
       return
@@ -648,7 +648,7 @@ async function fetchTasks(targetPageId = props.pageId) {
 
     tasksError.value = getApiErrorMessage(
       error,
-      'Không thể tải danh sách task.'
+      'Không thể tải danh sách công việc.'
     )
     rawTasks.value = []
   } finally {
@@ -676,7 +676,7 @@ async function fetchTaskComments(taskId: Guid) {
     if (!result.isSuccess || !result.data) {
       commentsError.value = getApiResultErrorMessage(
         result,
-        'Không tải được comment của task.'
+        'Không tải được bình luận của công việc.'
       )
       return
     }
@@ -694,7 +694,7 @@ async function fetchTaskComments(taskId: Guid) {
 
     commentsError.value = getApiErrorMessage(
       error,
-      'Không tải được comment của task.'
+      'Không tải được bình luận của công việc.'
     )
   } finally {
     if (currentRequestId === commentRequestId) {
@@ -776,7 +776,7 @@ function normalizePriority(priority: string): WorkTaskPriorityRequest {
 }
 
 function formatDueDate(value: string | null) {
-  if (!value) return 'No due date'
+  if (!value) return 'Chưa có hạn'
 
   const date = new Date(value)
 
@@ -797,13 +797,13 @@ function formatRelativeTime(value: string) {
   const diffMinutes = Math.max(0, Math.floor(diffMs / 60_000))
 
   if (diffMinutes < 1) return 'Vừa xong'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`
 
   const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffHours < 24) return `${diffHours} giờ trước`
 
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffDays < 7) return `${diffDays} ngày trước`
 
   return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
@@ -823,7 +823,7 @@ function isOverdue(value: string | null, status: string) {
 }
 
 function memberFallback(userId: Guid): TaskMemberOption {
-  const displayName = `User ${userId.slice(0, 8)}`
+  const displayName = `Người dùng ${userId.slice(0, 8)}`
 
   const fallbackInitials = displayName
     .split(/\s+/)
@@ -997,7 +997,7 @@ function mapCommentAuthor(comment: TaskCommentResponse) {
   return {
     userId: member.userId,
     name: member.isCurrentUser ? 'Bạn' : member.displayName,
-    role: member.isCurrentUser ? 'You' : member.role,
+    role: member.isCurrentUser ? 'Bạn' : roleLabel(member.role),
     avatarUrl: member.avatarUrl,
     initials: member.initials,
   }
@@ -1069,14 +1069,14 @@ async function addTaskComment(content: string, parentId: Guid | null = null) {
     if (!result.isSuccess || !result.data) {
       commentsError.value = getApiResultErrorMessage(
         result,
-        'Không gửi được comment.'
+        'Không gửi được bình luận.'
       )
       return
     }
 
     upsertComment(result.data)
   } catch (error) {
-    commentsError.value = getApiErrorMessage(error, 'Không gửi được comment.')
+    commentsError.value = getApiErrorMessage(error, 'Không gửi được bình luận.')
   } finally {
     isAddingComment.value = false
   }
@@ -1100,14 +1100,14 @@ async function assignTaskMember(userId: Guid) {
     if (!result.isSuccess || !result.data) {
       taskActionError.value = getApiResultErrorMessage(
         result,
-        'Không assign được member.'
+        'Không giao được thành viên.'
       )
       return
     }
 
     upsertTask(result.data)
   } catch (error) {
-    taskActionError.value = getApiErrorMessage(error, 'Không assign được member.')
+    taskActionError.value = getApiErrorMessage(error, 'Không giao được thành viên.')
   } finally {
     isMutatingTask.value = false
   }
@@ -1131,14 +1131,14 @@ async function unassignTaskMember(userId: Guid) {
     if (!result.isSuccess || !result.data) {
       taskActionError.value = getApiResultErrorMessage(
         result,
-        'Không gỡ assignee được.'
+        'Không gỡ người phụ trách được.'
       )
       return
     }
 
     upsertTask(result.data)
   } catch (error) {
-    taskActionError.value = getApiErrorMessage(error, 'Không gỡ assignee được.')
+    taskActionError.value = getApiErrorMessage(error, 'Không gỡ người phụ trách được.')
   } finally {
     isMutatingTask.value = false
   }
@@ -1164,7 +1164,7 @@ async function changeTaskStatus(status: WorkTaskStatusRequest) {
   if (!task || isMutatingTask.value) return
 
   if (normalizeStatus(task.status) === 'done') {
-    taskActionError.value = 'Task đã Done và trạng thái đã được khóa.'
+    taskActionError.value = 'Công việc đã hoàn tất nên trạng thái đã được khóa.'
     return
   }
 
@@ -1172,7 +1172,7 @@ async function changeTaskStatus(status: WorkTaskStatusRequest) {
 
   if (!canChangeStatusForRawTask(task)) {
     taskActionError.value =
-      'Bạn cần được assign vào task này hoặc có quyền owner/manager để đổi trạng thái.'
+      'Bạn cần được giao vào công việc này hoặc có quyền chủ sở hữu/quản lý để đổi trạng thái.'
     return
   }
 
@@ -1187,7 +1187,7 @@ async function changeTaskStatus(status: WorkTaskStatusRequest) {
     if (!result.isSuccess || !result.data) {
       taskActionError.value = getApiResultErrorMessage(
         result,
-        'Không đổi trạng thái task được.'
+        'Không đổi trạng thái công việc được.'
       )
       return
     }
@@ -1196,7 +1196,7 @@ async function changeTaskStatus(status: WorkTaskStatusRequest) {
   } catch (error) {
     taskActionError.value = getApiErrorMessage(
       error,
-      'Không đổi trạng thái task được.'
+      'Không đổi trạng thái công việc được.'
     )
   } finally {
     isMutatingTask.value = false
@@ -1205,9 +1205,9 @@ async function changeTaskStatus(status: WorkTaskStatusRequest) {
 
 function statusLabel(status: NormalizedTaskStatus) {
   return {
-    todo: 'To Do',
-    doing: 'Doing',
-    done: 'Done',
+    todo: 'Cần làm',
+    doing: 'Đang làm',
+    done: 'Đã xong',
   }[status]
 }
 
@@ -1221,9 +1221,9 @@ function statusClass(status: NormalizedTaskStatus) {
 
 function priorityLabel(priority: NormalizedTaskPriority) {
   return {
-    low: 'Low',
-    medium: 'Medium',
-    high: 'High',
+    low: 'Thấp',
+    medium: 'Vừa',
+    high: 'Cao',
   }[priority]
 }
 
@@ -1238,9 +1238,19 @@ function priorityClass(priority: NormalizedTaskPriority) {
 function assigneeSummary(task: WorkTaskView) {
   const firstAssignee = task.assignees[0]
 
-  if (!firstAssignee) return 'Unassigned'
+  if (!firstAssignee) return 'Chưa giao'
   if (task.assignees.length === 1) return firstAssignee.name
 
   return `${firstAssignee.name} +${task.assignees.length - 1}`
+}
+
+function roleLabel(role: string | null | undefined) {
+  const normalized = role?.trim().toLowerCase()
+
+  if (normalized === 'owner') return 'Chủ sở hữu'
+  if (normalized === 'manager') return 'Quản lý'
+  if (normalized === 'viewer') return 'Người xem'
+
+  return 'Thành viên'
 }
 </script>

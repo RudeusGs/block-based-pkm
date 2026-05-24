@@ -2,7 +2,7 @@
   <div
     class="lunar-rail"
     role="navigation"
-    aria-label="Collapsed sidebar"
+    aria-label="Sidebar thu gọn"
     @click.stop="emit('expand')"
   >
     <button
@@ -29,8 +29,8 @@
     <button
       type="button"
       class="lunar-rail-btn"
-      title="Workspaces"
-      aria-label="Mở sidebar workspace"
+      title="Không gian"
+      aria-label="Mở sidebar không gian"
       @click.stop="emit('expand')"
     >
       <i class="bi bi-folder2-open"></i>
@@ -39,8 +39,8 @@
     <button
       type="button"
       class="lunar-rail-btn"
-      title="My Tasks"
-      aria-label="Mở My Tasks"
+      title="Việc của tôi"
+      aria-label="Mở việc của tôi"
       @click.stop="emit('open-my-tasks')"
     >
       <i class="bi bi-check2-square"></i>
@@ -54,8 +54,8 @@
     <button
       type="button"
       class="lunar-rail-btn"
-      title="AI Suggestions"
-      aria-label="Mở AI Suggestions"
+      title="Gợi ý AI"
+      aria-label="Mở gợi ý AI"
       @click.stop="emit('open-recommendations')"
     >
       <i class="bi bi-stars"></i>
@@ -69,8 +69,8 @@
     <button
       type="button"
       class="lunar-rail-btn mt-auto"
-      title="Settings"
-      aria-label="Mở Settings"
+      title="Cài đặt"
+      aria-label="Mở cài đặt"
       @click.stop="emit('open-settings')"
     >
       <i class="bi bi-sliders2"></i>

@@ -11,7 +11,7 @@
         <button
           class="workspace-share-scrim"
           type="button"
-          aria-label="Đóng share workspace"
+          aria-label="Đóng chia sẻ không gian"
           @click="close"
         ></button>
 
@@ -19,7 +19,7 @@
           <header class="workspace-share-head">
             <div class="workspace-share-kicker">
               <span class="material-symbols-outlined">ios_share</span>
-              Workspace share
+              Chia sẻ không gian
             </div>
 
             <button
@@ -39,40 +39,40 @@
 
             <div>
               <h2 id="workspace-share-title">
-                Share “{{ workspaceName || 'Workspace' }}”
+                Chia sẻ “{{ workspaceName || 'Không gian' }}”
               </h2>
               <p>
-                Gửi workspace card vào Messenger. Người nhận bấm card là có thể vào workspace dù private hay public.
+                Gửi thẻ không gian qua tin nhắn. Người nhận bấm thẻ là có thể vào không gian dù riêng tư hay công khai.
               </p>
             </div>
           </section>
 
           <div v-if="!canShare" class="workspace-share-warning">
             <span class="material-symbols-outlined">lock</span>
-            Chỉ Owner hoặc Manager mới được share workspace. Member và Viewer nhìn cho vui thôi, không bấm share được nha.
+            Chỉ chủ sở hữu hoặc quản lý mới được chia sẻ không gian. Thành viên và người xem chỉ có thể xem phần này.
           </div>
 
           <template v-else>
             <div class="workspace-share-access-row">
               <div>
                 <strong>Quyền khi nhận</strong>
-                <span>Viewer chỉ xem, Member có thể tạo page/task theo quyền hiện tại.</span>
+                <span>Người xem chỉ xem, thành viên có thể tạo trang/công việc theo quyền hiện tại.</span>
               </div>
 
-              <div class="workspace-share-role-toggle" role="group" aria-label="Share role">
+              <div class="workspace-share-role-toggle" role="group" aria-label="Vai trò khi chia sẻ">
                 <button
                   type="button"
                   :class="{ active: shareRole === 'viewer' }"
                   @click="shareRole = 'viewer'"
                 >
-                  Viewer
+                  Người xem
                 </button>
                 <button
                   type="button"
                   :class="{ active: shareRole === 'member' }"
                   @click="shareRole = 'member'"
                 >
-                  Member
+                  Thành viên
                 </button>
               </div>
             </div>
@@ -116,8 +116,8 @@
 
             <div v-else-if="!visibleTargets.length" class="workspace-share-empty">
               <span class="material-symbols-outlined">forum</span>
-              <strong>Chưa có ai để share</strong>
-              <p>Hãy kết bạn hoặc mở conversation trước rồi quay lại share workspace.</p>
+              <strong>Chưa có ai để chia sẻ</strong>
+              <p>Hãy kết bạn hoặc mở cuộc trò chuyện trước rồi quay lại chia sẻ không gian.</p>
             </div>
 
             <div v-else class="workspace-share-list">
@@ -130,8 +130,8 @@
                 :disabled="target.isWorkspaceMember || sharingTargetKey === target.key"
                 :title="
                   target.isWorkspaceMember
-                    ? 'Người này đã ở trong workspace'
-                    : 'Gửi workspace qua Messenger'
+                    ? 'Người này đã ở trong không gian'
+                    : 'Gửi không gian qua tin nhắn'
                 "
                 @click="shareToTarget(target)"
               >
@@ -150,10 +150,10 @@
                   <strong>{{ target.fullName || target.userName }}</strong>
                   <small>
                     <template v-if="target.isWorkspaceMember">
-                      Đã ở trong workspace · @{{ target.userName }}
+                      Đã ở trong không gian · @{{ target.userName }}
                     </template>
                     <template v-else>
-                      {{ target.kind === 'conversation' ? 'Conversation' : 'Friend' }} · @{{ target.userName }}
+                      {{ target.kind === 'conversation' ? 'Cuộc trò chuyện' : 'Bạn bè' }} · @{{ target.userName }}
                     </template>
                   </small>
                 </span>
@@ -337,7 +337,7 @@ async function loadData() {
     if (!conversationResult.isSuccess || !conversationResult.data) {
       error.value = getApiResultErrorMessage(
         conversationResult,
-        'Không thể tải danh sách conversation.'
+        'Không thể tải danh sách cuộc trò chuyện.'
       )
       conversations.value = []
       friends.value = []
@@ -359,7 +359,7 @@ async function loadData() {
     if (!membersResult.isSuccess || !membersResult.data) {
       error.value = getApiResultErrorMessage(
         membersResult,
-        'Không thể kiểm tra thành viên workspace.'
+        'Không thể kiểm tra thành viên trong không gian.'
       )
       conversations.value = []
       friends.value = []
@@ -371,7 +371,7 @@ async function loadData() {
     friends.value = friendResult.data
     workspaceMembers.value = membersResult.data
   } catch (loadError) {
-    error.value = getApiErrorMessage(loadError, 'Không thể tải danh sách share.')
+    error.value = getApiErrorMessage(loadError, 'Không thể tải danh sách chia sẻ.')
     conversations.value = []
     friends.value = []
     workspaceMembers.value = []
@@ -389,7 +389,7 @@ async function resolveConversationId(target: ShareTarget) {
 
   if (!result.isSuccess || !result.data) {
     throw new Error(
-      getApiResultErrorMessage(result, 'Không thể mở conversation với người này.')
+      getApiResultErrorMessage(result, 'Không thể mở cuộc trò chuyện với người này.')
     )
   }
 
@@ -402,8 +402,8 @@ async function shareToTarget(target: ShareTarget) {
 
   if (target.isWorkspaceMember) {
     toast.info(
-      'Không cần share nữa',
-      `${target.fullName || target.userName} đã là thành viên của workspace này.`
+      'Không cần chia sẻ nữa',
+      `${target.fullName || target.userName} đã là thành viên của không gian này.`
     )
     return
   }
@@ -422,23 +422,23 @@ async function shareToTarget(target: ShareTarget) {
 
     if (!result.isSuccess || !result.data) {
       toast.warning(
-        'Share thất bại',
-        getApiResultErrorMessage(result, 'Không gửi được workspace card.')
+        'Chia sẻ thất bại',
+        getApiResultErrorMessage(result, 'Không gửi được thẻ không gian.')
       )
       return
     }
 
     toast.success(
-      'Đã gửi workspace',
-      `Workspace “${props.workspaceName}” đã được gửi cho ${target.fullName || target.userName}.`
+      'Đã gửi không gian',
+      `Không gian “${props.workspaceName}” đã được gửi cho ${target.fullName || target.userName}.`
     )
 
     emit('shared', conversationId)
     emit('close')
   } catch (shareError) {
     toast.warning(
-      'Share thất bại',
-      getApiErrorMessage(shareError, 'Không gửi được workspace card.')
+      'Chia sẻ thất bại',
+      getApiErrorMessage(shareError, 'Không gửi được thẻ không gian.')
     )
   } finally {
     sharingTargetKey.value = null

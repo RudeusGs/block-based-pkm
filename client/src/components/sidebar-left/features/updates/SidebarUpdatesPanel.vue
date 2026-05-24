@@ -2,8 +2,8 @@
   <section class="notion-sidebar-panel updates-panel">
     <header class="notion-panel-header">
       <div class="notion-panel-title">
-        <strong>Updates</strong>
-        <span>{{ unreadCount > 0 ? `${unreadCount} unread` : 'All read' }}</span>
+        <strong>Cập nhật</strong>
+        <span>{{ unreadCount > 0 ? `${unreadCount} chưa đọc` : 'Đã đọc hết' }}</span>
       </div>
 
       <div class="notion-panel-actions">
@@ -50,7 +50,7 @@
       v-else-if="error"
       class="notion-empty-state error"
     >
-      <strong>Không thể tải Updates</strong>
+      <strong>Không thể tải cập nhật</strong>
       <p>{{ error }}</p>
 
       <button
@@ -66,7 +66,7 @@
       class="notion-empty-state"
     >
       <strong>Chưa có cập nhật mới</strong>
-      <p>Mọi hoạt động quan trọng trong workspace sẽ hiện ở đây.</p>
+      <p>Mọi hoạt động quan trọng trong không gian sẽ hiện ở đây.</p>
     </div>
 
     <div
@@ -82,7 +82,7 @@
         <span
           v-if="!notification.isRead"
           class="notion-unread-dot"
-          title="Unread"
+          title="Chưa đọc"
         ></span>
 
         <div class="notion-update-content">
@@ -145,12 +145,12 @@ function normalize(value: string | null | undefined) {
 function notificationTypeLabel(type: string) {
   const normalized = normalize(type)
 
-  if (!normalized) return 'Update'
-  if (normalized.includes('task')) return 'Task'
-  if (normalized.includes('comment')) return 'Comment'
+  if (!normalized) return 'Cập nhật'
+  if (normalized.includes('task')) return 'Công việc'
+  if (normalized.includes('comment')) return 'Bình luận'
   if (normalized.includes('recommend')) return 'AI'
-  if (normalized.includes('workspace')) return 'Workspace'
-  if (normalized.includes('page')) return 'Page'
+  if (normalized.includes('workspace')) return 'Không gian'
+  if (normalized.includes('page')) return 'Trang'
 
   return type
 }

@@ -14,12 +14,12 @@
         class="notion-task-drawer"
         role="dialog"
         aria-modal="true"
-        aria-label="My tasks"
+        aria-label="Việc của tôi"
         @click.stop
       >
         <header class="notion-task-header">
           <div class="notion-task-title-content">
-            <span>My Tasks</span>
+            <span>Việc của tôi</span>
             <h2>Việc của bạn</h2>
           </div>
 
@@ -27,7 +27,7 @@
             type="button"
             class="notion-task-icon-btn"
             title="Đóng"
-            aria-label="Đóng My Tasks"
+            aria-label="Đóng việc của tôi"
             @click="emit('close')"
           >
             <span aria-hidden="true">×</span>
@@ -40,8 +40,8 @@
               <h3>Inbox công việc cá nhân</h3>
 
               <p>
-                Tất cả task được assign cho bạn sẽ hiển thị tại đây, không cần
-                chọn đúng workspace hay page.
+                Tất cả công việc được giao cho bạn sẽ hiển thị tại đây, không cần
+                chọn đúng không gian hay trang.
               </p>
             </div>
 
@@ -57,17 +57,17 @@
 
           <section class="notion-task-stat-grid">
             <article class="notion-task-stat-card">
-              <span>Open</span>
+              <span>Đang mở</span>
               <strong>{{ openTaskCount }}</strong>
             </article>
 
             <article class="notion-task-stat-card">
-              <span>Overdue</span>
+              <span>Quá hạn</span>
               <strong>{{ overdueTaskCount }}</strong>
             </article>
 
             <article class="notion-task-stat-card">
-              <span>High</span>
+              <span>Ưu tiên cao</span>
               <strong>{{ highPriorityCount }}</strong>
             </article>
           </section>
@@ -75,7 +75,7 @@
           <section class="notion-task-list-head">
             <div>
               <strong>{{ tasks.length }}</strong>
-              <span>task đang hiển thị</span>
+              <span>công việc đang hiển thị</span>
             </div>
 
             <span v-if="totalCount > tasks.length">
@@ -88,7 +88,7 @@
               v-if="error"
               class="notion-task-empty notion-task-error"
             >
-              <h3>Không tải được My Tasks</h3>
+              <h3>Không tải được việc của tôi</h3>
               <p>{{ error }}</p>
 
               <button
@@ -119,10 +119,10 @@
               v-else-if="!tasks.length"
               class="notion-task-empty"
             >
-              <h3>Chưa có task đang mở</h3>
+              <h3>Chưa có công việc đang mở</h3>
 
               <p>
-                Khi có task được assign cho bạn, nó sẽ tự xuất hiện ở đây.
+                Khi có công việc được giao cho bạn, nó sẽ tự xuất hiện ở đây.
               </p>
             </div>
 
@@ -163,8 +163,8 @@
                   <div class="notion-task-meta-line">
                     <span>{{ statusLabel(task.status) }}</span>
                     <span>{{ priorityLabel(task.priority) }}</span>
-                    <span v-if="task.pageId">Page task</span>
-                    <span v-else>No page</span>
+                    <span v-if="task.pageId">Có trang</span>
+                    <span v-else>Không gắn trang</span>
                   </div>
                 </div>
               </article>
@@ -291,8 +291,8 @@ function taskDueClass(dueDate: string | null) {
 function dueLabel(dueDate: string) {
   const state = dueState(dueDate)
 
-  if (state === 'overdue') return 'Overdue'
-  if (state === 'today') return 'Today'
+  if (state === 'overdue') return 'Quá hạn'
+  if (state === 'today') return 'Hôm nay'
 
   return formatDateTime(dueDate)
 }

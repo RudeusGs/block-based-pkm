@@ -6,8 +6,8 @@
   position: fixed;
   inset: 0;
   z-index: 1180;
-  background: rgba(0, 0, 0, 0.38);
-  backdrop-filter: blur(2px);
+  background: rgba(15, 15, 15, 0.34);
+  backdrop-filter: blur(1.5px);
 }
 
 .ai-reminder-panel {
@@ -20,23 +20,24 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #30302d;
-  border-radius: 16px;
-  color: #ededeb;
+  border: 1px solid #37352f;
+  border-radius: 14px;
+  color: #f1f1ef;
   background: #202020;
   box-shadow:
-    0 24px 80px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.025);
+    0 18px 52px rgba(0, 0, 0, 0.34),
+    0 0 0 1px rgba(255, 255, 255, 0.02);
 }
 
 .ai-reminder-header {
-  min-height: 68px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px 14px 12px;
-  border-bottom: 1px solid #30302d;
+  padding: 13px 14px 12px;
+  border-bottom: 1px solid #2f2f2b;
+  background: #202020;
 }
 
 .ai-reminder-title-block {
@@ -47,28 +48,28 @@
 }
 
 .ai-reminder-logo {
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   display: inline-grid;
   place-items: center;
-  flex: 0 0 36px;
-  border-radius: 10px;
-  color: #ededeb;
-  background: #343330;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.055);
+  flex: 0 0 34px;
+  border-radius: 8px;
+  color: #d8d8d4;
+  background: #2a2a27;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.035);
 }
 
 .ai-reminder-logo .material-symbols-outlined {
-  font-size: 19px;
+  font-size: 18px;
   font-variation-settings: 'FILL' 0;
 }
 
 .ai-reminder-title-block p {
   margin: 0 0 2px;
-  color: #9b9a94;
-  font-size: 11.5px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
+  color: #85837d;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
@@ -76,8 +77,8 @@
   margin: 0;
   overflow: hidden;
   color: #f1f1ef;
-  font-size: 17px;
-  font-weight: 680;
+  font-size: 16px;
+  font-weight: 650;
   line-height: 1.25;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -86,14 +87,14 @@
 .ai-reminder-header-actions {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 3px;
 }
 
 .ai-reminder-icon-btn {
-  width: 32px;
-  height: 32px;
+  width: 30px;
+  height: 30px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -102,13 +103,13 @@
 }
 
 .ai-reminder-icon-btn:hover:not(:disabled) {
-  color: #f1f1ef;
-  background: #a8a8a3;
+  color: #ededeb;
+  background: #2f2f2b;
 }
 
 .ai-reminder-icon-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.5;
+  opacity: 0.45;
 }
 
 .ai-reminder-icon-btn .material-symbols-outlined {
@@ -123,73 +124,60 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 18px;
+  gap: 16px;
   margin: 14px 14px 0;
-  padding: 16px;
-  border: 1px solid #30302d;
-  border-radius: 13px;
-  background:
-    #30302d;
+  padding: 15px;
+  border: 1px solid #37352f;
+  border-radius: 11px;
+  background: #252522;
 }
 
 .ai-reminder-kicker {
   display: block;
   margin-bottom: 6px;
-  color: #a8a8a3;
-  font-size: 11.5px;
-  font-weight: 650;
-  letter-spacing: 0.04em;
+  color: #85837d;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
 .ai-reminder-hero strong {
   display: block;
   color: #f1f1ef;
-  font-size: 20px;
-  font-weight: 720;
-  letter-spacing: -0.025em;
-  line-height: 1.18;
+  font-size: 19px;
+  font-weight: 680;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
 .ai-reminder-hero p {
-  margin: 9px 0 0;
+  margin: 8px 0 0;
   color: #aaa9a3;
   font-size: 13px;
   line-height: 1.55;
 }
 
 .ai-reminder-score {
-  min-width: 50px;
-  height: 50px;
+  min-width: 48px;
+  height: 48px;
   display: inline-grid;
   place-items: center;
-  flex: 0 0 50px;
-  border-radius: 14px;
+  flex: 0 0 48px;
+  border-radius: 12px;
   color: #ededeb;
-  background: #30302d;
-  font-size: 22px;
-  font-weight: 760;
+  background: #2f2f2b;
+  font-size: 21px;
+  font-weight: 700;
   line-height: 1;
 }
 
-.ai-reminder-score.critical {
-  color: #ffd2d2;
-  background: rgba(158, 78, 78, 0.22);
-}
-
-.ai-reminder-score.warning {
-  color: #f0d49a;
-  background: rgba(151, 116, 52, 0.2);
-}
-
-.ai-reminder-score.info {
-  color: #d7d7d1;
-  background: rgba(255, 255, 255, 0.08);
-}
-
+.ai-reminder-score.critical,
+.ai-reminder-score.warning,
+.ai-reminder-score.info,
 .ai-reminder-score.gentle {
-  color: #b8c7ae;
-  background: rgba(94, 128, 88, 0.17);
+  color: #ededeb;
+  background: #2f2f2b;
 }
 
 .ai-reminder-stats {
@@ -202,9 +190,9 @@
 .ai-reminder-stats article {
   min-width: 0;
   padding: 10px 9px;
-  border: 1px solid #30302d;
-  border-radius: 10px;
-  background: #242421;
+  border: 1px solid #37352f;
+  border-radius: 9px;
+  background: #252522;
 }
 
 .ai-reminder-stats span {
@@ -212,7 +200,7 @@
   overflow: hidden;
   color: #85837d;
   font-size: 11px;
-  font-weight: 650;
+  font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -221,8 +209,8 @@
   display: block;
   margin-top: 5px;
   color: #ededeb;
-  font-size: 18px;
-  font-weight: 720;
+  font-size: 17px;
+  font-weight: 680;
 }
 
 .ai-reminder-meta-row {
@@ -247,31 +235,31 @@
   align-items: center;
   gap: 4px;
   padding: 12px 14px 10px;
-  border-bottom: 1px solid #30302d;
+  border-bottom: 1px solid #2f2f2b;
 }
 
 .ai-reminder-tabs button {
   min-width: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 9px;
+  padding: 6px 9px;
   color: #a8a8a3;
   background: transparent;
   font-size: 12px;
-  font-weight: 620;
+  font-weight: 600;
 }
 
 .ai-reminder-tabs button:hover {
   color: #ededeb;
-  background: rgba(255, 255, 255, 0.055);
+  background: #2f2f2b;
 }
 
 .ai-reminder-tabs button.active {
   color: #ededeb;
-  background: #343330;
+  background: #33332f;
 }
 
 .ai-reminder-tabs button span {
@@ -281,10 +269,10 @@
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  color: #202020;
-  background: #d8d8d4;
+  color: #d8d8d4;
+  background: #3a3a35;
   font-size: 10.5px;
-  font-weight: 760;
+  font-weight: 680;
 }
 
 .ai-reminder-body {
@@ -292,6 +280,7 @@
   flex: 1 1 auto;
   overflow-y: auto;
   padding: 12px 14px 16px;
+  background: #202020;
 }
 
 .ai-reminder-body::-webkit-scrollbar {
@@ -305,7 +294,7 @@
 .ai-reminder-body::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: #3a3a3a;
+  background: #42423d;
   background-clip: content-box;
 }
 
@@ -315,10 +304,10 @@
   gap: 8px;
   margin-bottom: 10px;
   padding: 9px 10px;
-  border: 1px solid rgba(214, 177, 93, 0.18);
-  border-radius: 9px;
-  color: #d6b15d;
-  background: rgba(214, 177, 93, 0.075);
+  border: 1px solid #49473f;
+  border-radius: 8px;
+  color: #c7c5bd;
+  background: #282722;
   font-size: 12px;
   line-height: 1.45;
 }
@@ -329,6 +318,7 @@
 
 .ai-reminder-warning .material-symbols-outlined {
   margin-top: 1px;
+  color: #aaa9a3;
   font-size: 16px;
 }
 
@@ -345,14 +335,14 @@
 
 .ai-reminder-empty .material-symbols-outlined {
   color: #a8a8a3;
-  font-size: 38px;
+  font-size: 36px;
 }
 
 .ai-reminder-empty h3 {
   margin: 0;
   color: #ededeb;
   font-size: 15px;
-  font-weight: 680;
+  font-weight: 650;
 }
 
 .ai-reminder-empty p {
@@ -365,9 +355,9 @@
 .ai-reminder-focus {
   margin-bottom: 12px;
   padding: 12px;
-  border: 1px solid #30302d;
-  border-radius: 12px;
-  background: #242421;
+  border: 1px solid #37352f;
+  border-radius: 11px;
+  background: #252522;
 }
 
 .ai-reminder-section-head {
@@ -380,21 +370,21 @@
 
 .ai-reminder-section-head span {
   color: #85837d;
-  font-size: 11.5px;
-  font-weight: 680;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.035em;
   text-transform: uppercase;
 }
 
 .ai-reminder-section-head strong {
   color: #a8a8a3;
   font-size: 12px;
-  font-weight: 600;
+  font-weight: 580;
 }
 
 .ai-reminder-focus ol {
   display: grid;
-  gap: 6px;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -402,35 +392,30 @@
 
 .ai-reminder-focus li {
   display: grid;
-  grid-template-columns: 8px minmax(0, 1fr) auto;
+  grid-template-columns: 7px minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px;
   min-height: 28px;
   padding: 5px 7px;
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
 .ai-reminder-focus li:hover {
-  background: rgba(255, 255, 255, 0.045);
+  background: #2f2f2b;
 }
 
 .ai-reminder-focus li > span {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: 999px;
-  background: #85837d;
+  background: #7f7d75;
 }
 
-.ai-reminder-focus li > span.severity-critical {
-  background: #d98f8f;
-}
-
-.ai-reminder-focus li > span.severity-warning {
-  background: #c8a45b;
-}
-
-.ai-reminder-focus li > span.severity-info {
-  background: #a8a8a3;
+.ai-reminder-focus li > span.severity-critical,
+.ai-reminder-focus li > span.severity-warning,
+.ai-reminder-focus li > span.severity-info,
+.ai-reminder-focus li > span.severity-gentle {
+  background: #8f8d85;
 }
 
 .ai-reminder-focus strong {
@@ -438,7 +423,7 @@
   overflow: hidden;
   color: #ededeb;
   font-size: 12.5px;
-  font-weight: 620;
+  font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -460,39 +445,30 @@
   grid-template-columns: 34px minmax(0, 1fr);
   gap: 10px;
   padding: 12px;
-  border: 1px solid #30302d;
-  border-radius: 12px;
-  background: #242421;
+  border: 1px solid #37352f;
+  border-radius: 11px;
+  background: #252522;
 }
 
 .ai-reminder-card::before {
   content: '';
   position: absolute;
-  inset: 9px auto 9px 0;
+  inset: 10px auto 10px 0;
   width: 3px;
   border-radius: 0 999px 999px 0;
-  background: #85837d;
+  background: #6f6d66;
 }
 
-.ai-reminder-card.severity-critical::before {
-  background: #d98f8f;
-}
-
-.ai-reminder-card.severity-warning::before {
-  background: #c8a45b;
-}
-
-.ai-reminder-card.severity-info::before {
-  background: #a8a8a3;
-}
-
+.ai-reminder-card.severity-critical::before,
+.ai-reminder-card.severity-warning::before,
+.ai-reminder-card.severity-info::before,
 .ai-reminder-card.severity-gentle::before {
-  background: #7f9a79;
+  background: #8f8d85;
 }
 
 .ai-reminder-card:hover {
-  border-color: #3c3c38;
-  background: #282825;
+  border-color: #46443d;
+  background: #2a2a27;
 }
 
 .ai-reminder-card-icon {
@@ -500,7 +476,7 @@
   height: 34px;
   display: inline-grid;
   place-items: center;
-  border-radius: 9px;
+  border-radius: 8px;
   color: #d8d8d4;
   background: #30302d;
 }
@@ -525,7 +501,7 @@
 .ai-reminder-card-top time {
   color: #85837d;
   font-size: 11.2px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.25;
 }
 
@@ -534,7 +510,7 @@
   overflow: hidden;
   color: #f1f1ef;
   font-size: 14px;
-  font-weight: 690;
+  font-weight: 650;
   line-height: 1.35;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -545,7 +521,7 @@
   margin-top: 5px;
   color: #d8d8d4;
   font-size: 12.5px;
-  font-weight: 650;
+  font-weight: 600;
   line-height: 1.35;
 }
 
@@ -574,9 +550,9 @@
   border-radius: 999px;
   padding: 0 8px;
   color: #a8a8a3;
-  background: rgba(255, 255, 255, 0.055);
+  background: #30302d;
   font-size: 11.2px;
-  font-weight: 610;
+  font-weight: 580;
 }
 
 .ai-reminder-card-actions {
@@ -588,19 +564,19 @@
 .ai-reminder-card-actions button {
   min-height: 30px;
   border: 0;
-  border-radius: 7px;
+  border-radius: 6px;
   display: inline-flex;
   align-items: center;
   gap: 6px;
   padding: 0 9px;
   color: #ededeb;
-  background: #343330;
+  background: #33332f;
   font-size: 12px;
-  font-weight: 650;
+  font-weight: 620;
 }
 
 .ai-reminder-card-actions button:hover {
-  background: #3d3c38;
+  background: #3b3b36;
 }
 
 .ai-reminder-card-actions .material-symbols-outlined {
@@ -614,16 +590,16 @@
 
 .ai-reminder-skeleton-card {
   padding: 14px;
-  border: 1px solid #30302d;
-  border-radius: 12px;
-  background: #242421;
+  border: 1px solid #37352f;
+  border-radius: 11px;
+  background: #252522;
 }
 
 .ai-reminder-skeleton-card span {
   display: block;
   height: 9px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #2a2a27, #343330, #2a2a27);
+  background: linear-gradient(90deg, #2a2a27, #34342f, #2a2a27);
   background-size: 220% 100%;
   animation: ai-reminder-skeleton 1.25s ease-in-out infinite;
 }
@@ -659,7 +635,7 @@
 .ai-reminder-panel-enter-from,
 .ai-reminder-panel-leave-to {
   opacity: 0;
-  transform: translateX(18px) scale(0.985);
+  transform: translateX(14px) scale(0.99);
 }
 
 @keyframes ai-reminder-spin {

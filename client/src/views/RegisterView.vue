@@ -8,7 +8,7 @@
             <div class="mb-4 mb-lg-5">
               <router-link to="/login" class="back-link">
                 <span class="material-symbols-outlined">arrow_back</span>
-                <span>Back to login</span>
+                <span>Về đăng nhập</span>
               </router-link>
             </div>
 
@@ -21,9 +21,9 @@
                   <span class="brand-text">Block Paged</span>
                 </div>
 
-                <h1 class="register-title mb-2">Create an account</h1>
+                <h1 class="register-title mb-2">Tạo tài khoản</h1>
                 <p class="register-subtitle mb-0">
-                  Start curating your digital workspace today.
+                  Bắt đầu xây dựng không gian làm việc của bạn hôm nay.
                 </p>
               </div>
 
@@ -31,7 +31,7 @@
                 <form @submit.prevent="handleRegister" class="row g-3">
                   <div class="col-12">
                     <label for="fullName" class="form-label-custom">
-                      Full Name
+                      Họ và tên
                     </label>
 
                     <div class="input-shell">
@@ -42,7 +42,7 @@
                         type="text"
                         id="fullName"
                         class="form-control form-control-custom"
-                        placeholder="Jan van Eyck"
+                        placeholder="Nguyễn An"
                         autocomplete="name"
                         :disabled="isSubmitting"
                         required
@@ -52,7 +52,7 @@
 
                   <div class="col-12">
                     <label for="userName" class="form-label-custom">
-                      Username
+                      Tên đăng nhập
                     </label>
 
                     <div class="input-shell">
@@ -63,7 +63,7 @@
                         type="text"
                         id="userName"
                         class="form-control form-control-custom"
-                        placeholder="jan_eyck"
+                        placeholder="nguyen_an"
                         autocomplete="username"
                         :disabled="isSubmitting"
                         required
@@ -84,7 +84,7 @@
                         type="email"
                         id="email"
                         class="form-control form-control-custom"
-                        placeholder="jan@atheneum.io"
+                        placeholder="an@example.com"
                         autocomplete="email"
                         :disabled="isSubmitting"
                         required
@@ -94,7 +94,7 @@
 
                   <div class="col-12">
                     <label for="password" class="form-label-custom">
-                      Password
+                      Mật khẩu
                     </label>
 
                     <div class="input-shell">
@@ -116,7 +116,7 @@
                         class="password-toggle"
                         @click="togglePassword"
                         :disabled="isSubmitting"
-                        aria-label="Toggle password visibility"
+                        aria-label="Ẩn hoặc hiện mật khẩu"
                       >
                         <span class="material-symbols-outlined">
                           {{ showPassword ? 'visibility_off' : 'visibility' }}
@@ -131,7 +131,7 @@
                       class="btn btn-register w-100"
                       :disabled="isSubmitting || !canSubmit"
                     >
-                      <span v-if="!isSubmitting">Create Account</span>
+                      <span v-if="!isSubmitting">Tạo tài khoản</span>
 
                       <span v-else class="d-inline-flex align-items-center gap-2">
                         <span
@@ -139,7 +139,7 @@
                           role="status"
                           aria-hidden="true"
                         ></span>
-                        Creating account...
+                        Đang tạo tài khoản...
                       </span>
                     </button>
                   </div>
@@ -147,10 +147,10 @@
 
                 <div class="register-footer text-center">
                   <p class="mb-0">
-                    Already have an account?
+                    Bạn đã có tài khoản?
 
                     <router-link to="/login" class="signin-link ms-1">
-                      Sign in
+                      Đăng nhập
                     </router-link>
                   </p>
                 </div>
@@ -161,8 +161,8 @@
               <div class="d-flex flex-wrap align-items-center gap-3">
                 <span>© 2024 Block Paged</span>
                 <span class="meta-dot"></span>
-                <a href="#">Privacy</a>
-                <a href="#">Terms</a>
+                <a href="#">Quyền riêng tư</a>
+                <a href="#">Điều khoản</a>
               </div>
             </footer>
           </div>
@@ -226,12 +226,12 @@
 
             <div class="cursor-tag cursor-top">
               <span class="material-symbols-outlined filled">near_me</span>
-              <div class="cursor-label cursor-label-purple">Elena</div>
+              <div class="cursor-label cursor-label-purple">Linh</div>
             </div>
 
             <div class="cursor-tag cursor-bottom">
               <span class="material-symbols-outlined filled">near_me</span>
-              <div class="cursor-label cursor-label-dark">Marcus</div>
+              <div class="cursor-label cursor-label-dark">Minh</div>
             </div>
 
             <div class="floating-toolbar">

@@ -29,7 +29,7 @@
           :disabled="isAddingComment"
           @click="toggleReplyComposer"
         >
-          Reply
+          Trả lời
         </button>
       </div>
 
@@ -42,7 +42,7 @@
           ref="replyInputRef"
           v-model="replyDraft"
           rows="1"
-          :placeholder="`Reply to ${comment.author.name}...`"
+          :placeholder="`Trả lời ${comment.author.name}...`"
           :disabled="isAddingComment"
           @keydown.enter.exact.prevent="submitReply"
           @keydown.esc.prevent="closeReplyComposer"
@@ -54,7 +54,7 @@
             :disabled="isAddingComment"
             @click="closeReplyComposer"
           >
-            Cancel
+            Hủy
           </button>
 
           <button
@@ -62,7 +62,7 @@
             class="primary"
             :disabled="!replyDraft.trim() || isAddingComment"
           >
-            {{ isAddingComment ? 'Sending...' : 'Reply' }}
+            {{ isAddingComment ? 'Đang gửi...' : 'Trả lời' }}
           </button>
         </div>
       </form>

@@ -26,7 +26,7 @@
           <button
             type="button"
             class="toast-close"
-            aria-label="Close notification"
+            aria-label="Đóng thông báo"
             @click="removeToast(toast.id)"
           >
             ×

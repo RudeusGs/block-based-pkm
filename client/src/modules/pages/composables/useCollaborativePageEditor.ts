@@ -298,14 +298,14 @@ export function useCollaborativePageEditor(
   const isConnected = computed(() => realtimeClient.state.status === 'connected')
 
   function getDisplayName() {
-    return options.holderDisplayName?.value || 'Editor'
+    return options.holderDisplayName?.value || 'Người chỉnh sửa'
   }
 
   function getEditorSessionId() {
     const connectionId = realtimeClient.state.connectionId
 
     if (!connectionId) {
-      throw new Error('Chưa có realtime connectionId.')
+      throw new Error('Chưa có mã kết nối thời gian thực.')
     }
 
     return connectionId
@@ -514,7 +514,7 @@ export function useCollaborativePageEditor(
 
     if (!result.isSuccess || !result.data?.block) {
       throw new Error(
-        getApiResultErrorMessage(result, 'Không tạo được block đầu tiên.')
+        getApiResultErrorMessage(result, 'Không tạo được khối đầu tiên.')
       )
     }
 
@@ -532,7 +532,7 @@ export function useCollaborativePageEditor(
 
     if (!result.isSuccess || !result.data) {
       throw new Error(
-        getApiResultErrorMessage(result, 'Không tải được document.')
+        getApiResultErrorMessage(result, 'Không tải được tài liệu.')
       )
     }
 
@@ -564,7 +564,7 @@ export function useCollaborativePageEditor(
     } catch (reloadError) {
       error.value = getApiErrorMessage(
         reloadError,
-        'Không reload được document.'
+        'Không tải lại được tài liệu.'
       )
     } finally {
       isReloading.value = false
@@ -586,7 +586,7 @@ export function useCollaborativePageEditor(
       await ensureRealtimeJoined(pageId)
       await loadPageDocument(pageId)
     } catch (loadError) {
-      error.value = getApiErrorMessage(loadError, 'Không tải được page này.')
+      error.value = getApiErrorMessage(loadError, 'Không tải được trang này.')
     } finally {
       isLoading.value = false
     }
@@ -689,7 +689,7 @@ export function useCollaborativePageEditor(
 
       state.error = getApiErrorMessage(
         acquireError,
-        'Không lấy được quyền sửa block.'
+        'Không lấy được quyền sửa khối.'
       )
       return false
     }
@@ -781,7 +781,7 @@ export function useCollaborativePageEditor(
     if (!state.isLeaseHeld) {
       const acquired = await acquireBlock(block)
       if (!acquired) {
-        state.error = 'Không thể lấy quyền sửa block. Vui lòng thử lại.'
+        state.error = 'Không thể lấy quyền sửa khối. Vui lòng thử lại.'
         return
       }
     }
@@ -811,7 +811,7 @@ export function useCollaborativePageEditor(
 
           const reacquired = await acquireBlock(block)
           if (!reacquired) {
-            state.error = 'Không thể gia hạn hoặc lấy lại lease. Vui lòng thử lại.'
+            state.error = 'Không thể gia hạn hoặc lấy lại phiên chỉnh sửa. Vui lòng thử lại.'
             return
           }
         }
@@ -828,7 +828,7 @@ export function useCollaborativePageEditor(
 
       if (!result.isSuccess || !result.data?.block) {
         throw new Error(
-          getApiResultErrorMessage(result, 'Không lưu được block.')
+          getApiResultErrorMessage(result, 'Không lưu được khối.')
         )
       }
 
@@ -860,7 +860,7 @@ export function useCollaborativePageEditor(
         return
       }
 
-      state.error = getApiErrorMessage(saveError, 'Không lưu được block.')
+      state.error = getApiErrorMessage(saveError, 'Không lưu được khối.')
 
       if (getHttpStatus(saveError) === 409) {
         state.isLeaseHeld = false
@@ -927,7 +927,7 @@ export function useCollaborativePageEditor(
 
       if (!result.isSuccess || !result.data?.block) {
         throw new Error(
-          getApiResultErrorMessage(result, 'Không tạo được block mới.')
+          getApiResultErrorMessage(result, 'Không tạo được khối mới.')
         )
       }
 
@@ -951,7 +951,7 @@ export function useCollaborativePageEditor(
         return
       }
 
-      error.value = getApiErrorMessage(createError, 'Không tạo được block mới.')
+      error.value = getApiErrorMessage(createError, 'Không tạo được khối mới.')
     }
   }
 
@@ -974,12 +974,12 @@ export function useCollaborativePageEditor(
       const result = await blockController.delete(block.id, {
         expectedRevision: currentRevision.value,
         editorSessionId,
-        note: 'Deleted from collaborative editor',
+        note: 'Đã xóa từ trình soạn thảo cộng tác',
       })
 
       if (!result.isSuccess || !result.data) {
         throw new Error(
-          getApiResultErrorMessage(result, 'Không xóa được block.')
+          getApiResultErrorMessage(result, 'Không xóa được khối.')
         )
       }
 
@@ -1001,7 +1001,7 @@ export function useCollaborativePageEditor(
         return
       }
 
-      state.error = getApiErrorMessage(deleteError, 'Không xóa được block.')
+      state.error = getApiErrorMessage(deleteError, 'Không xóa được khối.')
     }
   }
 

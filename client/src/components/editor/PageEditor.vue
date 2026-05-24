@@ -5,8 +5,8 @@
       class="page-editor-empty"
     >
       <div class="page-editor-empty-icon">📄</div>
-      <h2>Chọn một page để bắt đầu</h2>
-      <p>Nội dung sẽ hiện ở đây sau khi bạn chọn page bên sidebar.</p>
+      <h2>Chọn một trang để bắt đầu</h2>
+      <p>Nội dung sẽ hiện ở đây sau khi bạn chọn trang bên sidebar.</p>
     </div>
 
     <template v-else>
@@ -18,7 +18,7 @@
         <img
           v-if="normalizedCoverImage"
           :src="normalizedCoverImage"
-          :alt="`${pageTitle || 'Page'} cover`"
+          :alt="`Ảnh bìa ${pageTitle || 'trang'}`"
           referrerpolicy="no-referrer"
           @error="coverImageFailed = true"
           @load="coverImageFailed = false"
@@ -29,7 +29,7 @@
           class="page-editor-cover-placeholder"
         >
           <i class="bi bi-image"></i>
-          <span>Add a cover image</span>
+          <span>Thêm ảnh bìa</span>
         </div>
 
         <input
@@ -59,7 +59,7 @@
           ></i>
 
           <span>
-            {{ normalizedCoverImage ? 'Change cover' : 'Upload cover' }}
+            {{ normalizedCoverImage ? 'Đổi ảnh bìa' : 'Tải ảnh bìa' }}
           </span>
         </button>
       </section>
@@ -68,14 +68,14 @@
         <button
           class="page-editor-icon"
           type="button"
-          title="Page icon"
+          title="Biểu tượng trang"
         >
           {{ pageIcon || '📄' }}
         </button>
 
         <div class="page-editor-title-wrap">
-          <p>{{ workspaceName || 'Workspace' }}</p>
-          <h1>{{ pageTitle || 'Untitled' }}</h1>
+          <p>{{ workspaceName || 'Không gian' }}</p>
+          <h1>{{ pageTitle || 'Chưa đặt tên' }}</h1>
         </div>
       </header>
 
@@ -92,7 +92,7 @@
           <button
             type="button"
             class="word-toolbar-dropdown-trigger"
-            title="Font"
+            title="Phông chữ"
             @mousedown.prevent.stop="toggleTextDropdown('font')"
           >
             <span>{{ selectedFontFamilyLabel }}</span>
@@ -125,7 +125,7 @@
           <button
             type="button"
             class="word-toolbar-dropdown-trigger"
-            title="Size"
+            title="Cỡ chữ"
             @mousedown.prevent.stop="toggleTextDropdown('size')"
           >
             <span>{{ selectedFontSizeLabel }}</span>
@@ -156,7 +156,7 @@
         <button
           class="word-toolbar-button word-toolbar-bold"
           type="button"
-          title="Bold"
+          title="Đậm"
           @mousedown.prevent="toggleBold"
         >
           B
@@ -165,7 +165,7 @@
         <button
           class="word-toolbar-button word-toolbar-italic"
           type="button"
-          title="Italic"
+          title="Nghiêng"
           @mousedown.prevent="toggleItalic"
         >
           I
@@ -175,7 +175,7 @@
 
         <label
           class="word-toolbar-color"
-          title="Text color"
+          title="Màu chữ"
           @mousedown="rememberTextSelection"
         >
           <span>A</span>
@@ -189,7 +189,7 @@
 
         <label
           class="word-toolbar-color"
-          title="Highlight color"
+          title="Màu đánh dấu"
           @mousedown="rememberTextSelection"
         >
           <span>H</span>
@@ -204,10 +204,10 @@
         <button
           class="word-toolbar-button word-toolbar-clear"
           type="button"
-          title="Clear style"
+          title="Xóa định dạng"
           @mousedown.prevent="clearInlineStyle"
         >
-          Clear
+          Xóa
         </button>
       </div>
 
@@ -233,7 +233,7 @@
           class="page-editor-readonly-banner"
         >
           <i class="bi bi-eye"></i>
-          <span>Read-only mode · Bạn chỉ có quyền xem page này.</span>
+          <span>Chế độ chỉ xem · Bạn chỉ có quyền xem trang này.</span>
         </div>
 
         <div
@@ -380,7 +380,7 @@ async function handleCoverFileChange(event: Event) {
     if (!result.isSuccess || !result.data) {
       coverUploadError.value = getApiResultErrorMessage(
         result,
-        'Không thể upload cover image.'
+        'Không thể tải ảnh bìa lên.'
       )
       return
     }
@@ -388,7 +388,7 @@ async function handleCoverFileChange(event: Event) {
     const coverImage = normalizeImageUrl(result.data.coverImage) ?? result.data.coverImage
 
     if (!coverImage) {
-      coverUploadError.value = 'Backend đã xử lý nhưng chưa trả về cover image.'
+      coverUploadError.value = 'Hệ thống đã xử lý nhưng chưa trả về ảnh bìa.'
       return
     }
 
@@ -398,11 +398,11 @@ async function handleCoverFileChange(event: Event) {
       coverImage,
       currentRevision: result.data.currentRevision,
     })
-    toast.success('Đã cập nhật cover', 'Cover image của page đã được upload.')
+    toast.success('Đã cập nhật ảnh bìa', 'Ảnh bìa của trang đã được tải lên.')
   } catch (error) {
     coverUploadError.value = getApiErrorMessage(
       error,
-      'Không thể upload cover image.'
+      'Không thể tải ảnh bìa lên.'
     )
   } finally {
     isUploadingCoverImage.value = false
@@ -451,7 +451,7 @@ const canEditPage = computed(() => props.canEdit !== false && canEditDocument.va
 
 const fontFamilies = [
   {
-    label: 'Default',
+    label: 'Mặc định',
     value:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
@@ -484,7 +484,7 @@ const fontFamilies = [
     value: '"Courier New", Courier, monospace',
   },
   {
-    label: 'Monospace',
+    label: 'Đơn cách',
     value:
       '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, monospace',
   },
@@ -534,7 +534,7 @@ const selectedFontFamilyLabel = computed(() => {
     (item) => item.value === selectedFontFamily.value
   )
 
-  return option?.label ?? 'Font'
+  return option?.label ?? 'Phông chữ'
 })
 
 const selectedFontSizeLabel = computed(() => {
@@ -542,7 +542,7 @@ const selectedFontSizeLabel = computed(() => {
     (item) => item.value === selectedFontSize.value
   )
 
-  return option?.label ?? 'Size'
+  return option?.label ?? 'Cỡ chữ'
 })
 
 function toggleTextDropdown(type: TextToolbarDropdownType) {

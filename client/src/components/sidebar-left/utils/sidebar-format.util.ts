@@ -9,9 +9,9 @@ export function getInitial(value: string | null | undefined, fallback = 'U') {
 export function statusLabel(status: string) {
   const value = status.toLowerCase()
 
-  if (value === 'todo' || value === 'to_do') return 'To do'
-  if (value === 'doing' || value === 'inprogress') return 'Doing'
-  if (value === 'done') return 'Done'
+  if (value === 'todo' || value === 'to_do') return 'Cần làm'
+  if (value === 'doing' || value === 'inprogress') return 'Đang làm'
+  if (value === 'done') return 'Đã xong'
 
   return status
 }
@@ -19,9 +19,9 @@ export function statusLabel(status: string) {
 export function priorityLabel(priority: string) {
   const value = priority.toLowerCase()
 
-  if (value === 'high') return 'High'
-  if (value === 'medium') return 'Medium'
-  if (value === 'low') return 'Low'
+  if (value === 'high') return 'Cao'
+  if (value === 'medium') return 'Vừa'
+  if (value === 'low') return 'Thấp'
 
   return priority
 }

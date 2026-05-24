@@ -43,7 +43,7 @@ export function useSidebarUpdates() {
       if (!result.isSuccess || !result.data) {
         notificationError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải Updates.'
+          'Không thể tải cập nhật.'
         )
         return
       }
@@ -52,7 +52,7 @@ export function useSidebarUpdates() {
     } catch (error) {
       notificationError.value = getApiErrorMessage(
         error,
-        'Không thể tải Updates.'
+        'Không thể tải cập nhật.'
       )
     } finally {
       isLoadingNotifications.value = false

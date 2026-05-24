@@ -8,7 +8,7 @@
         <button
           class="workspace-settings-scrim"
           type="button"
-          aria-label="Đóng cài đặt workspace"
+          aria-label="Đóng cài đặt không gian"
           @click="close"
         ></button>
 
@@ -16,14 +16,14 @@
           class="workspace-settings-panel"
           role="dialog"
           aria-modal="true"
-          aria-label="Workspace settings"
+          aria-label="Cài đặt không gian"
           @click.stop
           @keydown.esc="close"
         >
           <header class="workspace-settings-header">
             <div>
-              <p>Workspace</p>
-              <h2>Settings</h2>
+              <p>Không gian</p>
+              <h2>Cài đặt</h2>
             </div>
 
             <button
@@ -43,7 +43,7 @@
             >
               <span class="material-symbols-outlined">workspaces</span>
               <strong>Chưa chọn workspace</strong>
-              <p>Chọn workspace trước rồi quay lại phần settings nha.</p>
+              <p>Chọn không gian trước rồi quay lại phần cài đặt nha.</p>
             </section>
 
             <section
@@ -61,27 +61,27 @@
               @submit.prevent="save"
             >
               <label class="workspace-settings-field">
-                <span>Name</span>
+                <span>Tên</span>
                 <input
                   ref="nameInputRef"
                   v-model="form.name"
                   type="text"
                   maxlength="50"
-                  placeholder="Workspace name"
+                  placeholder="Tên không gian"
                   :disabled="isUpdatingWorkspace || !canEdit"
                 />
                 <small :class="{ danger: nameError }">
-                  {{ nameError || 'Tên hiển thị ở sidebar, breadcrumb và profile.' }}
+                  {{ nameError || 'Tên hiển thị ở thanh bên, đường dẫn và hồ sơ.' }}
                 </small>
               </label>
 
               <label class="workspace-settings-field">
-                <span>Description</span>
+                <span>Mô tả</span>
                 <textarea
                   v-model="form.description"
                   rows="5"
                   maxlength="500"
-                  placeholder="Workspace description"
+                  placeholder="Mô tả không gian"
                   :disabled="isUpdatingWorkspace || !canEdit"
                 ></textarea>
                 <small :class="{ danger: descriptionError }">
@@ -90,7 +90,7 @@
               </label>
 
               <section class="workspace-settings-field">
-                <span>Visibility</span>
+                <span>Hiển thị</span>
 
                 <div class="workspace-settings-visibility">
                   <button
@@ -113,7 +113,7 @@
                 </div>
 
                 <small>
-                  Private chỉ member xem được. Public cho user đăng nhập xem read-only.
+                  Riêng tư chỉ thành viên xem được. Công khai cho người dùng đăng nhập xem ở chế độ chỉ đọc.
                 </small>
               </section>
 
@@ -145,7 +145,7 @@
               :disabled="isUpdatingWorkspace"
               @click="close"
             >
-              Cancel
+              Hủy
             </button>
 
             <button
@@ -158,7 +158,7 @@
                 v-if="isUpdatingWorkspace"
                 class="settings-spinner"
               ></span>
-              <span>{{ isUpdatingWorkspace ? 'Saving...' : 'Save changes' }}</span>
+              <span>{{ isUpdatingWorkspace ? 'Đang lưu...' : 'Lưu thay đổi' }}</span>
             </button>
           </footer>
         </aside>
@@ -218,13 +218,13 @@ const visibilityOptions: Array<{
 }> = [
   {
     value: 'private',
-    label: 'Private',
-    description: 'Chỉ member trong workspace có quyền xem.',
+    label: 'Riêng tư',
+    description: 'Chỉ thành viên trong không gian có quyền xem.',
     icon: 'lock',
   },
   {
     value: 'public',
-    label: 'Public',
+    label: 'Công khai',
     description: 'Ai đăng nhập cũng xem được, nhưng không tự sửa.',
     icon: 'public',
   },
@@ -247,15 +247,15 @@ const canEdit = computed(() => {
 const nameError = computed(() => {
   const value = form.name.trim()
 
-  if (!value) return 'Tên workspace không được để trống.'
-  if (value.length > 50) return 'Tên workspace không được quá 50 ký tự.'
+  if (!value) return 'Tên không gian không được để trống.'
+  if (value.length > 50) return 'Tên không gian không được quá 50 ký tự.'
 
   return ''
 })
 
 const descriptionError = computed(() => {
   if (form.description.trim().length > 500) {
-    return 'Description không được quá 500 ký tự.'
+    return 'Mô tả không được quá 500 ký tự.'
   }
 
   return ''
@@ -264,15 +264,15 @@ const descriptionError = computed(() => {
 const isFormValid = computed(() => !nameError.value && !descriptionError.value)
 
 const permissionTitle = computed(() => {
-  if (!loadedWorkspace.value) return 'Workspace chưa được tải'
-  return canEdit.value ? 'Bạn có quyền chỉnh workspace này' : 'Read-only workspace'
+  if (!loadedWorkspace.value) return 'Không gian chưa được tải'
+  return canEdit.value ? 'Bạn có quyền chỉnh không gian này' : 'Không gian chỉ đọc'
 })
 
 const permissionDescription = computed(() => {
-  if (!loadedWorkspace.value) return 'Đang chờ dữ liệu từ backend.'
-  if (canEdit.value) return 'Bạn có thể đổi tên, mô tả và chế độ public/private.'
+  if (!loadedWorkspace.value) return 'Đang chờ dữ liệu từ hệ thống.'
+  if (canEdit.value) return 'Bạn có thể đổi tên, mô tả và chế độ công khai/riêng tư.'
 
-  return 'Bạn vẫn có thể xem nội dung nếu được cấp quyền, nhưng không thể chỉnh settings.'
+  return 'Bạn vẫn có thể xem nội dung nếu được cấp quyền, nhưng không thể chỉnh cài đặt.'
 })
 
 watch(

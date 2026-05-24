@@ -57,14 +57,14 @@ export function useRegister() {
         throw new Error(
           getApiResultErrorMessage(
             registerResponse,
-            'Registration failed. Please try again.'
+            'Đăng ký thất bại. Vui lòng thử lại.'
           )
         )
       }
 
       toast.success(
-        'Account created',
-        'Your account has been created. Signing you in...'
+        'Tạo tài khoản thành công',
+        'Tài khoản đã được tạo. Đang đăng nhập cho bạn...'
       )
 
       const loginResponse = await authController.login({
@@ -78,24 +78,24 @@ export function useRegister() {
         throw new Error(
           getApiResultErrorMessage(
             loginResponse,
-            'Account created, but automatic login failed because no token was returned.'
+            'Tài khoản đã tạo, nhưng đăng nhập tự động thất bại vì hệ thống không trả token.'
           )
         )
       }
 
       saveAuthToken(token)
 
-      toast.success('Signed in successfully', 'Welcome to your workspace.')
+      toast.success('Đăng nhập thành công', 'Chào mừng bạn đến với không gian làm việc.')
       await router.replace(getSafeAuthRedirect(route.query.redirect))
     } catch (error) {
       console.error('Register failed:', error)
 
       const message = getApiErrorMessage(
         error,
-        'Registration failed. Please try again.'
+        'Đăng ký thất bại. Vui lòng thử lại.'
       )
 
-      toast.error('Registration failed', message)
+      toast.error('Đăng ký thất bại', message)
     } finally {
       isSubmitting.value = false
     }

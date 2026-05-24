@@ -161,14 +161,14 @@ const subpages = [
   {
     id: 'sub-1',
     icon: '📊',
-    title: 'Market Research',
-    updatedDate: 'yesterday',
+    title: 'Nghiên cứu thị trường',
+    updatedDate: 'hôm qua',
   },
   {
     id: 'sub-2',
     icon: '👥',
-    title: 'Resource Allocation',
-    updatedDate: '3 days ago',
+    title: 'Phân bổ nguồn lực',
+    updatedDate: '3 ngày trước',
   },
 ]
 

@@ -13,17 +13,17 @@
             <button
               type="button"
               class="activity-log-close"
-              title="Đóng activity log"
-              aria-label="Đóng activity log"
+              title="Đóng nhật ký hoạt động"
+              aria-label="Đóng nhật ký hoạt động"
               @click="emit('close')"
             >
               <span class="material-symbols-outlined">close</span>
             </button>
 
             <div>
-              <p>Workspace activity</p>
+              <p>Hoạt động trong không gian</p>
               <h2 id="activity-log-title">
-                {{ workspaceName || 'Activity log' }}
+                {{ workspaceName || 'Nhật ký hoạt động' }}
               </h2>
             </div>
           </div>
@@ -36,7 +36,7 @@
               @click="clearFilters"
             >
               <span class="material-symbols-outlined">filter_alt_off</span>
-              <span>Reset</span>
+              <span>Đặt lại</span>
             </button>
 
             <button
@@ -51,7 +51,7 @@
               >
                 refresh
               </span>
-              <span>Refresh</span>
+              <span>Tải lại</span>
             </button>
           </div>
         </header>
@@ -63,13 +63,13 @@
                 <span class="material-symbols-outlined">history</span>
               </span>
 
-              <strong>Activity</strong>
+              <strong>Hoạt động</strong>
               <p>
                 {{ loadedCountLabel }}
               </p>
             </div>
 
-            <nav class="activity-log-filter-list" aria-label="Activity filters">
+            <nav class="activity-log-filter-list" aria-label="Bộ lọc hoạt động">
               <button
                 v-for="filter in entityFilters"
                 :key="filter.value"
@@ -99,7 +99,7 @@
                   <input
                     v-model="search"
                     type="search"
-                    placeholder="Search activity..."
+                    placeholder="Tìm hoạt động..."
                     :disabled="isLoading"
                     @keydown.enter.prevent="refresh"
                   />
@@ -109,7 +109,7 @@
                   v-model="datePreset"
                   class="activity-log-select compact"
                   :disabled="isLoading"
-                  aria-label="Filter by time"
+                  aria-label="Lọc theo thời gian"
                   @change="refresh"
                 >
                   <option
@@ -125,7 +125,7 @@
                   v-model="actionFilter"
                   class="activity-log-select"
                   :disabled="isLoading"
-                  aria-label="Filter by action"
+                  aria-label="Lọc theo thao tác"
                   @change="refresh"
                 >
                   <option
@@ -141,10 +141,10 @@
                   v-model="actorFilter"
                   class="activity-log-select"
                   :disabled="isLoading || !actorOptions.length"
-                  aria-label="Filter by actor"
+                  aria-label="Lọc theo người thực hiện"
                   @change="refresh"
                 >
-                  <option value="all">All people</option>
+                  <option value="all">Tất cả mọi người</option>
                   <option
                     v-for="actor in actorOptions"
                     :key="actor.userId"
@@ -161,8 +161,8 @@
               class="activity-log-empty-state"
             >
               <span class="material-symbols-outlined">workspaces</span>
-              <strong>Chưa chọn workspace</strong>
-              <p>Chọn workspace bên sidebar để xem activity log.</p>
+              <strong>Chưa chọn không gian</strong>
+              <p>Chọn không gian bên sidebar để xem nhật ký hoạt động.</p>
             </div>
 
             <div
@@ -187,7 +187,7 @@
               class="activity-log-empty-state error"
             >
               <span class="material-symbols-outlined">error</span>
-              <strong>Không thể tải activity log</strong>
+              <strong>Không thể tải nhật ký hoạt động</strong>
               <p>{{ error }}</p>
 
               <button type="button" @click="refresh">
@@ -201,7 +201,7 @@
             >
               <span class="material-symbols-outlined">hourglass_empty</span>
               <strong>Chưa có hoạt động nào</strong>
-              <p>Các thay đổi mới trong workspace sẽ xuất hiện ở đây.</p>
+              <p>Các thay đổi mới trong không gian sẽ xuất hiện ở đây.</p>
             </div>
 
             <div
@@ -267,7 +267,7 @@
                       <span class="material-symbols-outlined">
                         {{ isExpanded(activity.id) ? 'expand_less' : 'expand_more' }}
                       </span>
-                      Details
+                      Chi tiết
                     </button>
 
                     <dl
@@ -298,11 +298,11 @@
                     v-if="isLoadingMore"
                     class="activity-log-spinner"
                   ></span>
-                  <span>{{ isLoadingMore ? 'Loading...' : 'Load more' }}</span>
+                  <span>{{ isLoadingMore ? 'Đang tải...' : 'Tải thêm' }}</span>
                 </button>
 
                 <span v-else class="activity-log-end-note">
-                  End of activity
+                  Hết hoạt động
                 </span>
               </div>
             </div>
@@ -388,42 +388,42 @@ const entityFilters: Array<{
   label: string
   icon: string
 }> = [
-  { value: 'all', label: 'All activity', icon: 'all_inclusive' },
-  { value: 'Page', label: 'Pages', icon: 'description' },
-  { value: 'Block', label: 'Blocks', icon: 'view_agenda' },
-  { value: 'WorkTask', label: 'Tasks', icon: 'checklist' },
-  { value: 'TaskComment', label: 'Comments', icon: 'mode_comment' },
-  { value: 'WorkspaceMember', label: 'Members', icon: 'group' },
-  { value: 'TaskAssignee', label: 'Assignees', icon: 'assignment_ind' },
-  { value: 'Workspace', label: 'Workspace', icon: 'workspaces' },
+  { value: 'all', label: 'Tất cả hoạt động', icon: 'all_inclusive' },
+  { value: 'Page', label: 'Trang', icon: 'description' },
+  { value: 'Block', label: 'Khối', icon: 'view_agenda' },
+  { value: 'WorkTask', label: 'Công việc', icon: 'checklist' },
+  { value: 'TaskComment', label: 'Bình luận', icon: 'mode_comment' },
+  { value: 'WorkspaceMember', label: 'Thành viên', icon: 'group' },
+  { value: 'TaskAssignee', label: 'Người phụ trách', icon: 'assignment_ind' },
+  { value: 'Workspace', label: 'Không gian', icon: 'workspaces' },
 ]
 
 const actionOptions: Array<{
   value: ActionFilterValue
   label: string
 }> = [
-  { value: 'all', label: 'All actions' },
-  { value: 'Create', label: 'Created' },
-  { value: 'Update', label: 'Updated' },
-  { value: 'Delete', label: 'Deleted' },
-  { value: 'Move', label: 'Moved' },
-  { value: 'Assign', label: 'Assigned' },
-  { value: 'Unassign', label: 'Unassigned' },
-  { value: 'Complete', label: 'Completed' },
-  { value: 'Reopen', label: 'Reopened' },
-  { value: 'Restore', label: 'Restored' },
-  { value: 'Archive', label: 'Archived' },
-  { value: 'ChangePermissions', label: 'Permissions changed' },
+  { value: 'all', label: 'Tất cả thao tác' },
+  { value: 'Create', label: 'Đã tạo' },
+  { value: 'Update', label: 'Đã cập nhật' },
+  { value: 'Delete', label: 'Đã xóa' },
+  { value: 'Move', label: 'Đã di chuyển' },
+  { value: 'Assign', label: 'Đã giao' },
+  { value: 'Unassign', label: 'Đã gỡ giao' },
+  { value: 'Complete', label: 'Đã hoàn tất' },
+  { value: 'Reopen', label: 'Đã mở lại' },
+  { value: 'Restore', label: 'Đã khôi phục' },
+  { value: 'Archive', label: 'Đã lưu trữ' },
+  { value: 'ChangePermissions', label: 'Đã đổi quyền' },
 ]
 
 const datePresetOptions: Array<{
   value: DatePresetValue
   label: string
 }> = [
-  { value: 'all', label: 'All time' },
-  { value: '30d', label: 'Last 30 days' },
-  { value: '7d', label: 'Last 7 days' },
-  { value: '24h', label: 'Last 24 hours' },
+  { value: 'all', label: 'Tất cả thời gian' },
+  { value: '30d', label: '30 ngày qua' },
+  { value: '7d', label: '7 ngày qua' },
+  { value: '24h', label: '24 giờ qua' },
 ]
 
 const hasMore = computed(() => items.value.length < totalCount.value)
@@ -439,24 +439,24 @@ const hasActiveFilters = computed(() => {
 })
 
 const totalCountLabel = computed(() => {
-  if (!props.workspaceId) return 'No workspace'
-  if (totalCount.value === 0) return 'No activity'
+  if (!props.workspaceId) return 'Chưa chọn không gian'
+  if (totalCount.value === 0) return 'Chưa có hoạt động'
 
-  return `${totalCount.value} event${totalCount.value > 1 ? 's' : ''}`
+  return `${totalCount.value} sự kiện`
 })
 
 const loadedCountLabel = computed(() => {
-  if (!props.workspaceId) return 'No workspace selected'
-  if (!items.value.length) return 'No visible activity'
+  if (!props.workspaceId) return 'Chưa chọn không gian'
+  if (!items.value.length) return 'Chưa có hoạt động hiển thị'
 
-  return `Showing ${items.value.length} of ${totalCount.value} events`
+  return `Đang hiển thị ${items.value.length}/${totalCount.value} sự kiện`
 })
 
 const toolbarSubtitle = computed(() => {
-  if (!props.workspaceId) return 'Select a workspace first'
-  if (hasActiveFilters.value) return 'Filtered workspace events'
+  if (!props.workspaceId) return 'Chọn không gian trước'
+  if (hasActiveFilters.value) return 'Sự kiện trong không gian đã lọc'
 
-  return 'Latest workspace events'
+  return 'Sự kiện mới nhất trong không gian'
 })
 
 const actorOptions = computed(() => {
@@ -509,7 +509,7 @@ watch(
         void refresh()
       } else {
         resetList()
-        error.value = 'Bạn không có quyền xem activity log của workspace này.'
+        error.value = 'Bạn không có quyền xem nhật ký hoạt động của không gian này.'
       }
 
       window.addEventListener('keydown', handleKeydown)
@@ -529,7 +529,7 @@ watch(
 
     if (!props.canReadAudit) {
       resetList()
-      error.value = 'Bạn không có quyền xem activity log của workspace này.'
+      error.value = 'Bạn không có quyền xem nhật ký hoạt động của không gian này.'
       return
     }
 
@@ -597,7 +597,7 @@ async function refresh() {
 
   if (!props.canReadAudit) {
     resetList()
-    error.value = 'Bạn không có quyền xem activity log của workspace này.'
+    error.value = 'Bạn không có quyền xem nhật ký hoạt động của không gian này.'
     return
   }
 
@@ -620,7 +620,7 @@ async function refresh() {
     if (!result.isSuccess || !result.data) {
       error.value = getApiResultErrorMessage(
         result,
-        'Không thể tải activity log.'
+        'Không thể tải nhật ký hoạt động.'
       )
       items.value = []
       totalCount.value = 0
@@ -632,7 +632,7 @@ async function refresh() {
   } catch (requestError) {
     error.value = getApiErrorMessage(
       requestError,
-      'Không thể tải activity log.'
+      'Không thể tải nhật ký hoạt động.'
     )
     items.value = []
     totalCount.value = 0
@@ -669,7 +669,7 @@ async function loadMore() {
     if (!result.isSuccess || !result.data) {
       error.value = getApiResultErrorMessage(
         result,
-        'Không thể tải thêm activity log.'
+        'Không thể tải thêm nhật ký hoạt động.'
       )
       return
     }
@@ -680,7 +680,7 @@ async function loadMore() {
   } catch (requestError) {
     error.value = getApiErrorMessage(
       requestError,
-      'Không thể tải thêm activity log.'
+      'Không thể tải thêm nhật ký hoạt động.'
     )
   } finally {
     isLoadingMore.value = false
@@ -691,7 +691,7 @@ function actorName(activity: ActivityLogResponse) {
   return (
     activity.userFullName?.trim() ||
     activity.userName?.trim() ||
-    'Someone'
+    'Ai đó'
   )
 }
 
@@ -722,16 +722,16 @@ function normalize(value: string | null | undefined) {
 function entityLabel(entityType: string) {
   const value = normalize(entityType)
 
-  if (value === 'workspace') return 'Workspace'
-  if (value === 'workspacemember') return 'Member'
-  if (value === 'page') return 'Page'
-  if (value === 'block') return 'Block'
-  if (value === 'worktask') return 'Task'
-  if (value === 'taskcomment') return 'Comment'
-  if (value === 'taskassignee') return 'Assignee'
-  if (value === 'userpreference') return 'AI preference'
+  if (value === 'workspace') return 'Không gian'
+  if (value === 'workspacemember') return 'Thành viên'
+  if (value === 'page') return 'Trang'
+  if (value === 'block') return 'Khối'
+  if (value === 'worktask') return 'Công việc'
+  if (value === 'taskcomment') return 'Bình luận'
+  if (value === 'taskassignee') return 'Người phụ trách'
+  if (value === 'userpreference') return 'Cài đặt AI'
 
-  return entityType || 'Item'
+  return entityType || 'Mục'
 }
 
 function entityIcon(entityType: string) {
@@ -752,19 +752,19 @@ function entityIcon(entityType: string) {
 function actionLabel(action: string) {
   const value = normalize(action)
 
-  if (value === 'create') return 'created'
-  if (value === 'update') return 'updated'
-  if (value === 'delete') return 'deleted'
-  if (value === 'archive') return 'archived'
-  if (value === 'restore') return 'restored'
-  if (value === 'move') return 'moved'
-  if (value === 'assign') return 'assigned'
-  if (value === 'unassign') return 'unassigned'
-  if (value === 'complete') return 'completed'
-  if (value === 'reopen') return 'reopened'
-  if (value === 'changepermissions') return 'changed permissions for'
+  if (value === 'create') return 'đã tạo'
+  if (value === 'update') return 'đã cập nhật'
+  if (value === 'delete') return 'đã xóa'
+  if (value === 'archive') return 'đã lưu trữ'
+  if (value === 'restore') return 'đã khôi phục'
+  if (value === 'move') return 'đã di chuyển'
+  if (value === 'assign') return 'đã giao'
+  if (value === 'unassign') return 'đã gỡ giao'
+  if (value === 'complete') return 'đã hoàn tất'
+  if (value === 'reopen') return 'đã mở lại'
+  if (value === 'changepermissions') return 'đã đổi quyền cho'
 
-  return action || 'changed'
+  return action || 'đã thay đổi'
 }
 
 function actionSentence(activity: ActivityLogResponse) {
@@ -926,11 +926,11 @@ function metadataLabel(key: string) {
 
 function metadataValue(value: unknown): string {
   if (Array.isArray(value)) {
-    return value.length ? value.map(metadataValue).join(', ') : 'None'
+    return value.length ? value.map(metadataValue).join(', ') : 'Không có'
   }
 
   if (value instanceof Date) {
-    return value.toLocaleString()
+    return value.toLocaleString('vi-VN')
   }
 
   if (typeof value === 'object' && value !== null) {
@@ -938,7 +938,7 @@ function metadataValue(value: unknown): string {
   }
 
   if (typeof value === 'boolean') {
-    return value ? 'Yes' : 'No'
+    return value ? 'Có' : 'Không'
   }
 
   return String(value)
@@ -971,16 +971,16 @@ function resolveDateRange() {
 
 function dayLabel(value: string) {
   const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return 'Unknown date'
+  if (Number.isNaN(date.getTime())) return 'Không rõ ngày'
 
   const today = new Date()
   const yesterday = new Date()
   yesterday.setDate(today.getDate() - 1)
 
-  if (isSameDate(date, today)) return 'Today'
-  if (isSameDate(date, yesterday)) return 'Yesterday'
+  if (isSameDate(date, today)) return 'Hôm nay'
+  if (isSameDate(date, yesterday)) return 'Hôm qua'
 
-  return date.toLocaleDateString(undefined, {
+  return date.toLocaleDateString('vi-VN', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
@@ -1002,23 +1002,23 @@ function formatRelativeTime(value: string) {
   const diffMs = Date.now() - date.getTime()
   const diffMinutes = Math.max(0, Math.floor(diffMs / 60000))
 
-  if (diffMinutes < 1) return 'Just now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
+  if (diffMinutes < 1) return 'Vừa xong'
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`
 
   const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffHours < 24) return `${diffHours} giờ trước`
 
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffDays < 7) return `${diffDays} ngày trước`
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString('vi-VN')
 }
 
 function formatFullDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
 
-  return date.toLocaleString()
+  return date.toLocaleString('vi-VN')
 }
 </script>
 
@@ -1744,6 +1744,5 @@ function formatFullDate(value: string) {
   }
 }
 </style>
-
 
 

@@ -34,7 +34,7 @@
           @logout="account.logout"
         />
 
-        <nav class="lunar-nav" aria-label="Sidebar navigation">
+        <nav class="lunar-nav" aria-label="Điều hướng sidebar">
           <div class="lunar-primary-nav">
             <button
               type="button"
@@ -46,7 +46,7 @@
                 <i class="bi bi-check2-square"></i>
               </span>
 
-              <span class="lunar-nav-label">My Tasks</span>
+              <span class="lunar-nav-label">Việc của tôi</span>
 
               <span
                 v-if="myTasks.openTaskCount.value > 0"
@@ -66,7 +66,7 @@
                 <i class="bi bi-stars"></i>
               </span>
 
-              <span class="lunar-nav-label">AI Suggestions</span>
+              <span class="lunar-nav-label">Gợi ý AI</span>
 
               <span
                 v-if="recommendations.pendingRecommendationCount.value > 0"
@@ -130,7 +130,7 @@
             </span>
 
             <span class="lunar-footer-label">
-              Settings
+              Cài đặt
             </span>
           </button>
         </footer>
@@ -150,8 +150,8 @@
     <SidebarRecommendationsDrawer
       :open="shell.activePanel.value === 'recommendations'"
       :workspace-id="workspaceTree.selectedWorkspaceId.value"
-      workspace-name="Tất cả workspace"
-      page-name="Tự động tổng hợp theo task"
+      workspace-name="Tất cả không gian"
+      page-name="Tự động tổng hợp theo công việc"
       :recommendations="recommendations.taskRecommendations.value"
       :is-loading="recommendations.isLoadingTaskRecommendations.value"
       :is-generating="recommendations.isGeneratingTaskRecommendations.value"
@@ -208,11 +208,11 @@
 
     <ConfirmActionModal
       :open="workspaceTree.isDeletePageConfirmOpen.value"
-      title="Archive page này?"
+      title="Lưu trữ trang này?"
       :message="workspaceTree.deletePageConfirmMessage.value"
-      description="Page sẽ chuyển vào Trash và có thể restore lại trong sidebar."
-      confirm-label="Archive page"
-      submitting-label="Đang archive..."
+      description="Trang sẽ chuyển vào thùng rác và có thể khôi phục lại trong sidebar."
+      confirm-label="Lưu trữ trang"
+      submitting-label="Đang lưu trữ..."
       :is-submitting="workspaceTree.isDeletingPage.value"
       :error="workspaceTree.deletePageError.value"
       @close="workspaceTree.closeDeletePageConfirm"
@@ -378,7 +378,7 @@ async function refreshSidebarTree() {
   if (!workspaceTree.workspaceListError.value) {
     toast.success(
       'Đã đồng bộ sidebar',
-      'Danh sách workspace và page đã được tải lại.'
+      'Danh sách không gian và trang đã được tải lại.'
     )
   }
 }
@@ -423,8 +423,8 @@ function openPageSettings(page: PageTreeItem) {
   workspaceTree.selectPage(page)
 
   toast.info(
-    'Cài đặt page',
-    `Mình đã chọn page "${page.title}". Màn chỉnh metadata có thể nối tiếp vào action này.`
+    'Cài đặt trang',
+    `Mình đã chọn trang "${page.title}". Màn chỉnh siêu dữ liệu có thể nối tiếp vào thao tác này.`
   )
 }
 
@@ -438,9 +438,9 @@ async function sharePage(page: PageTreeItem) {
   try {
     await navigator.clipboard.writeText(url)
 
-    toast.success('Đã copy link page', `Link "${page.title}" đã nằm trong clipboard.`)
+    toast.success('Đã sao chép liên kết trang', `Liên kết "${page.title}" đã nằm trong clipboard.`)
   } catch {
-    toast.info('Link page', url, 7000)
+    toast.info('Liên kết trang', url, 7000)
   }
 }
 
@@ -450,8 +450,8 @@ async function toggleFavoritePage(page: { id: Guid; title?: string }) {
   if (result === null) return
 
   toast.success(
-    result ? 'Đã favorite page' : 'Đã bỏ favorite',
-    page.title ? `Page "${page.title}" đã được cập nhật.` : undefined
+    result ? 'Đã thêm vào yêu thích' : 'Đã bỏ khỏi yêu thích',
+    page.title ? `Trang "${page.title}" đã được cập nhật.` : undefined
   )
 }
 
@@ -461,7 +461,7 @@ async function duplicatePage(page: { id: Guid; title?: string }) {
   if (!duplicated) return
 
   toast.success(
-    'Đã duplicate page',
+    'Đã nhân bản trang',
     `Tạo bản sao "${duplicated.title}" thành công.`
   )
 }
@@ -472,8 +472,8 @@ async function restorePage(page: PageResponse | PageTreeItem) {
   if (!restored) return
 
   toast.success(
-    'Đã restore page',
-    `Page "${restored.title}" đã quay lại workspace.`
+    'Đã khôi phục trang',
+    `Trang "${restored.title}" đã quay lại không gian.`
   )
 }
 
@@ -484,7 +484,7 @@ async function confirmDeletePage() {
     return
   }
 
-  toast.success('Đã archive page', `Page "${deletedPage.title}" đã được chuyển vào Trash.`)
+  toast.success('Đã lưu trữ trang', `Trang "${deletedPage.title}" đã được chuyển vào thùng rác.`)
 }
 
 function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
@@ -624,6 +624,4 @@ onBeforeUnmount(() => {
   border-top: 1px solid #2b2b2b;
 }
 </style>
-
-
 

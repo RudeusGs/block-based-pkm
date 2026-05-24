@@ -15,22 +15,22 @@ export function useMyProfile() {
   const profileDisplayName = computed(() => {
     const currentProfile = profile.value
 
-    if (!currentProfile) return 'User'
+    if (!currentProfile) return 'Người dùng'
 
     return (
       currentProfile.fullName?.trim() ||
       currentProfile.userName?.trim() ||
       currentProfile.email?.trim() ||
-      'User'
+      'Người dùng'
     )
   })
 
   const profileSubtitle = computed(() => {
     const currentProfile = profile.value
 
-    if (!currentProfile) return 'Profile'
+    if (!currentProfile) return 'Hồ sơ'
 
-    return currentProfile.email || currentProfile.status || 'Profile'
+    return currentProfile.email || currentProfile.status || 'Hồ sơ'
   })
 
   const profileAvatarUrl = computed(() => {

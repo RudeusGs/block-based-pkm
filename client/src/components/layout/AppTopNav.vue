@@ -2,7 +2,7 @@
   <header class="app-top-nav sticky-top">
     <nav
       class="app-page-tabs"
-      aria-label="Open pages"
+      aria-label="Các trang đang mở"
     >
       <div
         v-if="workspaceNavigation.pageTabs.value.length"
@@ -36,8 +36,8 @@
           <button
             class="app-page-tab-close"
             type="button"
-            title="Close tab"
-            aria-label="Close page tab"
+            title="Đóng thẻ"
+            aria-label="Đóng thẻ trang"
             @click.stop="closePageTab(tab.id)"
           >
             <span class="material-symbols-outlined">close</span>
@@ -59,22 +59,22 @@
       <button
         class="app-task-jump"
         type="button"
-        title="Jump to Work Tasks"
+        title="Đi tới bảng công việc"
         @click="emit('jump-to-tasks')"
       >
         <span class="material-symbols-outlined">table_chart</span>
-        Tasks
+        Công việc
       </button>
 
       <button
         class="app-ai-reminder-btn"
         type="button"
         :title="aiReminderTitle"
-        aria-label="AI reminders"
+        aria-label="Nhắc việc AI"
         @click="openAiReminders"
       >
         <span class="material-symbols-outlined">auto_awesome</span>
-        Reminders
+        Nhắc việc
 
         <span
           v-if="aiReminderCount > 0"
@@ -87,8 +87,8 @@
       <button
         class="app-icon-btn"
         type="button"
-        title="Friends & profiles"
-        aria-label="Friends & profiles"
+        title="Bạn bè và hồ sơ"
+        aria-label="Bạn bè và hồ sơ"
         @click="openSocialHub"
       >
         <span class="material-symbols-outlined">group</span>
@@ -97,8 +97,8 @@
       <button
         class="app-icon-btn app-message-btn"
         type="button"
-        :title="messageUnreadCount > 0 ? `${messageUnreadCount} tin nhắn chưa đọc` : 'Messages'"
-        aria-label="Messages"
+        :title="messageUnreadCount > 0 ? `${messageUnreadCount} tin nhắn chưa đọc` : 'Tin nhắn'"
+        aria-label="Tin nhắn"
         @click="openMessenger()"
       >
         <span class="material-symbols-outlined">chat_bubble</span>
@@ -118,8 +118,8 @@
         <button
           class="app-icon-btn app-notification-btn"
           type="button"
-          title="Notifications"
-          aria-label="Notifications"
+          title="Thông báo"
+          aria-label="Thông báo"
           :aria-expanded="isNotificationMenuOpen"
           @click.stop="toggleNotifications"
         >
@@ -137,8 +137,8 @@
             :class="{ connected: notificationCenter.isRealtimeConnected.value }"
             :title="
               notificationCenter.isRealtimeConnected.value
-                ? 'Realtime connected'
-                : 'Realtime disconnected'
+                ? 'Đã kết nối thời gian thực'
+                : 'Mất kết nối thời gian thực'
             "
           ></span>
         </button>
@@ -148,18 +148,18 @@
             v-if="isNotificationMenuOpen"
             class="app-notification-menu"
             role="dialog"
-            aria-label="Notifications"
+            aria-label="Thông báo"
             @click.stop
           >
             <header class="app-notification-head">
               <div>
-                <strong>Notifications</strong>
+                <strong>Thông báo</strong>
 
                 <span>
                   {{
                     notificationCenter.unreadCount.value > 0
-                      ? `${notificationCenter.unreadCount.value} unread`
-                      : 'All caught up'
+                      ? `${notificationCenter.unreadCount.value} chưa đọc`
+                      : 'Đã đọc hết'
                   }}
                 </span>
               </div>
@@ -167,7 +167,7 @@
               <div class="app-notification-head-actions">
                 <button
                   type="button"
-                  title="Refresh"
+                  title="Tải lại"
                   :disabled="notificationCenter.isLoading.value"
                   @click="refreshNotifications"
                 >
@@ -176,7 +176,7 @@
 
                 <button
                   type="button"
-                  title="Mark all as read"
+                  title="Đánh dấu tất cả là đã đọc"
                   :disabled="
                     notificationCenter.unreadCount.value === 0 ||
                     notificationCenter.isMarkingAllRead.value
@@ -277,7 +277,7 @@
         class="app-icon-btn"
         type="button"
         :title="shareButtonTitle"
-        aria-label="Share workspace"
+        aria-label="Chia sẻ không gian"
         @click="openWorkspaceShare"
       >
         <span class="material-symbols-outlined">share</span>
@@ -286,8 +286,8 @@
       <button
         class="app-icon-btn"
         type="button"
-        title="Favorite current page"
-        aria-label="Favorite current page"
+        title="Thêm trang hiện tại vào yêu thích"
+        aria-label="Thêm trang hiện tại vào yêu thích"
         @click="favoriteCurrentPage"
       >
         <span class="material-symbols-outlined">star</span>
@@ -297,8 +297,8 @@
         v-if="canReadActivityLog"
         class="app-icon-btn"
         type="button"
-        title="Activity log"
-        aria-label="Activity log"
+        title="Nhật ký hoạt động"
+        aria-label="Nhật ký hoạt động"
         @click="openActivityLog"
       >
         <span class="material-symbols-outlined">history</span>
@@ -311,8 +311,8 @@
         <button
           class="app-icon-btn"
           type="button"
-          title="More"
-          aria-label="More actions"
+          title="Thêm"
+          aria-label="Thao tác khác"
           :aria-expanded="isMoreMenuOpen"
           @click.stop="toggleMoreMenu"
         >
@@ -324,12 +324,12 @@
             v-if="isMoreMenuOpen"
             class="app-more-menu"
             role="menu"
-            aria-label="More actions"
+            aria-label="Thao tác khác"
             @click.stop
           >
             <div class="app-more-menu-head">
               <strong>{{ workspaceNavigation.workspaceName.value }}</strong>
-              <span>Workspace actions</span>
+              <span>Thao tác không gian</span>
             </div>
 
             <button
@@ -362,7 +362,7 @@
               <span class="material-symbols-outlined">settings</span>
 
               <span>
-                <strong>Cài đặt workspace</strong>
+                <strong>Cài đặt không gian</strong>
                 <small>Quyền, tên và mô tả</small>
               </span>
             </button>
@@ -377,7 +377,7 @@
 
               <span>
                 <strong>Thành viên</strong>
-                <small>Xem danh sách người trong workspace</small>
+                <small>Xem danh sách người trong không gian</small>
               </span>
             </button>
 
@@ -392,8 +392,8 @@
               <span class="material-symbols-outlined">logout</span>
 
               <span>
-                <strong>Rời workspace</strong>
-                <small>Gỡ workspace này khỏi sidebar của bạn</small>
+                <strong>Rời không gian</strong>
+                <small>Gỡ không gian này khỏi sidebar của bạn</small>
               </span>
             </button>
 
@@ -413,8 +413,8 @@
               <span class="material-symbols-outlined">delete</span>
 
               <span>
-                <strong>Xóa workspace này</strong>
-                <small>Xóa workspace và toàn bộ dữ liệu bên trong</small>
+                <strong>Xóa không gian này</strong>
+                <small>Xóa không gian và toàn bộ dữ liệu bên trong</small>
               </span>
             </button>
           </section>
@@ -456,10 +456,10 @@
     <ConfirmActionModal
       v-if="canDeleteWorkspace"
       :open="deleteWorkspace.isDeleteWorkspaceConfirmOpen.value"
-      title="Xóa workspace này?"
+      title="Xóa không gian này?"
       :message="deleteWorkspaceConfirmMessage"
-      description="Toàn bộ page, task và member liên quan đến workspace này sẽ bị xóa theo backend. Hành động này không thể hoàn tác."
-      confirm-label="Xóa workspace"
+      description="Toàn bộ trang, công việc và thành viên liên quan đến không gian này sẽ bị xóa theo hệ thống. Hành động này không thể hoàn tác."
+      confirm-label="Xóa không gian"
       submitting-label="Đang xóa..."
       :is-submitting="deleteWorkspace.isDeletingWorkspace.value"
       :error="deleteWorkspace.deleteWorkspaceError.value"
@@ -581,27 +581,27 @@ const canReadActivityLog = computed(() => {
 })
 
 const shareButtonTitle = computed(() => {
-  if (!currentWorkspaceId.value) return 'Chọn workspace trước khi share'
-  if (!props.canShareWorkspace) return 'Chỉ Owner hoặc Manager mới được share workspace'
-  return 'Share workspace qua Messenger'
+  if (!currentWorkspaceId.value) return 'Chọn không gian trước khi chia sẻ'
+  if (!props.canShareWorkspace) return 'Chỉ chủ sở hữu hoặc quản lý mới được chia sẻ không gian'
+  return 'Chia sẻ không gian qua tin nhắn'
 })
 
 const aiReminderTitle = computed(() => {
   if (props.aiReminderCount > 0) {
-    return `${props.aiReminderCount} AI reminder cần xem`
+    return `${props.aiReminderCount} nhắc việc AI cần xem`
   }
 
-  return 'AI Reminders: quá hạn, sắp tới hạn, priority cao'
+  return 'Nhắc việc AI: quá hạn, sắp tới hạn, ưu tiên cao'
 })
 
 const deleteWorkspaceConfirmMessage = computed(() => {
   const workspace = deleteWorkspace.workspaceToDelete.value
 
   if (!workspace) {
-    return 'Bạn có chắc muốn xóa workspace này không?'
+    return 'Bạn có chắc muốn xóa không gian này không?'
   }
 
-  return `Bạn sắp xóa workspace "${workspace.name}". Toàn bộ page bên trong workspace này cũng sẽ bị ảnh hưởng.`
+  return `Bạn sắp xóa không gian "${workspace.name}". Toàn bộ trang bên trong không gian này cũng sẽ bị ảnh hưởng.`
 })
 
 function toggleNotifications() {
@@ -649,13 +649,13 @@ async function leaveCurrentWorkspace() {
 
     if (!result.isSuccess) {
       toast.warning(
-        'Không thể rời workspace',
+        'Không thể rời không gian',
         getApiResultErrorMessage(result, 'Hãy thử lại sau.')
       )
       return
     }
 
-    toast.success('Đã rời workspace', 'Workspace đã được gỡ khỏi sidebar của bạn.')
+    toast.success('Đã rời không gian', 'Không gian đã được gỡ khỏi sidebar của bạn.')
 
     if (currentWorkspaceId.value === workspaceId) {
       workspaceNavigation.clearNavigation()
@@ -664,7 +664,7 @@ async function leaveCurrentWorkspace() {
     emit('workspace-deleted', workspaceId)
   } catch (error) {
     toast.warning(
-      'Không thể rời workspace',
+      'Không thể rời không gian',
       getApiErrorMessage(error, 'Hãy thử lại sau.')
     )
   } finally {
@@ -736,12 +736,12 @@ function openWorkspaceShare() {
   isMoreMenuOpen.value = false
 
   if (!currentWorkspaceId.value) {
-    toast.warning('Chưa chọn workspace', 'Hãy chọn workspace trước khi share.')
+    toast.warning('Chưa chọn không gian', 'Hãy chọn không gian trước khi chia sẻ.')
     return
   }
 
   if (!props.canShareWorkspace) {
-    toast.warning('Không có quyền share', 'Chỉ Owner hoặc Manager mới được share workspace.')
+    toast.warning('Không có quyền chia sẻ', 'Chỉ chủ sở hữu hoặc quản lý mới được chia sẻ không gian.')
     return
   }
 
@@ -752,7 +752,7 @@ async function favoriteCurrentPage() {
   const page = workspaceNavigation.page.value
 
   if (!page) {
-    toast.warning('Chưa chọn page', 'Hãy mở page trước khi favorite nha.')
+    toast.warning('Chưa chọn trang', 'Hãy mở trang trước khi thêm vào yêu thích.')
     return
   }
 
@@ -761,17 +761,17 @@ async function favoriteCurrentPage() {
 
     if (!result.isSuccess) {
       toast.warning(
-        'Không thể favorite page',
+        'Không thể thêm trang vào yêu thích',
         getApiResultErrorMessage(result, 'Hãy thử lại sau.')
       )
       return
     }
 
-    toast.success('Đã favorite page', `Page "${page.title}" đã vào danh sách Favorites.`)
+    toast.success('Đã thêm trang vào yêu thích', `Trang "${page.title}" đã vào danh sách yêu thích.`)
     window.dispatchEvent(new CustomEvent('pkm:page-favorite-updated'))
   } catch (error) {
     toast.warning(
-      'Không thể favorite page',
+      'Không thể thêm trang vào yêu thích',
       getApiErrorMessage(error, 'Hãy thử lại sau.')
     )
   }
@@ -808,7 +808,7 @@ function handleWorkspaceUpdated(workspace: WorkspaceResponse) {
     name: workspace.name,
   })
 
-  toast.success('Đã cập nhật workspace', `Workspace "${workspace.name}" đã được lưu.`)
+  toast.success('Đã cập nhật không gian', `Không gian "${workspace.name}" đã được lưu.`)
   emit('workspace-updated', workspace)
 }
 
@@ -840,8 +840,8 @@ async function confirmDeleteWorkspace() {
   }
 
   toast.success(
-    'Đã xóa workspace',
-    `Workspace "${deletedWorkspace.name}" đã được xóa.`
+    'Đã xóa không gian',
+    `Không gian "${deletedWorkspace.name}" đã được xóa.`
   )
 
   if (currentWorkspaceId.value === deletedWorkspace.id) {
@@ -860,7 +860,7 @@ async function submitInvite() {
 
   toast.success(
     'Đã gửi lời mời',
-    `Lời mời tham gia workspace đã được gửi đến ${result.email}.`
+    `Lời mời tham gia không gian đã được gửi đến ${result.email}.`
   )
 
   isInviteModalOpen.value = false
@@ -876,12 +876,12 @@ async function refreshNotifications() {
 function notificationTypeLabel(type: string) {
   const normalized = type.trim().toLowerCase()
 
-  if (!normalized) return 'Update'
-  if (normalized.includes('task')) return 'Task'
-  if (normalized.includes('comment')) return 'Comment'
+  if (!normalized) return 'Cập nhật'
+  if (normalized.includes('task')) return 'Công việc'
+  if (normalized.includes('comment')) return 'Bình luận'
   if (normalized.includes('recommend')) return 'AI'
-  if (normalized.includes('workspace')) return 'Workspace'
-  if (normalized.includes('page')) return 'Page'
+  if (normalized.includes('workspace')) return 'Không gian'
+  if (normalized.includes('page')) return 'Trang'
 
   return type
 }
@@ -894,16 +894,16 @@ function formatNotificationTime(value: string) {
   const diffMs = Date.now() - date.getTime()
   const diffMinutes = Math.max(0, Math.floor(diffMs / 60000))
 
-  if (diffMinutes < 1) return 'Just now'
-  if (diffMinutes < 60) return `${diffMinutes}m ago`
+  if (diffMinutes < 1) return 'Vừa xong'
+  if (diffMinutes < 60) return `${diffMinutes} phút trước`
 
   const diffHours = Math.floor(diffMinutes / 60)
-  if (diffHours < 24) return `${diffHours}h ago`
+  if (diffHours < 24) return `${diffHours} giờ trước`
 
   const diffDays = Math.floor(diffHours / 24)
-  if (diffDays < 7) return `${diffDays}d ago`
+  if (diffDays < 7) return `${diffDays} ngày trước`
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString('vi-VN')
 }
 
 function handleDocumentClick(event: MouseEvent) {

@@ -16,7 +16,7 @@
           class="workspace-members-sidebar"
           role="dialog"
           aria-modal="true"
-          aria-label="Thành viên workspace"
+          aria-label="Thành viên không gian"
           tabindex="-1"
           @click.stop="activeMemberMenuId = null"
           @keydown.esc="emit('close')"
@@ -66,7 +66,7 @@
 
             <article class="overview-card">
               <strong>{{ props.onlineMembers.length }}</strong>
-              <span>Online</span>
+              <span>Đang hoạt động</span>
             </article>
 
             <article class="overview-card">
@@ -81,7 +81,7 @@
             <input
               v-model="searchTerm"
               type="search"
-              placeholder="Tìm theo tên, username, role..."
+              placeholder="Tìm theo tên, tên đăng nhập, vai trò..."
               autocomplete="off"
             />
 
@@ -155,7 +155,7 @@
           >
             <span class="material-symbols-outlined">person_search</span>
             <strong>Không tìm thấy thành viên</strong>
-            <p>Thử nhập tên, username hoặc role khác nha.</p>
+            <p>Thử nhập tên, tên đăng nhập hoặc vai trò khác.</p>
           </main>
 
           <main
@@ -167,7 +167,7 @@
               class="members-group"
             >
               <div class="members-group-head">
-                <h3>Online</h3>
+                <h3>Đang hoạt động</h3>
                 <span>{{ visibleOnlineMembers.length }}</span>
               </div>
 
@@ -252,7 +252,7 @@
                     v-if="activeMemberMenuId === member.userId"
                     class="member-dropdown"
                   >
-                    <div class="member-dropdown-label">Change role</div>
+                    <div class="member-dropdown-label">Đổi vai trò</div>
 
                     <button
                       v-for="roleOption in roleOptions"
@@ -284,8 +284,8 @@
                       <span class="material-symbols-outlined">workspace_premium</span>
 
                       <span>
-                        <strong>Chuyển owner</strong>
-                        <small>Trao quyền sở hữu workspace cho người này.</small>
+                        <strong>Chuyển chủ sở hữu</strong>
+                        <small>Trao quyền sở hữu không gian cho người này.</small>
                       </span>
                     </button>
 
@@ -298,7 +298,7 @@
                       <span class="material-symbols-outlined">person_remove</span>
 
                       <span>
-                        <strong>Xóa khỏi workspace</strong>
+                        <strong>Xóa khỏi không gian</strong>
                         <small>Gỡ quyền truy cập của thành viên này.</small>
                       </span>
                     </button>
@@ -312,7 +312,7 @@
               class="members-group"
             >
               <div class="members-group-head">
-                <h3>Offline</h3>
+                <h3>Vắng mặt</h3>
                 <span>{{ visibleOfflineMembers.length }}</span>
               </div>
 
@@ -397,7 +397,7 @@
                     v-if="activeMemberMenuId === member.userId"
                     class="member-dropdown"
                   >
-                    <div class="member-dropdown-label">Change role</div>
+                    <div class="member-dropdown-label">Đổi vai trò</div>
 
                     <button
                       v-for="roleOption in roleOptions"
@@ -429,8 +429,8 @@
                       <span class="material-symbols-outlined">workspace_premium</span>
 
                       <span>
-                        <strong>Chuyển owner</strong>
-                        <small>Trao quyền sở hữu workspace cho người này.</small>
+                        <strong>Chuyển chủ sở hữu</strong>
+                        <small>Trao quyền sở hữu không gian cho người này.</small>
                       </span>
                     </button>
 
@@ -443,7 +443,7 @@
                       <span class="material-symbols-outlined">person_remove</span>
 
                       <span>
-                        <strong>Xóa khỏi workspace</strong>
+                        <strong>Xóa khỏi không gian</strong>
                         <small>Gỡ quyền truy cập của thành viên này.</small>
                       </span>
                     </button>
@@ -456,7 +456,7 @@
 
         <ConfirmActionModal
           :open="Boolean(memberToRemove)"
-          title="Xóa thành viên khỏi workspace?"
+          title="Xóa thành viên khỏi không gian?"
           :message="removeMemberConfirmMessage"
           :description="removeMemberConfirmDescription"
           confirm-label="Xóa thành viên"
@@ -511,20 +511,20 @@ const roleOptions: Array<{
 }> = [
   {
     value: 'manager',
-    label: 'Manager',
-    description: 'Quản lý workspace và member.',
+    label: 'Quản lý',
+    description: 'Quản lý không gian và thành viên.',
     icon: 'admin_panel_settings',
   },
   {
     value: 'member',
-    label: 'Member',
-    description: 'Tạo, sửa page và task theo quyền.',
+    label: 'Thành viên',
+    description: 'Tạo, sửa trang và công việc theo quyền.',
     icon: 'edit_note',
   },
   {
     value: 'viewer',
-    label: 'Viewer',
-    description: 'Chỉ xem nội dung workspace.',
+    label: 'Người xem',
+    description: 'Chỉ xem nội dung không gian.',
     icon: 'visibility',
   },
 ]
@@ -575,17 +575,17 @@ const isRemovingSelectedMember = computed(() => {
 const removeMemberConfirmMessage = computed(() => {
   const member = memberToRemove.value
 
-  if (!member) return 'Bạn có chắc muốn xóa thành viên này khỏi workspace không?'
+  if (!member) return 'Bạn có chắc muốn xóa thành viên này khỏi không gian không?'
 
-  return `Bạn sắp xóa "${member.displayName}" khỏi workspace "${props.workspaceName}".`
+  return `Bạn sắp xóa "${member.displayName}" khỏi không gian "${props.workspaceName}".`
 })
 
 const removeMemberConfirmDescription = computed(() => {
   const member = memberToRemove.value
 
-  if (!member) return 'Thành viên này sẽ mất quyền truy cập workspace.'
+  if (!member) return 'Thành viên này sẽ mất quyền truy cập không gian.'
 
-  return `${member.email || member.userName || member.displayName} sẽ không còn thấy page, task và tài nguyên trong workspace này.`
+  return `${member.email || member.userName || member.displayName} sẽ không còn thấy trang, công việc và tài nguyên trong không gian này.`
 })
 
 watch(
@@ -652,13 +652,14 @@ function availabilityLabel(member: WorkspaceMemberListItem) {
 }
 
 function roleLabel(member: WorkspaceMemberListItem) {
-  if (member.isOwner) return 'Owner'
+  if (member.isOwner) return 'Chủ sở hữu'
 
-  const role = member.role?.trim()
+  const role = member.role?.trim().toLowerCase()
 
-  return role
-    ? role.charAt(0).toUpperCase() + role.slice(1).toLowerCase()
-    : 'Member'
+  if (role === 'manager') return 'Quản lý'
+  if (role === 'viewer') return 'Người xem'
+
+  return 'Thành viên'
 }
 
 function normalizedRole(member: WorkspaceMemberListItem) {

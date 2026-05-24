@@ -66,7 +66,7 @@ export function useMyWorkspaces() {
       if (!result.isSuccess || !result.data) {
         workspaceListError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải danh sách workspace.'
+          'Không thể tải danh sách không gian.'
         )
 
         return
@@ -76,7 +76,7 @@ export function useMyWorkspaces() {
     } catch (error) {
       workspaceListError.value = getApiErrorMessage(
         error,
-        'Không thể tải danh sách workspace.'
+        'Không thể tải danh sách không gian.'
       )
     } finally {
       isLoadingWorkspaces.value = false

@@ -12,16 +12,16 @@ type InlineStyleMap = Record<string, string>
 
 const DEFAULT_FONT_OPTIONS: InlineStyleOption[] = [
   {
-    label: 'Default',
+    label: 'Mặc định',
     value:
       'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   },
   {
-    label: 'Serif',
+    label: 'Có chân',
     value: 'Georgia, Cambria, "Times New Roman", Times, serif',
   },
   {
-    label: 'Mono',
+    label: 'Đơn cách',
     value:
       '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, monospace',
   },
@@ -161,7 +161,7 @@ class DropdownInlineStyleTool {
   render(): HTMLElement {
     const root = document.createElement('div')
     root.className = 'ce-inline-style-dropdown'
-    root.title = this.config.title ?? 'Text style'
+    root.title = this.config.title ?? 'Kiểu chữ'
 
     const button = document.createElement('button')
     button.type = 'button'
@@ -171,7 +171,7 @@ class DropdownInlineStyleTool {
 
     const label = document.createElement('span')
     label.className = 'ce-inline-style-trigger-label'
-    label.textContent = this.config.placeholder ?? 'Style'
+    label.textContent = this.config.placeholder ?? 'Kiểu'
 
     const caret = document.createElement('span')
     caret.className = 'ce-inline-style-trigger-caret'
@@ -453,7 +453,7 @@ class ColorInlineStyleTool {
     const button = document.createElement('button')
     button.type = 'button'
     button.className = `ce-inline-tool ce-inline-color-tool ${this.getButtonClass()}`
-    button.title = this.config.title ?? 'Color'
+    button.title = this.config.title ?? 'Màu'
 
     const label = document.createElement('span')
     label.className = 'ce-inline-color-label'

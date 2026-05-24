@@ -14,22 +14,22 @@
         class="task-drawer-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Create task"
+        aria-label="Tạo công việc"
         @click.stop
       >
         <div class="task-drawer-shell">
           <div class="task-drawer-topbar">
             <div class="task-drawer-crumb">
               <i class="bi bi-check2-square"></i>
-              <span>Task</span>
+              <span>Công việc</span>
               <i class="bi bi-chevron-right task-crumb-separator"></i>
-              <span>New</span>
+              <span>Tạo mới</span>
             </div>
 
             <button
               class="task-drawer-close"
               type="button"
-              title="Close"
+              title="Đóng"
               :disabled="isCreatingTask"
               @click="closePanel"
             >
@@ -47,8 +47,8 @@
               </div>
 
               <p class="task-eyebrow">
-                New task in
-                <span>{{ pageTitle || 'selected page' }}</span>
+                Tạo công việc trong
+                <span>{{ pageTitle || 'trang đang chọn' }}</span>
               </p>
 
               <input
@@ -56,14 +56,14 @@
                 v-model="form.title"
                 class="task-title-input"
                 type="text"
-                placeholder="Untitled task"
+                placeholder="Công việc chưa đặt tên"
                 maxlength="100"
                 :disabled="isCreatingTask"
               />
 
               <div class="task-title-meta">
                 <span :class="{ danger: titleError }">
-                  {{ titleError || 'Task sẽ được gắn với page hiện tại.' }}
+                  {{ titleError || 'Công việc sẽ được gắn với trang hiện tại.' }}
                 </span>
 
                 <span :class="{ danger: form.title.length >= 100 }">
@@ -79,7 +79,7 @@
                   for="new-task-priority"
                 >
                   <i class="bi bi-flag"></i>
-                  <span>Priority</span>
+                  <span>Ưu tiên</span>
                 </label>
 
                 <div class="task-property-value">
@@ -89,13 +89,13 @@
                     class="task-property-input"
                     :disabled="isCreatingTask"
                   >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
+                    <option value="low">Thấp</option>
+                    <option value="medium">Vừa</option>
+                    <option value="high">Cao</option>
                   </select>
 
                   <p class="task-property-help">
-                    Mặc định là Medium, chỉnh cao/thấp tùy độ gấp.
+                    Mặc định là vừa, chỉnh cao/thấp tùy độ gấp.
                   </p>
                 </div>
               </div>
@@ -106,7 +106,7 @@
                   for="new-task-due-date"
                 >
                   <i class="bi bi-calendar-event"></i>
-                  <span>Due date</span>
+                  <span>Hạn</span>
                 </label>
 
                 <div class="task-property-value">
@@ -119,7 +119,7 @@
                   />
 
                   <p class="task-property-help">
-                    Optional. Để trống nếu task chưa có deadline.
+                    Không bắt buộc. Để trống nếu công việc chưa có hạn.
                   </p>
                 </div>
               </div>
@@ -130,7 +130,7 @@
               >
                 <label class="task-property-label">
                   <i class="bi bi-people"></i>
-                  <span>Assignees</span>
+                  <span>Người phụ trách</span>
                 </label>
 
                 <div class="task-property-value">
@@ -138,14 +138,14 @@
                     v-if="isLoadingMembers"
                     class="task-assignee-loading"
                   >
-                    Đang tải member trong workspace...
+                    Đang tải thành viên trong không gian...
                   </div>
 
                   <div
                     v-else-if="!members.length"
                     class="task-assignee-empty"
                   >
-                    Không có member khả dụng để assign. Bạn vẫn tạo task trống được.
+                    Không có thành viên khả dụng để giao việc. Bạn vẫn tạo công việc trống được.
                   </div>
 
                   <div
@@ -168,7 +168,7 @@
 
                       <span class="task-assignee-option-main">
                         <strong>{{ member.displayName }}</strong>
-                        <small>{{ member.role }}</small>
+                        <small>{{ roleLabel(member.role) }}</small>
                       </span>
 
                       <i
@@ -190,7 +190,7 @@
                   for="new-task-description"
                 >
                   <i class="bi bi-card-text"></i>
-                  <span>Description</span>
+                  <span>Mô tả</span>
                 </label>
 
                 <div class="task-property-value">
@@ -200,12 +200,12 @@
                     class="task-property-input task-property-textarea"
                     rows="5"
                     maxlength="400"
-                    placeholder="Ghi nhanh context, yêu cầu, checklist..."
+                    placeholder="Ghi nhanh bối cảnh, yêu cầu, danh sách việc cần làm..."
                     :disabled="isCreatingTask"
                   ></textarea>
 
                   <p class="task-property-help task-property-help-inline">
-                    <span>Optional.</span>
+                    <span>Không bắt buộc.</span>
                     <span>{{ form.description.length }}/400</span>
                   </p>
                 </div>
@@ -213,7 +213,7 @@
             </section>
 
             <section class="task-preview-section">
-              <div class="task-preview-label">Preview</div>
+              <div class="task-preview-label">Xem trước</div>
 
               <div class="task-preview-card">
                 <div class="task-preview-icon">
@@ -233,7 +233,7 @@
                 </div>
 
                 <div class="task-preview-badge">
-                  To Do
+                  Cần làm
                 </div>
               </div>
             </section>
@@ -249,9 +249,9 @@
 
           <footer class="task-drawer-footer">
             <div class="task-keyboard-hint">
-              <span>Ctrl + Enter to create</span>
+              <span>Ctrl + Enter để tạo</span>
               <span class="task-dot"></span>
-              <span>Esc to close</span>
+              <span>Esc để đóng</span>
             </div>
 
             <div class="task-drawer-actions">
@@ -261,7 +261,7 @@
                 :disabled="isCreatingTask"
                 @click="closePanel"
               >
-                Cancel
+                Hủy
               </button>
 
               <button
@@ -274,7 +274,7 @@
                   v-if="isCreatingTask"
                   class="task-btn-spinner"
                 ></span>
-                <span>{{ isCreatingTask ? 'Creating...' : 'Create task' }}</span>
+                <span>{{ isCreatingTask ? 'Đang tạo...' : 'Tạo công việc' }}</span>
               </button>
             </div>
           </footer>
@@ -356,8 +356,8 @@ const selectedAssignees = computed(() => {
 const titleError = computed(() => {
   const value = form.title.trim()
 
-  if (!value) return 'Tên task không được để trống.'
-  if (value.length > 100) return 'Tên task không được quá 100 ký tự.'
+  if (!value) return 'Tên công việc không được để trống.'
+  if (value.length > 100) return 'Tên công việc không được quá 100 ký tự.'
 
   return ''
 })
@@ -367,22 +367,22 @@ const isFormValid = computed(() => {
 })
 
 const previewTitle = computed(() => {
-  return form.title.trim() || 'Untitled task'
+  return form.title.trim() || 'Công việc chưa đặt tên'
 })
 
 const priorityLabel = computed(() => {
   return {
-    low: 'Low priority',
-    medium: 'Medium priority',
-    high: 'High priority',
+    low: 'Ưu tiên thấp',
+    medium: 'Ưu tiên vừa',
+    high: 'Ưu tiên cao',
   }[form.priority]
 })
 
 const assigneeLabel = computed(() => {
-  if (!selectedAssignees.value.length) return 'Unassigned'
+  if (!selectedAssignees.value.length) return 'Chưa giao'
 
   const firstAssignee = selectedAssignees.value[0]
-  if (!firstAssignee) return 'Unassigned'
+  if (!firstAssignee) return 'Chưa giao'
 
   if (selectedAssignees.value.length === 1) return firstAssignee.displayName
 
@@ -390,13 +390,13 @@ const assigneeLabel = computed(() => {
 })
 
 const memberHelpText = computed(() => {
-  if (!props.canManageAssignees) return 'Chỉ owner hoặc manager mới được assign task.'
-  if (!props.workspaceId) return 'Chọn workspace trước đã nha.'
-  if (props.isLoadingMembers) return 'Đang tải member trong workspace...'
-  if (props.membersError) return 'Không tải được member, vẫn có thể tạo task không gắn người.'
-  if (!props.members.length) return 'Backend không cho assign chính mình, nên chỉ hiện member khác bạn.'
+  if (!props.canManageAssignees) return 'Chỉ chủ sở hữu hoặc quản lý mới được giao công việc.'
+  if (!props.workspaceId) return 'Chọn không gian làm việc trước đã.'
+  if (props.isLoadingMembers) return 'Đang tải thành viên trong không gian...'
+  if (props.membersError) return 'Không tải được thành viên, vẫn có thể tạo công việc không gắn người.'
+  if (!props.members.length) return 'Hệ thống không cho tự giao cho chính mình, nên chỉ hiện thành viên khác bạn.'
 
-  return 'Có thể chọn nhiều người hoặc để trống và assign sau.'
+  return 'Có thể chọn nhiều người hoặc để trống và giao sau.'
 })
 
 watch(
@@ -455,6 +455,16 @@ function toggleAssignee(userId: Guid) {
   }
 
   form.assigneeUserIds = [...form.assigneeUserIds, userId]
+}
+
+function roleLabel(role: string | null | undefined) {
+  const normalized = role?.trim().toLowerCase()
+
+  if (normalized === 'owner') return 'Chủ sở hữu'
+  if (normalized === 'manager') return 'Quản lý'
+  if (normalized === 'viewer') return 'Người xem'
+
+  return 'Thành viên'
 }
 
 function toDueDatePayload(value: string) {

@@ -27,7 +27,7 @@ export function useCreateWorkspace() {
       if (!result.isSuccess || !result.data) {
         createWorkspaceError.value = getApiResultErrorMessage(
           result,
-          'Không thể tạo workspace.'
+          'Không thể tạo không gian.'
         )
 
         return null
@@ -37,7 +37,7 @@ export function useCreateWorkspace() {
     } catch (error) {
       createWorkspaceError.value = getApiErrorMessage(
         error,
-        'Không thể tạo workspace. Vui lòng thử lại.'
+        'Không thể tạo không gian. Vui lòng thử lại.'
       )
 
       return null

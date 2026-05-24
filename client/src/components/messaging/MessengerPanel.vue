@@ -6,12 +6,12 @@
         class="messenger-layer"
         role="dialog"
         aria-modal="true"
-        aria-label="Messenger"
+        aria-label="Tin nhắn"
       >
         <button
           class="messenger-scrim"
           type="button"
-          aria-label="Đóng messenger"
+          aria-label="Đóng tin nhắn"
           @click="close"
         ></button>
 
@@ -23,8 +23,7 @@
           <section class="conversation-sidebar">
             <header class="conversation-head">
               <div>
-                <p>Realtime</p>
-                <h2>Messages</h2>
+                <h2>Tin nhắn</h2>
               </div>
 
               <button
@@ -43,7 +42,7 @@
                 @click="loadConversations"
               >
                 <span class="material-symbols-outlined">refresh</span>
-                Sync
+                Đồng bộ
               </button>
 
               <span
@@ -51,8 +50,8 @@
                 :class="{ connected: realtimeClient.isConnected.value }"
                 :title="
                   realtimeClient.isConnected.value
-                    ? 'Realtime connected'
-                    : 'Realtime disconnected'
+                    ? 'Đã kết nối thời gian thực'
+                    : 'Mất kết nối thời gian thực'
                 "
               ></span>
             </div>
@@ -77,7 +76,7 @@
             >
               <span class="material-symbols-outlined">forum</span>
               <strong>Chưa có tin nhắn</strong>
-              <p>Vào Friends rồi bấm Message để mở chat riêng.</p>
+              <p>Vào Bạn bè rồi bấm Nhắn tin để mở cuộc trò chuyện riêng.</p>
             </div>
 
             <div
@@ -171,7 +170,7 @@
                   :disabled="isLoadingMoreMessages"
                   @click="loadMoreMessages"
                 >
-                  {{ isLoadingMoreMessages ? 'Loading...' : 'Load older messages' }}
+                  {{ isLoadingMoreMessages ? 'Đang tải...' : 'Tải tin nhắn cũ hơn' }}
                 </button>
 
                 <div
@@ -192,7 +191,7 @@
                   v-else-if="!messages.length"
                   class="chat-empty-row"
                 >
-                  Hãy gửi tin nhắn đầu tiên. Đừng gửi “alo” rồi offline nha.
+                  Hãy gửi tin nhắn đầu tiên. Đừng gửi “alo” rồi im luôn nha.
                 </div>
 
                 <article
@@ -212,10 +211,10 @@
                         </span>
 
                         <div class="message-workspace-copy">
-                          <span class="message-workspace-kicker">Workspace</span>
-                          <strong>{{ workspaceSharePayload(message)?.workspaceName || 'Workspace' }}</strong>
+                          <span class="message-workspace-kicker">Không gian</span>
+                          <strong>{{ workspaceSharePayload(message)?.workspaceName || 'Không gian' }}</strong>
                           <p>
-                            {{ workspaceSharePayload(message)?.workspaceDescription || 'Workspace được chia sẻ qua Messenger.' }}
+                            {{ workspaceSharePayload(message)?.workspaceDescription || 'Không gian được chia sẻ qua tin nhắn.' }}
                           </p>
 
                           <div class="message-workspace-meta">
@@ -246,7 +245,7 @@
                       </button>
 
                       <span v-else class="message-workspace-sent-note">
-                        Bạn đã share workspace này. Người nhận bấm card là vào được.
+                        Bạn đã chia sẻ không gian này. Người nhận bấm thẻ là vào được.
                       </span>
                     </template>
 
@@ -255,7 +254,7 @@
                         v-if="message.imageUrl"
                         class="message-image"
                         :src="normalizeMessageImage(message.imageUrl)"
-                        alt="Message image"
+                        alt="Ảnh trong tin nhắn"
                         referrerpolicy="no-referrer"
                       />
 
@@ -266,7 +265,7 @@
 
                     <time>
                       {{ formatMessageTime(message.createdDate) }}
-                      <span v-if="message.isMine && message.readAtUtc">· Seen</span>
+                      <span v-if="message.isMine && message.readAtUtc">· Đã xem</span>
                     </time>
                   </div>
                 </article>
@@ -577,17 +576,17 @@ function workspaceSharePayload(message: MessageResponse): WorkspaceShareMessageP
 }
 
 function workspaceShareInitial(message: MessageResponse) {
-  return workspaceSharePayload(message)?.workspaceName.trim().charAt(0).toUpperCase() || 'W'
+  return workspaceSharePayload(message)?.workspaceName.trim().charAt(0).toUpperCase() || 'K'
 }
 
 function workspaceShareVisibilityLabel(value: string | null | undefined) {
   const normalized = value?.trim().toLowerCase()
-  return normalized === 'public' ? 'Public' : 'Private'
+  return normalized === 'public' ? 'Công khai' : 'Riêng tư'
 }
 
 function workspaceShareRoleLabel(value: string | null | undefined) {
   const normalized = value?.trim().toLowerCase()
-  return normalized === 'member' ? 'Join as Member' : 'View as Viewer'
+  return normalized === 'member' ? 'Tham gia với quyền thành viên' : 'Xem với quyền người xem'
 }
 
 function isWorkspaceShareAccepted(message: MessageResponse) {
@@ -605,13 +604,13 @@ function workspaceShareActionIcon(message: MessageResponse) {
 
 function workspaceShareActionLabel(message: MessageResponse) {
   if (acceptingWorkspaceShareMessageId.value === message.id) return 'Đang mở...'
-  return isWorkspaceShareAccepted(message) ? 'Đã tham gia' : 'Mở workspace'
+  return isWorkspaceShareAccepted(message) ? 'Đã tham gia' : 'Mở không gian'
 }
 
 function workspaceShareActionTitle(message: MessageResponse) {
   return isWorkspaceShareAccepted(message)
-    ? 'Bạn đã ở trong workspace này rồi'
-    : 'Tham gia workspace từ lời mời Messenger'
+    ? 'Bạn đã ở trong không gian này rồi'
+    : 'Tham gia không gian từ lời mời tin nhắn'
 }
 
 async function acceptWorkspaceShare(message: MessageResponse) {
@@ -624,8 +623,8 @@ async function acceptWorkspaceShare(message: MessageResponse) {
 
     if (!result.isSuccess || !result.data) {
       toast.warning(
-        'Không mở được workspace',
-        getApiResultErrorMessage(result, 'Workspace share không còn hợp lệ.')
+        'Không mở được không gian',
+        getApiResultErrorMessage(result, 'Chia sẻ không gian không còn hợp lệ.')
       )
       return
     }
@@ -636,15 +635,15 @@ async function acceptWorkspaceShare(message: MessageResponse) {
     ])
 
     toast.success(
-      'Đã mở workspace',
-      `Workspace “${result.data.name}” đã được thêm vào sidebar.`
+      'Đã mở không gian',
+      `Không gian “${result.data.name}” đã được thêm vào sidebar.`
     )
 
     emit('workspace-opened', result.data)
   } catch (error) {
     toast.warning(
-      'Không mở được workspace',
-      getApiErrorMessage(error, 'Workspace share không còn hợp lệ.')
+      'Không mở được không gian',
+      getApiErrorMessage(error, 'Chia sẻ không gian không còn hợp lệ.')
     )
   } finally {
     acceptingWorkspaceShareMessageId.value = null
@@ -749,7 +748,7 @@ async function loadConversations() {
     if (!result.isSuccess || !result.data) {
       conversationError.value = getApiResultErrorMessage(
         result,
-        'Không thể tải conversations.'
+        'Không thể tải cuộc trò chuyện.'
       )
       conversations.value = []
       return
@@ -759,7 +758,7 @@ async function loadConversations() {
   } catch (error) {
     conversationError.value = getApiErrorMessage(
       error,
-      'Không thể tải conversations.'
+      'Không thể tải cuộc trò chuyện.'
     )
     conversations.value = []
   } finally {
@@ -859,7 +858,7 @@ async function startDirectConversation(userId: Guid) {
         result,
         'Không thể mở cuộc trò chuyện. Hai người cần là bạn bè trước.'
       )
-      toast.warning('Không thể mở chat', conversationError.value ?? undefined)
+      toast.warning('Không thể mở cuộc trò chuyện', conversationError.value ?? undefined)
       return
     }
 
@@ -870,7 +869,7 @@ async function startDirectConversation(userId: Guid) {
       error,
       'Không thể mở cuộc trò chuyện. Hai người cần là bạn bè trước.'
     )
-    toast.warning('Không thể mở chat', conversationError.value ?? undefined)
+    toast.warning('Không thể mở cuộc trò chuyện', conversationError.value ?? undefined)
   }
 }
 
@@ -1248,20 +1247,20 @@ function formatConversationTime(value: string | null) {
   const diffMs = Date.now() - date.getTime()
   const minutes = Math.max(0, Math.floor(diffMs / 60000))
 
-  if (minutes < 1) return 'now'
-  if (minutes < 60) return `${minutes}m`
+  if (minutes < 1) return 'vừa xong'
+  if (minutes < 60) return `${minutes} phút`
 
   const hours = Math.floor(minutes / 60)
-  if (hours < 24) return `${hours}h`
+  if (hours < 24) return `${hours} giờ`
 
-  return date.toLocaleDateString()
+  return date.toLocaleDateString('vi-VN')
 }
 
 function formatMessageTime(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
 
-  return date.toLocaleTimeString([], {
+  return date.toLocaleTimeString('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
   })

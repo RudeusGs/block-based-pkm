@@ -1,6 +1,6 @@
 <template>
   <main class="invite-success-page">
-    <router-link to="/" class="success-brand" aria-label="Go to home">
+    <router-link to="/" class="success-brand" aria-label="Về trang chủ">
       <span class="material-symbols-outlined">widgets</span>
       <strong>Block Paged</strong>
     </router-link>
@@ -18,7 +18,7 @@
 
       <div v-if="member" class="success-details is-single">
         <div>
-          <span>Vai trò trong workspace</span>
+          <span>Vai trò trong không gian</span>
           <strong>{{ formatRole(member.role) }}</strong>
         </div>
       </div>
@@ -41,7 +41,7 @@
           @click="goToApp"
         >
           <span class="material-symbols-outlined">arrow_forward</span>
-          Vào workspace
+          Vào không gian
         </button>
 
         <router-link
@@ -123,7 +123,7 @@ const route = useRoute()
 const router = useRouter()
 
 const status = ref<InviteStatus>('loading')
-const message = ref('Đang kiểm tra lời mời workspace của bạn.')
+const message = ref('Đang kiểm tra lời mời không gian của bạn.')
 const member = ref<WorkspaceMemberResponse | null>(null)
 const errorAction = ref<InviteErrorAction>('retry')
 
@@ -184,7 +184,7 @@ const kicker = computed(() => {
 })
 
 const title = computed(() => {
-  if (status.value === 'success') return 'Bạn đã tham gia workspace'
+  if (status.value === 'success') return 'Bạn đã tham gia không gian'
   if (status.value === 'error' && errorAction.value === 'login') {
     return 'Đăng nhập để xác nhận lời mời'
   }
@@ -199,7 +199,7 @@ const title = computed(() => {
 
   if (status.value === 'error') return 'Link lời mời cần được kiểm tra lại'
 
-  return 'Đang đưa bạn vào workspace'
+  return 'Đang đưa bạn vào không gian'
 })
 
 function getErrorCode(error: unknown): string | null {
@@ -261,7 +261,7 @@ async function acceptInvitation() {
   }
 
   status.value = 'loading'
-  message.value = 'Đang kiểm tra lời mời workspace của bạn.'
+  message.value = 'Đang kiểm tra lời mời không gian của bạn.'
   member.value = null
   errorAction.value = 'retry'
 
@@ -284,7 +284,7 @@ async function acceptInvitation() {
     member.value = response.data
     status.value = 'success'
     message.value =
-      'Workspace đã được thêm vào tài khoản của bạn. Bạn có thể mở ứng dụng để tiếp tục làm việc.'
+      'Không gian đã được thêm vào tài khoản của bạn. Bạn có thể mở ứng dụng để tiếp tục làm việc.'
   } catch (error) {
     const apiError = error as { status?: number }
     const errorCode = getErrorCode(error)
@@ -799,6 +799,4 @@ onMounted(() => {
   }
 }
 </style>
-
-
 

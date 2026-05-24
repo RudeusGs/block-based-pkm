@@ -19,12 +19,8 @@
       >
         <header class="ai-reminder-header">
           <div class="ai-reminder-title-block">
-            <span class="ai-reminder-logo">
-              <span class="material-symbols-outlined">auto_awesome</span>
-            </span>
-
             <div>
-              <p>AI Reminder Center</p>
+              <p>Trung tâm nhắc việc AI</p>
               <h2 id="ai-reminder-title">Nhắc việc thông minh</h2>
             </div>
           </div>
@@ -33,7 +29,7 @@
             <button
               type="button"
               class="ai-reminder-icon-btn"
-              title="Refresh reminders"
+              title="Tải lại nhắc việc"
               :disabled="isLoading"
               @click="emit('refresh')"
             >
@@ -48,7 +44,7 @@
             <button
               type="button"
               class="ai-reminder-icon-btn"
-              title="Close"
+              title="Đóng"
               @click="emit('close')"
             >
               <span class="material-symbols-outlined">close</span>
@@ -68,34 +64,34 @@
           </span>
         </section>
 
-        <section class="ai-reminder-stats" aria-label="Reminder summary">
+        <section class="ai-reminder-stats" aria-label="Tóm tắt nhắc việc">
           <article>
-            <span>Overdue</span>
+            <span>Quá hạn</span>
             <strong>{{ summary.overdue }}</strong>
           </article>
 
           <article>
-            <span>Today</span>
+            <span>Hôm nay</span>
             <strong>{{ summary.dueToday + summary.dueSoon }}</strong>
           </article>
 
           <article>
-            <span>High</span>
+            <span>Ưu tiên cao</span>
             <strong>{{ summary.highPriority }}</strong>
           </article>
 
           <article>
-            <span>No due</span>
+            <span>Chưa có hạn</span>
             <strong>{{ summary.unscheduled }}</strong>
           </article>
         </section>
 
         <section class="ai-reminder-meta-row">
           <span>{{ sourceLabel }}</span>
-          <span v-if="generatedAt">Updated {{ formatGeneratedAt(generatedAt) }}</span>
+          <span v-if="generatedAt">Cập nhật lúc {{ formatGeneratedAt(generatedAt) }}</span>
         </section>
 
-        <section class="ai-reminder-tabs" aria-label="Reminder filters">
+        <section class="ai-reminder-tabs" aria-label="Bộ lọc nhắc việc">
           <button
             v-for="filter in filters"
             :key="filter.value"
@@ -147,7 +143,7 @@
               class="ai-reminder-focus"
             >
               <div class="ai-reminder-section-head">
-                <span>Focus plan</span>
+                <span>Kế hoạch tập trung</span>
                 <strong>{{ focusPlan.length }} việc nên nhìn trước</strong>
               </div>
 
@@ -187,7 +183,7 @@
                   <div class="ai-reminder-task-meta">
                     <span>{{ statusLabel(reminder.status) }}</span>
                     <span>{{ priorityLabel(reminder.priority) }}</span>
-                    <span>{{ reminder.source === 'assigned' ? 'Assigned to me' : 'Workspace task' }}</span>
+                    <span>{{ reminder.source === 'assigned' ? 'Giao cho tôi' : 'Việc trong không gian' }}</span>
                   </div>
 
                   <div class="ai-reminder-card-actions">
@@ -261,22 +257,22 @@ const planningCount = computed(() => {
 const filters = computed(() => [
   {
     value: 'all' as const,
-    label: 'All',
+    label: 'Tất cả',
     count: props.summary.total,
   },
   {
     value: 'urgent' as const,
-    label: 'Urgent',
+    label: 'Gấp',
     count: urgentCount.value,
   },
   {
     value: 'today' as const,
-    label: 'Today',
+    label: 'Hôm nay',
     count: todayCount.value,
   },
   {
     value: 'planning' as const,
-    label: 'Plan',
+    label: 'Lên kế hoạch',
     count: planningCount.value,
   },
 ])
@@ -312,21 +308,21 @@ const focusPlan = computed(() => {
 })
 
 const heroKicker = computed(() => {
-  if (props.isLoading) return 'Đang quét task'
+  if (props.isLoading) return 'Đang quét công việc'
   if (props.summary.critical > 0) return 'Có việc cháy nhẹ rồi'
   if (props.summary.warning > 0) return 'Nên xử lý sớm'
   if (props.summary.total > 0) return 'Có vài việc cần để mắt'
 
-  return 'Workspace đang ổn'
+  return 'Không gian đang ổn'
 })
 
 const heroTitle = computed(() => {
-  if (props.isLoading) return 'AI đang rà soát deadline và priority'
+  if (props.isLoading) return 'AI đang rà soát hạn và độ ưu tiên'
   if (props.summary.critical > 0) return `${props.summary.critical} nhắc nhở gấp cần xem ngay`
   if (props.summary.warning > 0) return `${props.summary.warning} việc nên xử lý trong hôm nay`
   if (props.summary.total > 0) return `${props.summary.total} gợi ý nhắc việc được tạo`
 
-  return 'Chưa có task nào cần réo mạnh'
+  return 'Chưa có công việc nào cần nhắc mạnh'
 })
 
 const heroMessage = computed(() => {
@@ -343,10 +339,10 @@ const heroMessage = computed(() => {
   }
 
   if (props.summary.highPriority > 0) {
-    return `Có ${props.summary.highPriority} task high priority. AI đang giữ chúng trong radar cho bạn.`
+    return `Có ${props.summary.highPriority} công việc ưu tiên cao. AI đang theo dõi nhóm này cho bạn.`
   }
 
-  return 'AI sẽ tiếp tục nhắc khi có task quá hạn, sắp tới hạn, priority cao hoặc lâu chưa cập nhật.'
+  return 'AI sẽ tiếp tục nhắc khi có công việc quá hạn, sắp tới hạn, ưu tiên cao hoặc lâu chưa cập nhật.'
 })
 
 const heroSeverityClass = computed(() => {
@@ -361,7 +357,7 @@ const sourceLabel = computed(() => {
   const assigned = props.summary.assignedTaskCount
   const workspace = props.summary.workspaceTaskCount
 
-  return `${assigned} task của bạn · ${workspace} task workspace`
+  return `${assigned} việc của bạn · ${workspace} việc trong không gian`
 })
 
 watch(
@@ -377,34 +373,34 @@ watch(
 
 function categoryLabel(category: AiReminderCategory) {
   return {
-    overdue: 'Overdue',
-    'due-soon': 'Due soon',
-    'due-today': 'Today',
-    'due-week': 'Upcoming',
-    'high-priority': 'Priority',
-    'in-progress': 'Progress',
-    unscheduled: 'No deadline',
+    overdue: 'Quá hạn',
+    'due-soon': 'Sắp tới hạn',
+    'due-today': 'Hôm nay',
+    'due-week': 'Sắp tới',
+    'high-priority': 'Ưu tiên',
+    'in-progress': 'Đang làm',
+    unscheduled: 'Chưa có hạn',
   }[category]
 }
 
 function statusLabel(status: string) {
   const normalized = status.trim().toLowerCase()
 
-  if (normalized === 'todo') return 'To do'
-  if (normalized === 'doing') return 'Doing'
-  if (normalized === 'done') return 'Done'
+  if (normalized === 'todo') return 'Cần làm'
+  if (normalized === 'doing') return 'Đang làm'
+  if (normalized === 'done') return 'Đã xong'
 
-  return status || 'Unknown status'
+  return status || 'Chưa rõ trạng thái'
 }
 
 function priorityLabel(priority: string) {
   const normalized = priority.trim().toLowerCase()
 
-  if (normalized === 'high') return 'High priority'
-  if (normalized === 'medium') return 'Medium priority'
-  if (normalized === 'low') return 'Low priority'
+  if (normalized === 'high') return 'Ưu tiên cao'
+  if (normalized === 'medium') return 'Ưu tiên vừa'
+  if (normalized === 'low') return 'Ưu tiên thấp'
 
-  return priority || 'No priority'
+  return priority || 'Chưa có ưu tiên'
 }
 
 function formatGeneratedAt(value: Date) {

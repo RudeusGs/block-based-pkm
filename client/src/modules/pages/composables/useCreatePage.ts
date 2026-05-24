@@ -29,7 +29,7 @@ export function useCreatePage() {
       if (!result.isSuccess || !result.data) {
         createPageError.value = getApiResultErrorMessage(
           result,
-          'Không thể tạo page.'
+          'Không thể tạo trang.'
         )
 
         return null
@@ -39,7 +39,7 @@ export function useCreatePage() {
     } catch (error) {
       createPageError.value = getApiErrorMessage(
         error,
-        'Không thể tạo page. Vui lòng thử lại.'
+        'Không thể tạo trang. Vui lòng thử lại.'
       )
 
       return null

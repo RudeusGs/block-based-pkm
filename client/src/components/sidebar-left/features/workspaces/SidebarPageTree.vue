@@ -38,7 +38,7 @@
           v-if="canCreateChild"
           type="button"
           class="lunar-page-action"
-          title="Tạo subpage"
+          title="Tạo trang con"
           @click.stop="emit('createChild', page)"
         >
           <i class="bi bi-plus-lg"></i>

@@ -14,22 +14,22 @@
         class="workspace-drawer-panel"
         role="dialog"
         aria-modal="true"
-        aria-label="Create workspace"
+        aria-label="Tạo không gian làm việc"
         @click.stop
       >
         <div class="workspace-drawer-shell">
           <div class="workspace-drawer-topbar d-flex align-items-center justify-content-between">
             <div class="d-flex align-items-center gap-2 drawer-crumb">
               <i class="bi bi-layout-sidebar-inset"></i>
-              <span>Workspace</span>
+              <span>Không gian</span>
               <i class="bi bi-chevron-right drawer-crumb-separator"></i>
-              <span>New</span>
+              <span>Tạo mới</span>
             </div>
 
             <button
               class="ghost-icon-btn"
               type="button"
-              title="Close"
+              title="Đóng"
               :disabled="isCreatingWorkspace"
               @click="closeModal"
             >
@@ -48,14 +48,14 @@
                 v-model="form.name"
                 type="text"
                 class="workspace-title-input"
-                placeholder="Untitled workspace"
+                placeholder="Không gian chưa đặt tên"
                 maxlength="50"
                 :disabled="isCreatingWorkspace"
               />
 
               <div class="title-meta d-flex align-items-center justify-content-between mt-2">
                 <span class="inline-hint" :class="{ danger: nameError }">
-                  {{ nameError || 'Tên workspace sẽ hiển thị ở sidebar và danh sách workspace.' }}
+                  {{ nameError || 'Tên không gian sẽ hiển thị ở thanh bên và danh sách không gian.' }}
                 </span>
 
                 <span
@@ -71,7 +71,7 @@
               <div class="property-row">
                 <div class="property-label">
                   <i class="bi bi-shield-lock"></i>
-                  <span>Visibility</span>
+                  <span>Hiển thị</span>
                 </div>
 
                 <div class="property-value">
@@ -106,7 +106,7 @@
                   </div>
 
                   <p class="inline-hint mt-2 mb-0">
-                    Public chỉ mở quyền đọc. Quyền tạo/sửa/xóa vẫn theo role workspace.
+                    Công khai chỉ mở quyền đọc. Quyền tạo/sửa/xóa vẫn theo vai trò trong không gian.
                   </p>
                 </div>
               </div>
@@ -114,7 +114,7 @@
               <div class="property-row">
                 <div class="property-label">
                   <i class="bi bi-text-paragraph"></i>
-                  <span>Description</span>
+                  <span>Mô tả</span>
                 </div>
 
                 <div class="property-value">
@@ -123,7 +123,7 @@
                     class="workspace-description-input"
                     rows="6"
                     maxlength="500"
-                    placeholder="Write a short description about this workspace..."
+                    placeholder="Viết mô tả ngắn về không gian này..."
                     :disabled="isCreatingWorkspace"
                   />
 
@@ -132,7 +132,7 @@
                       class="inline-hint"
                       :class="{ danger: descriptionError }"
                     >
-                      {{ descriptionError || 'Mô tả giúp team hiểu workspace này dùng để làm gì.' }}
+                      {{ descriptionError || 'Mô tả giúp nhóm hiểu không gian này dùng để làm gì.' }}
                     </span>
 
                     <span
@@ -147,7 +147,7 @@
             </section>
 
             <section class="workspace-preview mt-4">
-              <div class="preview-label">Preview in sidebar</div>
+              <div class="preview-label">Xem trước trong thanh bên</div>
 
               <div class="preview-card d-flex align-items-center gap-3">
                 <div class="preview-icon">
@@ -165,7 +165,7 @@
                 </div>
 
                 <span class="preview-visibility">
-                  {{ form.visibility === 'public' ? 'Public' : 'Private' }}
+                  {{ form.visibility === 'public' ? 'Công khai' : 'Riêng tư' }}
                 </span>
               </div>
             </section>
@@ -178,9 +178,9 @@
 
           <footer class="workspace-drawer-footer">
             <div class="keyboard-hint">
-              <span>Ctrl + Enter to create</span>
+              <span>Ctrl + Enter để tạo</span>
               <span class="dot-separator"></span>
-              <span>Esc to close</span>
+              <span>Esc để đóng</span>
             </div>
 
             <div class="drawer-actions d-flex align-items-center gap-2">
@@ -190,7 +190,7 @@
                 :disabled="isCreatingWorkspace"
                 @click="closeModal"
               >
-                Cancel
+                Hủy
               </button>
 
               <button
@@ -205,7 +205,7 @@
                 ></span>
 
                 <span>
-                  {{ isCreatingWorkspace ? 'Creating...' : 'Create workspace' }}
+                  {{ isCreatingWorkspace ? 'Đang tạo...' : 'Tạo không gian' }}
                 </span>
               </button>
             </div>
@@ -262,14 +262,14 @@ const visibilityOptions: Array<{
 }> = [
   {
     value: 'private',
-    label: 'Private',
-    description: 'Chỉ member được xem nội dung workspace.',
+    label: 'Riêng tư',
+    description: 'Chỉ thành viên được xem nội dung không gian.',
     icon: 'bi bi-lock-fill',
   },
   {
     value: 'public',
-    label: 'Public',
-    description: 'User đăng nhập có thể xem, không tự có quyền sửa.',
+    label: 'Công khai',
+    description: 'Người dùng đăng nhập có thể xem, không tự có quyền sửa.',
     icon: 'bi bi-globe2',
   },
 ]
@@ -285,8 +285,8 @@ const form = reactive<CreateWorkspaceForm>({
 const nameError = computed(() => {
   const value = form.name.trim()
 
-  if (!value) return 'Tên Workspace không được để trống.'
-  if (value.length > 50) return 'Tên Workspace không được quá 50 ký tự.'
+  if (!value) return 'Tên không gian không được để trống.'
+  if (value.length > 50) return 'Tên không gian không được quá 50 ký tự.'
 
   return ''
 })
@@ -295,7 +295,7 @@ const descriptionError = computed(() => {
   const value = form.description.trim()
 
   if (value.length > 500) {
-    return 'Description không được quá 500 ký tự.'
+    return 'Mô tả không được quá 500 ký tự.'
   }
 
   return ''
@@ -306,11 +306,11 @@ const isFormValid = computed(() => {
 })
 
 const previewName = computed(() => {
-  return form.name.trim() || 'Untitled workspace'
+  return form.name.trim() || 'Không gian chưa đặt tên'
 })
 
 const previewDescription = computed(() => {
-  return form.description.trim() || 'No description'
+  return form.description.trim() || 'Chưa có mô tả'
 })
 
 watch(

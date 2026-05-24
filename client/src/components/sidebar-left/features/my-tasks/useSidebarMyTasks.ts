@@ -36,7 +36,7 @@ export function useSidebarMyTasks() {
       if (!result.isSuccess || !result.data) {
         myTaskError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải My Tasks.'
+          'Không thể tải việc của tôi.'
         )
         return
       }
@@ -46,7 +46,7 @@ export function useSidebarMyTasks() {
     } catch (error) {
       myTaskError.value = getApiErrorMessage(
         error,
-        'Không thể tải My Tasks.'
+        'Không thể tải việc của tôi.'
       )
     } finally {
       isLoadingMyTasks.value = false

@@ -27,7 +27,7 @@ export function useUpdateWorkspace() {
       if (!result.isSuccess || !result.data) {
         workspaceSettingsError.value = getApiResultErrorMessage(
           result,
-          'Không thể tải workspace.'
+          'Không thể tải không gian.'
         )
         return null
       }
@@ -36,7 +36,7 @@ export function useUpdateWorkspace() {
     } catch (error) {
       workspaceSettingsError.value = getApiErrorMessage(
         error,
-        'Không thể tải workspace.'
+        'Không thể tải không gian.'
       )
       return null
     } finally {
@@ -59,7 +59,7 @@ export function useUpdateWorkspace() {
       if (!result.isSuccess || !result.data) {
         workspaceSettingsError.value = getApiResultErrorMessage(
           result,
-          'Không thể cập nhật workspace.'
+          'Không thể cập nhật không gian.'
         )
         return null
       }
@@ -68,7 +68,7 @@ export function useUpdateWorkspace() {
     } catch (error) {
       workspaceSettingsError.value = getApiErrorMessage(
         error,
-        'Không thể cập nhật workspace.'
+        'Không thể cập nhật không gian.'
       )
       return null
     } finally {
