@@ -85,39 +85,71 @@
         :style="textToolbarStyle"
         @mousedown.stop="keepTextToolbarOpen"
       >
-        <select
-          v-model="selectedFontFamily"
-          class="word-toolbar-select word-toolbar-font"
-          title="Font"
-          @mousedown="rememberTextSelection"
-          @change="applyFontFamily"
+        <div
+          class="word-toolbar-dropdown word-toolbar-font"
+          :class="{ open: activeTextDropdown === 'font' }"
         >
-          <option value="">Font</option>
-          <option
-            v-for="font in fontFamilies"
-            :key="font.value"
-            :value="font.value"
+          <button
+            type="button"
+            class="word-toolbar-dropdown-trigger"
+            title="Font"
+            @mousedown.prevent.stop="toggleTextDropdown('font')"
           >
-            {{ font.label }}
-          </option>
-        </select>
+            <span>{{ selectedFontFamilyLabel }}</span>
+            <i class="bi bi-chevron-down"></i>
+          </button>
 
-        <select
-          v-model="selectedFontSize"
-          class="word-toolbar-select word-toolbar-size"
-          title="Size"
-          @mousedown="rememberTextSelection"
-          @change="applyFontSize"
-        >
-          <option value="">Size</option>
-          <option
-            v-for="size in fontSizes"
-            :key="size.value"
-            :value="size.value"
+          <div
+            v-if="activeTextDropdown === 'font'"
+            class="word-toolbar-dropdown-menu font-menu"
+            @mousedown.prevent.stop
           >
-            {{ size.label }}
-          </option>
-        </select>
+            <button
+              v-for="font in fontFamilies"
+              :key="font.value"
+              type="button"
+              class="word-toolbar-dropdown-item"
+              :class="{ active: selectedFontFamily === font.value }"
+              :style="{ fontFamily: font.value }"
+              @mousedown.prevent.stop="chooseFontFamily(font.value)"
+            >
+              {{ font.label }}
+            </button>
+          </div>
+        </div>
+
+        <div
+          class="word-toolbar-dropdown word-toolbar-size"
+          :class="{ open: activeTextDropdown === 'size' }"
+        >
+          <button
+            type="button"
+            class="word-toolbar-dropdown-trigger"
+            title="Size"
+            @mousedown.prevent.stop="toggleTextDropdown('size')"
+          >
+            <span>{{ selectedFontSizeLabel }}</span>
+            <i class="bi bi-chevron-down"></i>
+          </button>
+
+          <div
+            v-if="activeTextDropdown === 'size'"
+            class="word-toolbar-dropdown-menu size-menu"
+            @mousedown.prevent.stop
+          >
+            <button
+              v-for="size in fontSizes"
+              :key="size.value"
+              type="button"
+              class="word-toolbar-dropdown-item"
+              :class="{ active: selectedFontSize === size.value }"
+              :style="{ fontSize: size.value }"
+              @mousedown.prevent.stop="chooseFontSize(size.value)"
+            >
+              {{ size.label }}
+            </button>
+          </div>
+        </div>
 
         <span class="word-toolbar-divider"></span>
 
@@ -395,8 +427,6 @@ const {
   selectedFontSize,
   selectedTextColor,
   selectedHighlightColor,
-  fontFamilies,
-  fontSizes,
 
   keepTextToolbarOpen,
   rememberTextSelection,
@@ -418,6 +448,128 @@ const {
 } = usePageEditor(props)
 
 const canEditPage = computed(() => props.canEdit !== false && canEditDocument.value)
+
+const fontFamilies = [
+  {
+    label: 'Default',
+    value:
+      'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+  },
+  {
+    label: 'Arial',
+    value: 'Arial, Helvetica, sans-serif',
+  },
+  {
+    label: 'Times New Roman',
+    value: '"Times New Roman", Times, serif',
+  },
+  {
+    label: 'Georgia',
+    value: 'Georgia, Cambria, "Times New Roman", Times, serif',
+  },
+  {
+    label: 'Verdana',
+    value: 'Verdana, Geneva, sans-serif',
+  },
+  {
+    label: 'Tahoma',
+    value: 'Tahoma, Geneva, sans-serif',
+  },
+  {
+    label: 'Trebuchet MS',
+    value: '"Trebuchet MS", Helvetica, sans-serif',
+  },
+  {
+    label: 'Courier New',
+    value: '"Courier New", Courier, monospace',
+  },
+  {
+    label: 'Monospace',
+    value:
+      '"JetBrains Mono", "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Monaco, monospace',
+  },
+  {
+    label: 'Comic Sans',
+    value: '"Comic Sans MS", "Comic Sans", cursive',
+  },
+]
+
+const fontSizes = [
+  { label: '12', value: '12px' },
+  { label: '14', value: '14px' },
+  { label: '16', value: '16px' },
+  { label: '18', value: '18px' },
+  { label: '20', value: '20px' },
+  { label: '24', value: '24px' },
+  { label: '28', value: '28px' },
+  { label: '32', value: '32px' },
+  { label: '40', value: '40px' },
+  { label: '48', value: '48px' },
+]
+
+type TextToolbarDropdownType = 'font' | 'size'
+type TextToolbarOption = {
+  label: string
+  value: string
+}
+
+const activeTextDropdown = ref<TextToolbarDropdownType | null>(null)
+
+function getOptionArray(options: unknown): TextToolbarOption[] {
+  if (Array.isArray(options)) {
+    return options as TextToolbarOption[]
+  }
+
+  const maybeRef = options as { value?: TextToolbarOption[] }
+
+  if (Array.isArray(maybeRef?.value)) {
+    return maybeRef.value
+  }
+
+  return []
+}
+
+const selectedFontFamilyLabel = computed(() => {
+  const option = getOptionArray(fontFamilies).find(
+    (item) => item.value === selectedFontFamily.value
+  )
+
+  return option?.label ?? 'Font'
+})
+
+const selectedFontSizeLabel = computed(() => {
+  const option = getOptionArray(fontSizes).find(
+    (item) => item.value === selectedFontSize.value
+  )
+
+  return option?.label ?? 'Size'
+})
+
+function toggleTextDropdown(type: TextToolbarDropdownType) {
+  rememberTextSelection()
+
+  activeTextDropdown.value = activeTextDropdown.value === type ? null : type
+}
+
+function chooseFontFamily(value: string) {
+  rememberTextSelection()
+  selectedFontFamily.value = value
+  applyFontFamily()
+  activeTextDropdown.value = null
+}
+
+function chooseFontSize(value: string) {
+  rememberTextSelection()
+  selectedFontSize.value = value
+  applyFontSize()
+  activeTextDropdown.value = null
+}
+
+watch(isTextToolbarVisible, (visible) => {
+  if (!visible) {
+    activeTextDropdown.value = null
+  }
+})
 
 function preventReadonlyMutation(event: Event) {
   if (canEditPage.value) return false
@@ -473,10 +625,14 @@ function handleEditorKeydownGuarded(event: KeyboardEvent) {
   handleEditorKeydown(event)
 }
 
-function handleEditorInputGuarded(event: Event) {
-  if (!canEditPage.value) return
+function handleEditorInputGuarded(event?: Event) {
+  if (!canEditPage.value) {
+    event?.preventDefault()
+    event?.stopPropagation()
+    return
+  }
 
-  handleEditorInput(event)
+  handleEditorInput()
 }
 
 function handleEditorFocusOutGuarded(event: FocusEvent) {

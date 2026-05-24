@@ -1753,3 +1753,103 @@ body .tc-popover__item--focused,
 .page-editor-holder--readonly [contenteditable='true'] {
   caret-color: transparent;
 }
+/* =========================================================
+   Word toolbar custom dropdown
+   Fix native select bị chặn trong floating text toolbar
+========================================================= */
+
+.word-toolbar-dropdown {
+  position: relative;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  z-index: 20010;
+}
+
+.word-toolbar-dropdown-trigger {
+  width: 100%;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 10px;
+  color: #dddddd;
+  background: transparent;
+  font-family: var(--pe-font-sans);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  outline: none;
+}
+
+.word-toolbar-dropdown-trigger:hover,
+.word-toolbar-dropdown.open .word-toolbar-dropdown-trigger {
+  color: #ffffff;
+  background: var(--pe-active);
+}
+
+.word-toolbar-dropdown-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.word-toolbar-dropdown-trigger i {
+  color: #9b9b9b;
+  font-size: 11px;
+  transition: transform 0.12s ease;
+}
+
+.word-toolbar-dropdown.open .word-toolbar-dropdown-trigger i {
+  transform: rotate(180deg);
+}
+
+.word-toolbar-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 20020;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid var(--pe-border);
+  border-radius: 10px;
+  background: #191919;
+  box-shadow:
+    0 18px 52px rgba(0, 0, 0, 0.48),
+    0 0 0 1px rgba(255, 255, 255, 0.035);
+}
+
+.word-toolbar-dropdown-menu.font-menu {
+  width: 190px;
+}
+
+.word-toolbar-dropdown-menu.size-menu {
+  width: 96px;
+}
+
+.word-toolbar-dropdown-item {
+  width: 100%;
+  min-height: 32px;
+  border: 0;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  padding: 6px 9px;
+  color: #d9d9d9;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.word-toolbar-dropdown-item:hover,
+.word-toolbar-dropdown-item.active {
+  color: #ffffff;
+  background: var(--pe-active);
+}

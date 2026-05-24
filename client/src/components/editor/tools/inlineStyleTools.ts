@@ -119,6 +119,11 @@ class DropdownInlineStyleTool {
   protected config: any
   protected savedRange: Range | null = null
 
+  private root: HTMLDivElement | null = null
+  private menu: HTMLDivElement | null = null
+  private button: HTMLButtonElement | null = null
+  private isOpen = false
+
   static get isInline() {
     return true
   }
@@ -154,42 +159,117 @@ class DropdownInlineStyleTool {
   }
 
   render(): HTMLElement {
-    const select = document.createElement('select')
-    select.className = 'ce-inline-style-select'
-    select.title = this.config.title ?? 'Text style'
+    const root = document.createElement('div')
+    root.className = 'ce-inline-style-dropdown'
+    root.title = this.config.title ?? 'Text style'
 
-    const placeholder = document.createElement('option')
-    placeholder.value = ''
-    placeholder.textContent = this.config.placeholder ?? 'Style'
-    placeholder.disabled = true
-    placeholder.selected = true
-    select.appendChild(placeholder)
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.className = 'ce-inline-style-trigger'
+    button.setAttribute('aria-haspopup', 'listbox')
+    button.setAttribute('aria-expanded', 'false')
+
+    const label = document.createElement('span')
+    label.className = 'ce-inline-style-trigger-label'
+    label.textContent = this.config.placeholder ?? 'Style'
+
+    const caret = document.createElement('span')
+    caret.className = 'ce-inline-style-trigger-caret'
+    caret.textContent = '▾'
+
+    button.appendChild(label)
+    button.appendChild(caret)
+
+    const menu = document.createElement('div')
+    menu.className = 'ce-inline-style-menu'
+    menu.setAttribute('role', 'listbox')
+    menu.hidden = true
 
     this.getOptions().forEach((option) => {
-      const item = document.createElement('option')
-      item.value = option.value
+      const item = document.createElement('button')
+      item.type = 'button'
+      item.className = 'ce-inline-style-item'
       item.textContent = option.label
-      select.appendChild(item)
+      item.setAttribute('role', 'option')
+
+      const dataType = this.getDataType()
+
+      if (dataType === 'font-family') {
+        item.style.fontFamily = option.value
+      }
+
+      if (dataType === 'font-size') {
+        item.style.fontSize = option.value
+        item.style.lineHeight = '1.25'
+      }
+
+      item.addEventListener('pointerdown', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+
+        this.saveSelection()
+        this.applyValue(option.value)
+        this.closeMenu()
+      })
+
+      item.addEventListener('click', (event) => {
+        event.preventDefault()
+        event.stopPropagation()
+      })
+
+      menu.appendChild(item)
     })
 
-    select.addEventListener('mousedown', (event) => {
+    button.addEventListener('pointerdown', (event) => {
+      event.preventDefault()
       event.stopPropagation()
+
       this.saveSelection()
+      this.toggleMenu()
     })
 
-    select.addEventListener('click', (event) => {
+    button.addEventListener('click', (event) => {
+      event.preventDefault()
       event.stopPropagation()
-      this.saveSelection()
     })
 
-    select.addEventListener('change', () => {
-      const value = select.value
-
-      this.applyValue(value)
-      select.selectedIndex = 0
+    root.addEventListener('pointerdown', (event) => {
+      event.stopPropagation()
     })
 
-    return select
+    root.addEventListener('click', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+    })
+
+    root.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        event.stopPropagation()
+        this.closeMenu()
+      }
+    })
+
+    root.appendChild(button)
+    root.appendChild(menu)
+
+    this.root = root
+    this.button = button
+    this.menu = menu
+
+    document.removeEventListener(
+      'pointerdown',
+      this.handleOutsidePointerDown,
+      true
+    )
+
+    document.addEventListener(
+      'pointerdown',
+      this.handleOutsidePointerDown,
+      true
+    )
+
+    return root
   }
 
   surround(range: Range) {
@@ -198,6 +278,14 @@ class DropdownInlineStyleTool {
 
   checkState() {
     return false
+  }
+
+  destroy() {
+    document.removeEventListener(
+      'pointerdown',
+      this.handleOutsidePointerDown,
+      true
+    )
   }
 
   protected getOptions(): InlineStyleOption[] {
@@ -249,6 +337,43 @@ class DropdownInlineStyleTool {
 
     applyStyleToRange(range, this.getStyle(value), this.getDataType())
     this.savedRange = null
+  }
+
+  private toggleMenu() {
+    if (this.isOpen) {
+      this.closeMenu()
+      return
+    }
+
+    this.openMenu()
+  }
+
+  private openMenu() {
+    if (!this.menu || !this.button || !this.root) return
+
+    this.isOpen = true
+    this.menu.hidden = false
+    this.root.classList.add('open')
+    this.button.setAttribute('aria-expanded', 'true')
+  }
+
+  private closeMenu() {
+    if (!this.menu || !this.button || !this.root) return
+
+    this.isOpen = false
+    this.menu.hidden = true
+    this.root.classList.remove('open')
+    this.button.setAttribute('aria-expanded', 'false')
+  }
+
+  private handleOutsidePointerDown = (event: PointerEvent) => {
+    if (!this.root) return
+
+    const target = event.target as Node | null
+
+    if (target && !this.root.contains(target)) {
+      this.closeMenu()
+    }
   }
 }
 
