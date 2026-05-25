@@ -1,3 +1,5 @@
-﻿namespace Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
+using Pkm.Application.Common.UseCases;
 
-public sealed record DeleteWorkspaceCommand(Guid WorkspaceId);
+namespace Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
+
+public sealed record DeleteWorkspaceCommand(Guid WorkspaceId) : ICommand;

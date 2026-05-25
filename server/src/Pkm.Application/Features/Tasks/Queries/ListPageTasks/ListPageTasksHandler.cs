@@ -1,24 +1,25 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Application.Features.Tasks.Models;
 
 namespace Pkm.Application.Features.Tasks.Queries.ListPageTasks;
 
-public sealed class ListPageTasksHandler
+public sealed class ListPageTasksHandler : IQueryHandler<ListPageTasksQuery, WorkTaskPagedResultDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskReadRepository _workTaskRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
     private readonly ListPageTasksQueryValidator _validator;
 
     public ListPageTasksHandler(
         ICurrentUser currentUser,
         IPageAccessEvaluator pageAccessEvaluator,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskReadRepository workTaskRepository,
         ITaskAssigneeRepository taskAssigneeRepository,
         ListPageTasksQueryValidator validator)
     {

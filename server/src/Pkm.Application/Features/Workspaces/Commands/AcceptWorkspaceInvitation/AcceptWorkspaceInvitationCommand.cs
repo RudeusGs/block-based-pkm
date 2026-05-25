@@ -1,4 +1,6 @@
-﻿namespace Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Workspaces.Models;
 
-public sealed record AcceptWorkspaceInvitationCommand(
-    string Token);
+namespace Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
+
+public sealed record AcceptWorkspaceInvitationCommand(string Token) : ICommand<WorkspaceMemberDto>;

@@ -1,13 +1,14 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Authentication.Models;
 using DomainRefreshToken = Pkm.Domain.Users.RefreshToken;
 
 namespace Pkm.Application.Features.Authentication.Commands.RefreshToken;
 
-public sealed class RefreshTokenHandler
+public sealed class RefreshTokenHandler : ICommandHandler<RefreshTokenCommand, AuthTokenDto>
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IUserRepository _userRepository;

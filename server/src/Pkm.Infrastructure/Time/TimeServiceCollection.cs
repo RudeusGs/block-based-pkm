@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Pkm.Application.Abstractions.Time;
+using Microsoft.Extensions.DependencyInjection;
+using Pkm.Application.Common.Abstractions.Time;
 
 namespace Pkm.Infrastructure.Time;
 

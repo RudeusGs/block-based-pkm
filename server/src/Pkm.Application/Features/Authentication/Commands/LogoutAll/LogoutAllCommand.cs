@@ -1,4 +1,5 @@
-﻿namespace Pkm.Application.Features.Authentication.Commands.LogoutAll;
+using Pkm.Application.Common.UseCases;
 
-public sealed record LogoutAllCommand(
-    string? IpAddress = null);
+namespace Pkm.Application.Features.Authentication.Commands.LogoutAll;
+
+public sealed record LogoutAllCommand(string? IpAddress = null) : ICommand;

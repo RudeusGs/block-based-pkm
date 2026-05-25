@@ -1,4 +1,4 @@
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Social;
 
 namespace Pkm.Domain.Messaging;

@@ -1,4 +1,6 @@
-﻿namespace Pkm.Application.Features.Tasks.Commands.RestoreTaskComment;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Tasks.Models;
 
-public sealed record RestoreTaskCommentCommand(
-    Guid CommentId);
+namespace Pkm.Application.Features.Tasks.Commands.RestoreTaskComment;
+
+public sealed record RestoreTaskCommentCommand(Guid CommentId) : ICommand<TaskCommentDto>;

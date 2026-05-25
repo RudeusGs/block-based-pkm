@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Features.Social.Models;
 using Pkm.Domain.Social;
 using Pkm.Domain.Users;

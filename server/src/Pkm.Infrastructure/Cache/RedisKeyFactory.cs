@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Infrastructure.Cache;
 

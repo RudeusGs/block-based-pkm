@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
-using Pkm.Application.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Infrastructure.Realtime.Hubs;
 
 namespace Pkm.Infrastructure.Realtime.Publishers;

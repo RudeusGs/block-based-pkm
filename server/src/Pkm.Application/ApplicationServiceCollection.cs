@@ -1,241 +1,106 @@
+using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
-using Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
-using Pkm.Application.Features.Account.Commands.ChangeMyPassword;
-using Pkm.Application.Features.Account.Commands.UpdateMyProfile;
-using Pkm.Application.Features.Account.Queries.GetMyProfile;
-using Pkm.Application.Features.Authentication.Commands.Login;
-using Pkm.Application.Features.Authentication.Commands.Logout;
-using Pkm.Application.Features.Authentication.Commands.LogoutAll;
-using Pkm.Application.Features.Authentication.Commands.RefreshToken;
-using Pkm.Application.Features.Authentication.Commands.Register;
-using Pkm.Application.Features.Authentication.Queries.GetUserRoles;
-using Pkm.Application.Features.Documents.Commands.AcquireBlockLease;
-using Pkm.Application.Features.Documents.Commands.CreateBlock;
-using Pkm.Application.Features.Documents.Commands.DeleteBlock;
-using Pkm.Application.Features.Documents.Commands.MoveBlock;
-using Pkm.Application.Features.Documents.Commands.ReleaseBlockLease;
-using Pkm.Application.Features.Documents.Commands.RenewBlockLease;
-using Pkm.Application.Features.Documents.Commands.UpdateBlock;
 using Pkm.Application.Features.Documents.Policies;
-using Pkm.Application.Features.Documents.Queries.GetBlock;
-using Pkm.Application.Features.Documents.Queries.GetBlockLease;
-using Pkm.Application.Features.Documents.Queries.GetPagePresence;
-using Pkm.Application.Features.Documents.Queries.ListPageBlocks;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Application.Features.Files.Services;
-using Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
-using Pkm.Application.Features.Files.Commands.UploadMyAvatarImage;
-using Pkm.Application.Features.Files.Commands.UploadImage;
-using Pkm.Application.Features.Notifications.Commands.DeleteNotification;
-using Pkm.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
-using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsRead;
-using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsUnread;
-using Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
-using Pkm.Application.Features.Notifications.Queries.ListNotifications;
+using Pkm.Application.Features.Messaging.Services;
 using Pkm.Application.Features.Notifications.Services;
-using Pkm.Application.Features.Pages.Commands.CreatePage;
-using Pkm.Application.Features.Pages.Queries.ListArchivedPages;
-using Pkm.Application.Features.Pages.Queries.ListRecentPages;
-using Pkm.Application.Features.Pages.Queries.ListFavoritePages;
-using Pkm.Application.Features.Pages.Commands.RestorePage;
-using Pkm.Application.Features.Pages.Commands.DuplicatePage;
-using Pkm.Application.Features.Pages.Commands.UnfavoritePage;
-using Pkm.Application.Features.Pages.Commands.FavoritePage;
-using Pkm.Application.Features.Pages.Commands.DeletePage;
-using Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
 using Pkm.Application.Features.Pages.Policies;
-using Pkm.Application.Features.Pages.Queries.GetPage;
-using Pkm.Application.Features.Pages.Queries.ListSubPages;
-using Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
-using Pkm.Application.Features.Pages.Queries.SearchPages;
-using Pkm.Application.Features.Recommendations.Commands.AcceptTaskRecommendation;
-using Pkm.Application.Features.Recommendations.Commands.CompleteTaskRecommendation;
-using Pkm.Application.Features.Recommendations.Commands.GenerateTaskRecommendations;
-using Pkm.Application.Features.Recommendations.Commands.RejectTaskRecommendation;
-using Pkm.Application.Features.Recommendations.Commands.UpdateUserTaskPreference;
-using Pkm.Application.Features.Recommendations.Queries.GetUserTaskPreference;
-using Pkm.Application.Features.Recommendations.Queries.ListTaskRecommendations;
 using Pkm.Application.Features.Recommendations.Services;
 using Pkm.Application.Features.Social.Services;
-using Pkm.Application.Features.Messaging.Services;
-using Pkm.Application.Features.Tasks.Commands.AssignTask;
-using Pkm.Application.Features.Tasks.Commands.ChangeWorkTaskStatus;
-using Pkm.Application.Features.Tasks.Commands.CreateTaskComment;
-using Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
-using Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
-using Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
-using Pkm.Application.Features.Tasks.Commands.RestoreTaskComment;
-using Pkm.Application.Features.Tasks.Commands.UnassignTask;
-using Pkm.Application.Features.Tasks.Commands.UpdateTaskComment;
-using Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
 using Pkm.Application.Features.Tasks.Policies;
-using Pkm.Application.Features.Tasks.Queries.GetWorkTaskById;
-using Pkm.Application.Features.Tasks.Queries.ListMyAssignedTasks;
-using Pkm.Application.Features.Tasks.Queries.ListPageTasks;
-using Pkm.Application.Features.Tasks.Queries.ListTaskComments;
-using Pkm.Application.Features.Tasks.Queries.ListWorkspaceTasks;
-using Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
-using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
-using Pkm.Application.Features.Workspaces.Commands.ChangeWorkspaceMemberRole;
-using Pkm.Application.Features.Workspaces.Commands.CreateWorkspace;
-using Pkm.Application.Features.Workspaces.Commands.DeleteWorkspace;
-using Pkm.Application.Features.Workspaces.Commands.JoinPublicWorkspaceAsViewer;
-using Pkm.Application.Features.Workspaces.Commands.TransferWorkspaceOwnership;
-using Pkm.Application.Features.Workspaces.Commands.LeaveWorkspace;
-using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
-using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Policies;
-using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
-using Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
-using Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
+
 namespace Pkm.Application;
 
 public static class ApplicationServiceCollection
 {
     public static IServiceCollection AddApplicationServices(this IServiceCollection services)
     {
+        var applicationAssembly = typeof(ApplicationServiceCollection).Assembly;
+
+        services.AddApplicationPolicies();
+        services.AddApplicationServicesInternal();
+        services.AddScoped<IUseCaseDispatcher, UseCaseDispatcher>();
+        services.AddConcreteTypesBySuffix(applicationAssembly, "Handler", ServiceLifetime.Scoped);
+        services.AddConcreteTypesBySuffix(applicationAssembly, "Validator", ServiceLifetime.Scoped);
+
+        return services;
+    }
+
+    private static IServiceCollection AddApplicationPolicies(this IServiceCollection services)
+    {
         services.AddScoped<IWorkspaceAccessEvaluator, WorkspaceAccessEvaluator>();
         services.AddScoped<IPageAccessEvaluator, PageAccessEvaluator>();
         services.AddScoped<IDocumentAccessEvaluator, DocumentAccessEvaluator>();
         services.AddScoped<ITaskAccessEvaluator, TaskAccessEvaluator>();
+
+        return services;
+    }
+
+    private static IServiceCollection AddApplicationServicesInternal(this IServiceCollection services)
+    {
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
-        services.AddScoped<ISocialApplicationService, SocialApplicationService>();
-        services.AddScoped<IMessagingApplicationService, MessagingApplicationService>();
+        services.AddScoped<SocialApplicationService>();
+        services.AddScoped<ISocialApplicationService>(sp => sp.GetRequiredService<SocialApplicationService>());
+        services.AddScoped<ISocialCommandService>(sp => sp.GetRequiredService<SocialApplicationService>());
+        services.AddScoped<ISocialQueryService>(sp => sp.GetRequiredService<SocialApplicationService>());
 
+        services.AddScoped<MessagingApplicationService>();
+        services.AddScoped<IMessagingApplicationService>(sp => sp.GetRequiredService<MessagingApplicationService>());
+        services.AddScoped<IMessagingCommandService>(sp => sp.GetRequiredService<MessagingApplicationService>());
+        services.AddScoped<IMessagingQueryService>(sp => sp.GetRequiredService<MessagingApplicationService>());
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
-
-        services.AddScoped<LoginCommandValidator>();
-        services.AddScoped<RegisterCommandValidator>();
-        services.AddScoped<CreateWorkspaceCommandValidator>();
-        services.AddScoped<UpdateWorkspaceCommandValidator>();
-        services.AddScoped<AddWorkspaceMemberCommandValidator>();
-        services.AddScoped<CreateWorkTaskCommandValidator>();
-        services.AddScoped<UpdateWorkTaskCommandValidator>();
-        services.AddScoped<AssignTaskCommandValidator>();
-        services.AddScoped<UnassignTaskCommandValidator>();
-        services.AddScoped<DeleteWorkTaskCommandValidator>();
-        services.AddScoped<ChangeWorkTaskStatusCommandValidator>();
-        services.AddScoped<ListPageTasksQueryValidator>();
-        services.AddScoped<ListWorkspaceTasksQueryValidator>();
-        services.AddScoped<ListNotificationsQueryValidator>();
-        services.AddScoped<ListMyAssignedTasksQueryValidator>();
-
-        services.AddScoped<CreateTaskCommentCommandValidator>();
-        services.AddScoped<UpdateTaskCommentCommandValidator>();
-        services.AddScoped<DeleteTaskCommentCommandValidator>();
-        services.AddScoped<RestoreTaskCommentCommandValidator>();
-        services.AddScoped<ListTaskCommentsQueryValidator>();
-
-        services.AddScoped<GenerateTaskRecommendationsCommandValidator>();
-        services.AddScoped<ListTaskRecommendationsQueryValidator>();
-        services.AddScoped<UpdateUserTaskPreferenceCommandValidator>();
-
-        services.AddScoped<RefreshTokenCommandValidator>();
-        services.AddScoped<LogoutCommandValidator>();
-        services.AddScoped<UpdateMyProfileCommandValidator>();
-        services.AddScoped<ChangeMyPasswordCommandValidator>();
-
-        services.AddScoped<LoginHandler>();
-        services.AddScoped<RegisterHandler>();
-        services.AddScoped<GetUserRolesHandler>();
-
-        services.AddScoped<CreateWorkspaceHandler>();
-        services.AddScoped<UpdateWorkspaceHandler>();
-        services.AddScoped<DeleteWorkspaceHandler>();
-        services.AddScoped<AddWorkspaceMemberHandler>();
-        services.AddScoped<AcceptWorkspaceInvitationHandler>();
-        services.AddScoped<ChangeWorkspaceMemberRoleHandler>();
-        services.AddScoped<RemoveWorkspaceMemberHandler>();
-        services.AddScoped<JoinPublicWorkspaceAsViewerHandler>();
-        services.AddScoped<LeaveWorkspaceHandler>();
-        services.AddScoped<TransferWorkspaceOwnershipHandler>();
-
-        services.AddScoped<GetWorkspaceByIdHandler>();
-        services.AddScoped<ListMyWorkspacesHandler>();
-        services.AddScoped<ListWorkspaceMembersHandler>();
-
-        services.AddScoped<CreatePageHandler>();
-        services.AddScoped<UpdatePageMetadataHandler>();
-        services.AddScoped<DeletePageHandler>();
-        services.AddScoped<FavoritePageHandler>();
-        services.AddScoped<UnfavoritePageHandler>();
-        services.AddScoped<DuplicatePageHandler>();
-        services.AddScoped<RestorePageHandler>();
-
-        services.AddScoped<GetPageHandler>();
-        services.AddScoped<ListWorkspacePagesHandler>();
-        services.AddScoped<ListSubPagesHandler>();
-        services.AddScoped<SearchPagesHandler>();
-        services.AddScoped<ListFavoritePagesHandler>();
-        services.AddScoped<ListRecentPagesHandler>();
-        services.AddScoped<ListArchivedPagesHandler>();
-
-        services.AddScoped<GetBlockHandler>();
-        services.AddScoped<GetBlockLeaseHandler>();
-        services.AddScoped<GetPagePresenceHandler>();
-        services.AddScoped<ListPageBlocksHandler>();
-
-        services.AddScoped<CreateBlockHandler>();
-        services.AddScoped<UpdateBlockHandler>();
-        services.AddScoped<MoveBlockHandler>();
-        services.AddScoped<DeleteBlockHandler>();
-
-        services.AddScoped<AcquireBlockLeaseHandler>();
-        services.AddScoped<RenewBlockLeaseHandler>();
-        services.AddScoped<ReleaseBlockLeaseHandler>();
-
-        services.AddScoped<CreateWorkTaskHandler>();
-        services.AddScoped<UpdateWorkTaskHandler>();
-        services.AddScoped<DeleteWorkTaskHandler>();
-        services.AddScoped<AssignTaskHandler>();
-        services.AddScoped<UnassignTaskHandler>();
-        services.AddScoped<ChangeWorkTaskStatusHandler>();
-        services.AddScoped<ListMyAssignedTasksHandler>();
-
-        services.AddScoped<GetWorkTaskByIdHandler>();
-        services.AddScoped<ListPageTasksHandler>();
-        services.AddScoped<ListWorkspaceTasksHandler>();
-
-        services.AddScoped<ListTaskCommentsHandler>();
-        services.AddScoped<CreateTaskCommentHandler>();
-        services.AddScoped<UpdateTaskCommentHandler>();
-        services.AddScoped<DeleteTaskCommentHandler>();
-        services.AddScoped<RestoreTaskCommentHandler>();
-
-        services.AddScoped<ListWorkspaceActivityLogsHandler>();
-        services.AddScoped<ListNotificationsHandler>();
-        services.AddScoped<GetUnreadNotificationCountHandler>();
-        services.AddScoped<MarkNotificationAsReadHandler>();
-        services.AddScoped<MarkNotificationAsUnreadHandler>();
-        services.AddScoped<MarkAllNotificationsAsReadHandler>();
-        services.AddScoped<DeleteNotificationHandler>();
-
-        services.AddScoped<GenerateTaskRecommendationsHandler>();
-        services.AddScoped<ListTaskRecommendationsHandler>();
-        services.AddScoped<AcceptTaskRecommendationHandler>();
-        services.AddScoped<RejectTaskRecommendationHandler>();
-        services.AddScoped<CompleteTaskRecommendationHandler>();
-        services.AddScoped<GetUserTaskPreferenceHandler>();
-        services.AddScoped<UpdateUserTaskPreferenceHandler>();
-
-        services.AddScoped<RefreshTokenHandler>();
-        services.AddScoped<LogoutHandler>();
-        services.AddScoped<LogoutAllHandler>();
-
-        services.AddScoped<GetMyProfileHandler>();
-        services.AddScoped<UpdateMyProfileHandler>();
-        services.AddScoped<ChangeMyPasswordHandler>();
-
-        services.AddScoped<UploadImageHandler>();
-        services.AddScoped<UploadMyAvatarImageHandler>();
-        services.AddScoped<UploadPageCoverImageHandler>();
-
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 
         return services;
     }
+
+    private static IServiceCollection AddConcreteTypesBySuffix(
+        this IServiceCollection services,
+        Assembly assembly,
+        string suffix,
+        ServiceLifetime lifetime)
+    {
+        var implementationTypes = assembly
+            .DefinedTypes
+            .Where(type =>
+                type is { IsAbstract: false, IsInterface: false } &&
+                type.Name.EndsWith(suffix, StringComparison.Ordinal) &&
+                type.DeclaredConstructors.Any(ctor => !ctor.IsStatic))
+            .Select(type => type.AsType());
+
+        foreach (var implementationType in implementationTypes)
+        {
+            services.Add(new ServiceDescriptor(
+                implementationType,
+                implementationType,
+                lifetime));
+
+            foreach (var serviceType in GetUseCaseHandlerInterfaces(implementationType))
+            {
+                services.Add(new ServiceDescriptor(
+                    serviceType,
+                    implementationType,
+                    lifetime));
+            }
+        }
+
+        return services;
+    }
+
+    private static IEnumerable<Type> GetUseCaseHandlerInterfaces(Type implementationType)
+        => implementationType
+            .GetInterfaces()
+            .Where(type =>
+                type.IsGenericType &&
+                type.GetGenericTypeDefinition() is var genericDefinition &&
+                (genericDefinition == typeof(ICommandHandler<>) ||
+                 genericDefinition == typeof(ICommandHandler<,>) ||
+                 genericDefinition == typeof(IQueryHandler<,>)));
 }

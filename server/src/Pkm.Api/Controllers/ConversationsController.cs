@@ -5,8 +5,12 @@ using Pkm.Api.Contracts.Requests.Messaging;
 using Pkm.Api.Contracts.Responses.Messaging;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Workspaces;
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Features.Messaging.Services;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Messaging.Commands;
+using Pkm.Application.Features.Messaging.Models;
+using Pkm.Application.Features.Messaging.Queries;
+using Pkm.Application.Features.Workspaces.Models;
 
 namespace Pkm.Api.Controllers;
 
@@ -16,14 +20,14 @@ public sealed class ConversationsController : BaseController
 {
     private const long MaxRequestBodySizeBytes = 10 * 1024 * 1024;
 
-    private readonly IMessagingApplicationService _messagingApplicationService;
+    private readonly IUseCaseDispatcher _useCaseDispatcher;
 
     public ConversationsController(
         ICurrentUser currentUser,
-        IMessagingApplicationService messagingApplicationService)
+        IUseCaseDispatcher useCaseDispatcher)
         : base(currentUser)
     {
-        _messagingApplicationService = messagingApplicationService;
+        _useCaseDispatcher = useCaseDispatcher;
     }
 
     [HttpPost("direct")]
@@ -37,8 +41,8 @@ public sealed class ConversationsController : BaseController
         [FromBody] CreateDirectConversationRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.CreateOrGetDirectConversationAsync(
-            request.RecipientUserId,
+        var result = await _useCaseDispatcher.ExecuteAsync<CreateDirectConversationCommand, ConversationDto>(
+            new CreateDirectConversationCommand(request.RecipientUserId),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -52,9 +56,8 @@ public sealed class ConversationsController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.ListConversationsAsync(
-            pageNumber,
-            pageSize,
+        var result = await _useCaseDispatcher.QueryAsync<ListConversationsQuery, ConversationPagedResultDto>(
+            new ListConversationsQuery(pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -70,10 +73,8 @@ public sealed class ConversationsController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.ListMessagesAsync(
-            conversationId,
-            pageNumber,
-            pageSize,
+        var result = await _useCaseDispatcher.QueryAsync<ListMessagesQuery, MessagePagedResultDto>(
+            new ListMessagesQuery(conversationId, pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -90,9 +91,8 @@ public sealed class ConversationsController : BaseController
         [FromBody] SendTextMessageRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.SendTextMessageAsync(
-            conversationId,
-            request.Body,
+        var result = await _useCaseDispatcher.ExecuteAsync<SendTextMessageCommand, MessageDto>(
+            new SendTextMessageCommand(conversationId, request.Body),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -110,10 +110,11 @@ public sealed class ConversationsController : BaseController
         [FromBody] SendWorkspaceShareMessageRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.SendWorkspaceShareMessageAsync(
-            conversationId,
-            request.WorkspaceId,
-            request.Role ?? "viewer",
+        var result = await _useCaseDispatcher.ExecuteAsync<SendWorkspaceShareMessageCommand, MessageDto>(
+            new SendWorkspaceShareMessageCommand(
+                conversationId,
+                request.WorkspaceId,
+                request.Role ?? "viewer"),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -130,8 +131,75 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid messageId,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.AcceptWorkspaceShareAsync(
-            messageId,
+        var result = await _useCaseDispatcher.ExecuteAsync<AcceptWorkspaceShareCommand, WorkspaceDto>(
+            new AcceptWorkspaceShareCommand(messageId),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpDelete("messages/{messageId:guid}")]
+    [ProducesResponseType(typeof(ApiResult), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    public async Task<ActionResult<ApiResult>> DeleteMessage(
+        [FromRoute] Guid messageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _useCaseDispatcher.ExecuteAsync(
+            new DeleteMessageForEveryoneCommand(messageId),
+            cancellationToken);
+
+        return HandleResult(result);
+    }
+
+    [HttpPost("messages/{messageId:guid}/reactions")]
+    [ProducesResponseType(typeof(ApiResult<MessageResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<MessageResponse>>> ToggleMessageReaction(
+        [FromRoute] Guid messageId,
+        [FromBody] SetMessageReactionRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _useCaseDispatcher.ExecuteAsync<ToggleMessageReactionCommand, MessageDto>(
+            new ToggleMessageReactionCommand(messageId, request.Emoji),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpPost("messages/{messageId:guid}/pin")]
+    [ProducesResponseType(typeof(ApiResult<MessageResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    public async Task<ActionResult<ApiResult<MessageResponse>>> PinMessage(
+        [FromRoute] Guid messageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _useCaseDispatcher.ExecuteAsync<PinMessageCommand, MessageDto>(
+            new PinMessageCommand(messageId),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpDelete("messages/{messageId:guid}/pin")]
+    [ProducesResponseType(typeof(ApiResult<MessageResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    public async Task<ActionResult<ApiResult<MessageResponse>>> UnpinMessage(
+        [FromRoute] Guid messageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await _useCaseDispatcher.ExecuteAsync<UnpinMessageCommand, MessageDto>(
+            new UnpinMessageCommand(messageId),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -158,13 +226,14 @@ public sealed class ConversationsController : BaseController
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _messagingApplicationService.SendImageMessageAsync(
-            conversationId,
-            request.Caption,
-            file.FileName,
-            ResolveContentType(file),
-            file.Length,
-            stream,
+        var result = await _useCaseDispatcher.ExecuteAsync<SendImageMessageCommand, MessageDto>(
+            new SendImageMessageCommand(
+                conversationId,
+                request.Caption,
+                file.FileName,
+                ResolveContentType(file),
+                file.Length,
+                stream),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -178,8 +247,8 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid conversationId,
         CancellationToken cancellationToken)
     {
-        var result = await _messagingApplicationService.MarkConversationReadAsync(
-            conversationId,
+        var result = await _useCaseDispatcher.ExecuteAsync(
+            new MarkConversationReadCommand(conversationId),
             cancellationToken);
 
         return HandleResult(result);
@@ -201,10 +270,4 @@ public sealed class ConversationsController : BaseController
         => string.IsNullOrWhiteSpace(file.ContentType)
             ? "application/octet-stream"
             : file.ContentType;
-}
-
-public sealed class SendImageMessageFormRequest
-{
-    public IFormFile? File { get; init; }
-    public string? Caption { get; init; }
 }

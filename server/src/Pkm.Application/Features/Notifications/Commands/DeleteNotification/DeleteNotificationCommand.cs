@@ -1,3 +1,5 @@
-﻿namespace Pkm.Application.Features.Notifications.Commands.DeleteNotification;
+using Pkm.Application.Common.UseCases;
 
-public sealed record DeleteNotificationCommand(Guid NotificationId);
+namespace Pkm.Application.Features.Notifications.Commands.DeleteNotification;
+
+public sealed record DeleteNotificationCommand(Guid NotificationId) : ICommand;

@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Features.Messaging.Models;
 using Pkm.Application.Features.Social.Models;
 using Pkm.Domain.Messaging;
@@ -147,13 +147,13 @@ internal sealed class MessagingRepository : IMessagingRepository
         pageSize = pageSize <= 0 ? 30 : Math.Min(pageSize, 100);
         var skip = (pageNumber - 1) * pageSize;
 
-        return await _context.Messages
+        var rows = await _context.Messages
             .AsNoTracking()
             .Where(x => x.ConversationId == conversationId && !x.IsDeletedForEveryone)
             .OrderByDescending(x => x.CreatedDate)
             .Skip(skip)
             .Take(pageSize)
-            .Select(x => new MessageDto(
+            .Select(x => new MessageRow(
                 x.Id,
                 x.ConversationId,
                 x.SenderUserId,
@@ -167,14 +167,16 @@ internal sealed class MessagingRepository : IMessagingRepository
                 x.CreatedDate,
                 x.UpdatedDate))
             .ToListAsync(cancellationToken);
+
+        return await BuildMessageDtosAsync(rows, viewerUserId, cancellationToken);
     }
 
-    public Task<MessageDto?> GetMessageDtoAsync(
+    public async Task<MessageDto?> GetMessageDtoAsync(
         Guid messageId,
         Guid viewerUserId,
         CancellationToken cancellationToken = default)
     {
-        return _context.Messages
+        var row = await _context.Messages
             .AsNoTracking()
             .Where(x =>
                 x.Id == messageId &&
@@ -182,7 +184,7 @@ internal sealed class MessagingRepository : IMessagingRepository
                 _context.Conversations.Any(c =>
                     c.Id == x.ConversationId &&
                     (c.FirstUserId == viewerUserId || c.SecondUserId == viewerUserId)))
-            .Select(x => new MessageDto(
+            .Select(x => new MessageRow(
                 x.Id,
                 x.ConversationId,
                 x.SenderUserId,
@@ -196,6 +198,11 @@ internal sealed class MessagingRepository : IMessagingRepository
                 x.CreatedDate,
                 x.UpdatedDate))
             .FirstOrDefaultAsync(cancellationToken);
+
+        if (row is null)
+            return null;
+
+        return (await BuildMessageDtosAsync(new[] { row }, viewerUserId, cancellationToken)).FirstOrDefault();
     }
 
     public Task<Message?> GetMessageForRecipientAsync(
@@ -209,6 +216,21 @@ internal sealed class MessagingRepository : IMessagingRepository
                 x.Id == messageId &&
                 x.RecipientUserId == recipientUserId &&
                 !x.IsDeletedForEveryone,
+                cancellationToken);
+    }
+
+    public Task<Message?> GetMessageForParticipantForUpdateAsync(
+        Guid messageId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.Messages
+            .FirstOrDefaultAsync(x =>
+                x.Id == messageId &&
+                !x.IsDeletedForEveryone &&
+                _context.Conversations.Any(c =>
+                    c.Id == x.ConversationId &&
+                    (c.FirstUserId == userId || c.SecondUserId == userId)),
                 cancellationToken);
     }
 
@@ -239,9 +261,110 @@ internal sealed class MessagingRepository : IMessagingRepository
         return messages.Count;
     }
 
+    public Task<MessageReaction?> GetReactionForUserForUpdateAsync(
+        Guid messageId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.MessageReactions
+            .FirstOrDefaultAsync(x => x.MessageId == messageId && x.UserId == userId, cancellationToken);
+    }
+
+    public Task<MessagePin?> GetPinForMessageForUpdateAsync(
+        Guid messageId,
+        CancellationToken cancellationToken = default)
+    {
+        return _context.MessagePins
+            .FirstOrDefaultAsync(x => x.MessageId == messageId, cancellationToken);
+    }
+
+    private async Task<IReadOnlyList<MessageDto>> BuildMessageDtosAsync(
+        IReadOnlyList<MessageRow> rows,
+        Guid viewerUserId,
+        CancellationToken cancellationToken)
+    {
+        if (rows.Count == 0)
+            return Array.Empty<MessageDto>();
+
+        var messageIds = rows.Select(x => x.Id).ToArray();
+
+        var reactionRows = await _context.MessageReactions
+            .AsNoTracking()
+            .Where(x => messageIds.Contains(x.MessageId))
+            .GroupBy(x => new { x.MessageId, x.Emoji })
+            .Select(x => new
+            {
+                x.Key.MessageId,
+                x.Key.Emoji,
+                Count = x.Count(),
+                ReactedByMe = x.Any(y => y.UserId == viewerUserId)
+            })
+            .ToListAsync(cancellationToken);
+
+        var reactionsByMessage = reactionRows
+            .GroupBy(x => x.MessageId)
+            .ToDictionary(
+                x => x.Key,
+                x => (IReadOnlyList<MessageReactionDto>)x
+                    .OrderByDescending(y => y.Count)
+                    .ThenBy(y => y.Emoji)
+                    .Select(y => new MessageReactionDto(y.Emoji, y.Count, y.ReactedByMe))
+                    .ToArray());
+
+        var pinnedIds = await _context.MessagePins
+            .AsNoTracking()
+            .Where(x => messageIds.Contains(x.MessageId))
+            .Select(x => x.MessageId)
+            .ToListAsync(cancellationToken);
+        var pinned = pinnedIds.ToHashSet();
+
+        return rows.Select(x => new MessageDto(
+                x.Id,
+                x.ConversationId,
+                x.SenderUserId,
+                x.RecipientUserId,
+                x.Type,
+                x.Body,
+                x.ImageUrl,
+                x.AttachmentFileId,
+                x.IsMine,
+                x.ReadAtUtc,
+                x.CreatedDate,
+                x.UpdatedDate,
+                reactionsByMessage.TryGetValue(x.Id, out var reactions) ? reactions : Array.Empty<MessageReactionDto>(),
+                pinned.Contains(x.Id)))
+            .ToArray();
+    }
+
     public void AddConversation(Conversation conversation) => _context.Conversations.Add(conversation);
 
     public void AddMessage(Message message) => _context.Messages.Add(message);
 
+    public void AddReaction(MessageReaction reaction) => _context.MessageReactions.Add(reaction);
+
+    public void AddPin(MessagePin pin) => _context.MessagePins.Add(pin);
+
+    public void RemoveReaction(MessageReaction reaction) => _context.MessageReactions.Remove(reaction);
+
+    public void RemovePin(MessagePin pin) => _context.MessagePins.Remove(pin);
+
     public void UpdateConversation(Conversation conversation) => _context.Conversations.Update(conversation);
+
+    public void UpdateMessage(Message message) => _context.Messages.Update(message);
+
+    public void UpdateReaction(MessageReaction reaction) => _context.MessageReactions.Update(reaction);
+
+    private sealed record MessageRow(
+        Guid Id,
+        Guid ConversationId,
+        Guid SenderUserId,
+        Guid RecipientUserId,
+        MessageType Type,
+        string? Body,
+        string? ImageUrl,
+        Guid? AttachmentFileId,
+        bool IsMine,
+        DateTimeOffset? ReadAtUtc,
+        DateTimeOffset CreatedDate,
+        DateTimeOffset? UpdatedDate);
 }

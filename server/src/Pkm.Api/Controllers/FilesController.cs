@@ -1,14 +1,19 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
+using Pkm.Api.Contracts.Requests.Files;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Account;
 using Pkm.Api.Contracts.Responses.Files;
 using Pkm.Api.Contracts.Responses.Pages;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Account.Models;
 using Pkm.Application.Features.Files.Commands.UploadImage;
 using Pkm.Application.Features.Files.Commands.UploadMyAvatarImage;
 using Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
+using Pkm.Application.Features.Files.Models;
+using Pkm.Application.Features.Pages.Models;
 
 namespace Pkm.Api.Controllers;
 
@@ -17,20 +22,14 @@ public sealed class FilesController : BaseController
 {
     private const long MaxRequestBodySizeBytes = 10 * 1024 * 1024;
 
-    private readonly UploadImageHandler _uploadImageHandler;
-    private readonly UploadMyAvatarImageHandler _uploadMyAvatarImageHandler;
-    private readonly UploadPageCoverImageHandler _uploadPageCoverImageHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public FilesController(
         ICurrentUser currentUser,
-        UploadImageHandler uploadImageHandler,
-        UploadMyAvatarImageHandler uploadMyAvatarImageHandler,
-        UploadPageCoverImageHandler uploadPageCoverImageHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _uploadImageHandler = uploadImageHandler;
-        _uploadMyAvatarImageHandler = uploadMyAvatarImageHandler;
-        _uploadPageCoverImageHandler = uploadPageCoverImageHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/files/images")]
@@ -59,7 +58,7 @@ public sealed class FilesController : BaseController
             stream,
             request.Purpose);
 
-        var result = await _uploadImageHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<UploadImageCommand, StoredFileDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -88,7 +87,7 @@ public sealed class FilesController : BaseController
             file.Length,
             stream);
 
-        var result = await _uploadMyAvatarImageHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<UploadMyAvatarImageCommand, UserProfileDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -122,7 +121,7 @@ public sealed class FilesController : BaseController
             file.Length,
             stream);
 
-        var result = await _uploadPageCoverImageHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<UploadPageCoverImageCommand, PageDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -142,21 +141,4 @@ public sealed class FilesController : BaseController
         => string.IsNullOrWhiteSpace(file.ContentType)
             ? "application/octet-stream"
             : file.ContentType;
-}
-
-public sealed class UploadImageFormRequest
-{
-    public IFormFile? File { get; init; }
-    public string? Purpose { get; init; }
-}
-
-public sealed class UploadAvatarImageFormRequest
-{
-    public IFormFile? File { get; init; }
-}
-
-public sealed class UploadPageCoverImageFormRequest
-{
-    public IFormFile? File { get; init; }
-    public long? ExpectedRevision { get; init; }
 }

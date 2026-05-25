@@ -1,11 +1,8 @@
-using Pkm.Domain.Users;
+using Pkm.Application.Common.Abstractions.Authentication;
 
 
 namespace Pkm.Infrastructure.Authentication;
 
-/// <summary>
-/// Adapter from domain password hashing abstraction to ASP.NET Core PasswordHasher.
-/// </summary>
 internal sealed class PasswordHasher : IPasswordHasher
 {
     private readonly Microsoft.AspNetCore.Identity.PasswordHasher<string> _innerHasher = new();

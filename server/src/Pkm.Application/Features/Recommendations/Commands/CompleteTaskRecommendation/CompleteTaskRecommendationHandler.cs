@@ -1,19 +1,20 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Domain.Audit;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Recommendations;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Recommendations.Commands.CompleteTaskRecommendation;
 
-public sealed class CompleteTaskRecommendationHandler
+public sealed class CompleteTaskRecommendationHandler : ICommandHandler<CompleteTaskRecommendationCommand, TaskRecommendationDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly ITaskRecommendationRepository _recommendationRepository;

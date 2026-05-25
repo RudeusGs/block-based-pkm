@@ -1,4 +1,4 @@
-using Pkm.Application.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Features.Documents.Models;
 
 namespace Pkm.Infrastructure.Realtime.Hubs;

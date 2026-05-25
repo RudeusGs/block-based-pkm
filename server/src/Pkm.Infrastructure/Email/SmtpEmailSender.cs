@@ -1,8 +1,8 @@
-﻿using System.Net;
+using System.Net;
 using System.Net.Mail;
 using System.Text;
 using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Email;
+using Pkm.Application.Common.Abstractions.Email;
 
 namespace Pkm.Infrastructure.Email;
 

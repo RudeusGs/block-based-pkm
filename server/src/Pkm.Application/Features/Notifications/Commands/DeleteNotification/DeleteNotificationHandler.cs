@@ -1,13 +1,14 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Notifications.Services;
 
 namespace Pkm.Application.Features.Notifications.Commands.DeleteNotification;
 
-public sealed class DeleteNotificationHandler
+public sealed class DeleteNotificationHandler : ICommandHandler<DeleteNotificationCommand>
 {
     private readonly ICurrentUser _currentUser;
     private readonly INotificationRepository _notificationRepository;

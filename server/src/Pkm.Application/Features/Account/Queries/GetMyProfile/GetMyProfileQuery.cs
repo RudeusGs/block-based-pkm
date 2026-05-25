@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Account.Queries.GetMyProfile;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Account.Models;
 
-public sealed record GetMyProfileQuery;
+namespace Pkm.Application.Features.Account.Queries.GetMyProfile;
+
+public sealed record GetMyProfileQuery : IQuery<UserProfileDto>;

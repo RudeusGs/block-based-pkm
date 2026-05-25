@@ -1,12 +1,14 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Responses.Notifications;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Notifications.Commands.DeleteNotification;
 using Pkm.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
 using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsRead;
 using Pkm.Application.Features.Notifications.Commands.MarkNotificationAsUnread;
+using Pkm.Application.Features.Notifications.Models;
 using Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
 using Pkm.Application.Features.Notifications.Queries.ListNotifications;
 
@@ -16,29 +18,14 @@ namespace Pkm.Api.Controllers;
 [Route("api/v1/notifications")]
 public sealed class NotificationsController : BaseController
 {
-    private readonly ListNotificationsHandler _listNotificationsHandler;
-    private readonly GetUnreadNotificationCountHandler _getUnreadNotificationCountHandler;
-    private readonly MarkNotificationAsReadHandler _markNotificationAsReadHandler;
-    private readonly MarkNotificationAsUnreadHandler _markNotificationAsUnreadHandler;
-    private readonly MarkAllNotificationsAsReadHandler _markAllNotificationsAsReadHandler;
-    private readonly DeleteNotificationHandler _deleteNotificationHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public NotificationsController(
         ICurrentUser currentUser,
-        ListNotificationsHandler listNotificationsHandler,
-        GetUnreadNotificationCountHandler getUnreadNotificationCountHandler,
-        MarkNotificationAsReadHandler markNotificationAsReadHandler,
-        MarkNotificationAsUnreadHandler markNotificationAsUnreadHandler,
-        MarkAllNotificationsAsReadHandler markAllNotificationsAsReadHandler,
-        DeleteNotificationHandler deleteNotificationHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _listNotificationsHandler = listNotificationsHandler;
-        _getUnreadNotificationCountHandler = getUnreadNotificationCountHandler;
-        _markNotificationAsReadHandler = markNotificationAsReadHandler;
-        _markNotificationAsUnreadHandler = markNotificationAsUnreadHandler;
-        _markAllNotificationsAsReadHandler = markAllNotificationsAsReadHandler;
-        _deleteNotificationHandler = deleteNotificationHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpGet]
@@ -52,7 +39,7 @@ public sealed class NotificationsController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listNotificationsHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListNotificationsQuery, NotificationPagedResultDto>(
             new ListNotificationsQuery(
                 workspaceId,
                 unreadOnly,
@@ -71,7 +58,7 @@ public sealed class NotificationsController : BaseController
         [FromQuery] Guid? workspaceId = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _getUnreadNotificationCountHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetUnreadNotificationCountQuery, NotificationUnreadCountDto>(
             new GetUnreadNotificationCountQuery(workspaceId),
             cancellationToken);
 
@@ -87,7 +74,7 @@ public sealed class NotificationsController : BaseController
         [FromRoute] Guid notificationId,
         CancellationToken cancellationToken)
     {
-        var result = await _markNotificationAsReadHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<MarkNotificationAsReadCommand, NotificationDto>(
             new MarkNotificationAsReadCommand(notificationId),
             cancellationToken);
 
@@ -103,7 +90,7 @@ public sealed class NotificationsController : BaseController
         [FromRoute] Guid notificationId,
         CancellationToken cancellationToken)
     {
-        var result = await _markNotificationAsUnreadHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<MarkNotificationAsUnreadCommand, NotificationDto>(
             new MarkNotificationAsUnreadCommand(notificationId),
             cancellationToken);
 
@@ -118,7 +105,7 @@ public sealed class NotificationsController : BaseController
         [FromQuery] Guid? workspaceId = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _markAllNotificationsAsReadHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<MarkAllNotificationsAsReadCommand, NotificationUnreadCountDto>(
             new MarkAllNotificationsAsReadCommand(workspaceId),
             cancellationToken);
 
@@ -134,7 +121,7 @@ public sealed class NotificationsController : BaseController
         [FromRoute] Guid notificationId,
         CancellationToken cancellationToken)
     {
-        var result = await _deleteNotificationHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new DeleteNotificationCommand(notificationId),
             cancellationToken);
 

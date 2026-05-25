@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Workspaces.Models;
 
-public sealed record GetWorkspaceByIdQuery(Guid WorkspaceId);
+namespace Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
+
+public sealed record GetWorkspaceByIdQuery(Guid WorkspaceId) : IQuery<WorkspaceDto>;

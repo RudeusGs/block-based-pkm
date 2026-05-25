@@ -1,4 +1,4 @@
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Domain.Users;
 
@@ -43,7 +43,7 @@ public sealed class User : EntityBase
 
         FullName = TextRules.NormalizeRequired(fullName, MaxNameLength, nameof(FullName));
         AvatarUrl = TextRules.NormalizeOptional(avatarUrl, MaxUrlLength, nameof(AvatarUrl));
-        PasswordHash = string.IsNullOrWhiteSpace(passwordHash) ? string.Empty : passwordHash;
+        PasswordHash = NormalizePasswordHash(passwordHash);
 
         Status = UserStatus.Active;
         IsAuthenticated = false;
@@ -55,24 +55,16 @@ public sealed class User : EntityBase
         string email,
         string fullName,
         string? avatarUrl,
-        string rawPassword,
-        IPasswordHasher passwordHasher,
+        string passwordHash,
         DateTimeOffset now)
     {
-        if (passwordHasher is null)
-            throw new DomainException("PasswordHasher không hợp lệ.");
-
-        TextRules.ValidateStrongPassword(rawPassword);
-
-        var hashedPassword = passwordHasher.HashPassword(rawPassword);
-
         return new User(
             id,
             userName,
             email,
             fullName,
             avatarUrl,
-            hashedPassword,
+            passwordHash,
             now);
     }
 
@@ -92,19 +84,14 @@ public sealed class User : EntityBase
 
     public bool IsActive() => Status == UserStatus.Active;
 
-    public void ChangePassword(
-        string newRawPassword,
-        IPasswordHasher passwordHasher,
-        DateTimeOffset now)
+    public static void EnsurePasswordMeetsPolicy(string plainPassword)
+        => TextRules.ValidateStrongPassword(plainPassword);
+
+    public void ChangePassword(string passwordHash, DateTimeOffset now)
     {
         ThrowIfDeleted();
 
-        if (passwordHasher is null)
-            throw new DomainException("PasswordHasher không hợp lệ.");
-
-        TextRules.ValidateStrongPassword(newRawPassword);
-
-        PasswordHash = passwordHasher.HashPassword(newRawPassword);
+        PasswordHash = NormalizePasswordHash(passwordHash);
         Touch(now);
     }
 
@@ -181,5 +168,13 @@ public sealed class User : EntityBase
 
         Email = TextRules.NormalizeRequired(email, MaxEmailLength, nameof(Email));
         NormalizedEmail = NormalizeEmail(Email);
+    }
+
+    private static string NormalizePasswordHash(string passwordHash)
+    {
+        if (string.IsNullOrWhiteSpace(passwordHash))
+            throw new DomainException("Password hash is required.");
+
+        return passwordHash.Trim();
     }
 }

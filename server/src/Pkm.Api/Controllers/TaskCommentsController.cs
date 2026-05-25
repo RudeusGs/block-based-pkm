@@ -1,13 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Tasks;
 using Pkm.Api.Contracts.Responses.Tasks;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Tasks.Commands.CreateTaskComment;
 using Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
 using Pkm.Application.Features.Tasks.Commands.RestoreTaskComment;
 using Pkm.Application.Features.Tasks.Commands.UpdateTaskComment;
+using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Queries.ListTaskComments;
 
 namespace Pkm.Api.Controllers;
@@ -15,26 +17,14 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class TaskCommentsController : BaseController
 {
-    private readonly ListTaskCommentsHandler _listTaskCommentsHandler;
-    private readonly CreateTaskCommentHandler _createTaskCommentHandler;
-    private readonly UpdateTaskCommentHandler _updateTaskCommentHandler;
-    private readonly DeleteTaskCommentHandler _deleteTaskCommentHandler;
-    private readonly RestoreTaskCommentHandler _restoreTaskCommentHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public TaskCommentsController(
         ICurrentUser currentUser,
-        ListTaskCommentsHandler listTaskCommentsHandler,
-        CreateTaskCommentHandler createTaskCommentHandler,
-        UpdateTaskCommentHandler updateTaskCommentHandler,
-        DeleteTaskCommentHandler deleteTaskCommentHandler,
-        RestoreTaskCommentHandler restoreTaskCommentHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _listTaskCommentsHandler = listTaskCommentsHandler;
-        _createTaskCommentHandler = createTaskCommentHandler;
-        _updateTaskCommentHandler = updateTaskCommentHandler;
-        _deleteTaskCommentHandler = deleteTaskCommentHandler;
-        _restoreTaskCommentHandler = restoreTaskCommentHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpGet("api/v1/tasks/{taskId:guid}/comments")]
@@ -50,7 +40,7 @@ public sealed class TaskCommentsController : BaseController
         [FromQuery] bool includeDeleted = true,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listTaskCommentsHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListTaskCommentsQuery, TaskCommentPagedResultDto>(
             new ListTaskCommentsQuery(
                 taskId,
                 pageNumber,
@@ -73,7 +63,7 @@ public sealed class TaskCommentsController : BaseController
         [FromBody] CreateTaskCommentRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _createTaskCommentHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<CreateTaskCommentCommand, TaskCommentDto>(
             new CreateTaskCommentCommand(
                 taskId,
                 request.Content,
@@ -95,7 +85,7 @@ public sealed class TaskCommentsController : BaseController
         [FromBody] UpdateTaskCommentRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _updateTaskCommentHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<UpdateTaskCommentCommand, TaskCommentDto>(
             new UpdateTaskCommentCommand(
                 commentId,
                 request.Content),
@@ -115,7 +105,7 @@ public sealed class TaskCommentsController : BaseController
         [FromRoute] Guid commentId,
         CancellationToken cancellationToken)
     {
-        var result = await _deleteTaskCommentHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<DeleteTaskCommentCommand, TaskCommentDto>(
             new DeleteTaskCommentCommand(commentId),
             cancellationToken);
 
@@ -133,7 +123,7 @@ public sealed class TaskCommentsController : BaseController
         [FromRoute] Guid commentId,
         CancellationToken cancellationToken)
     {
-        var result = await _restoreTaskCommentHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<RestoreTaskCommentCommand, TaskCommentDto>(
             new RestoreTaskCommentCommand(commentId),
             cancellationToken);
 

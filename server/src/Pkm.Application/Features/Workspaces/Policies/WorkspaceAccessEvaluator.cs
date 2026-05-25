@@ -1,5 +1,5 @@
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Authorization;
 using Pkm.Domain.Workspaces;
 

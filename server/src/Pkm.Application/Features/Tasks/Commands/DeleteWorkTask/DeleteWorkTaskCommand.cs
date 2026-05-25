@@ -1,4 +1,5 @@
-﻿namespace Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
+using Pkm.Application.Common.UseCases;
 
-public sealed record DeleteWorkTaskCommand(
-    Guid TaskId);
+namespace Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
+
+public sealed record DeleteWorkTaskCommand(Guid TaskId) : ICommand;

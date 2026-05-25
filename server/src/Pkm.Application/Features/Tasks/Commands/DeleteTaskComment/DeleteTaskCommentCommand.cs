@@ -1,4 +1,6 @@
-﻿namespace Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Tasks.Models;
 
-public sealed record DeleteTaskCommentCommand(
-    Guid CommentId);
+namespace Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
+
+public sealed record DeleteTaskCommentCommand(Guid CommentId) : ICommand<TaskCommentDto>;

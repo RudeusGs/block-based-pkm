@@ -1,5 +1,5 @@
 using Microsoft.EntityFrameworkCore;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Domain.Users;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;
@@ -47,6 +47,18 @@ internal sealed class UserRepository : IUserRepository
 
         return await _dbContext.Users
             .AsNoTracking()
+            .FirstOrDefaultAsync(
+                u => u.NormalizedEmail == normalized,
+                cancellationToken);
+    }
+
+    public async Task<User?> GetByEmailForUpdateAsync(
+        string email,
+        CancellationToken cancellationToken = default)
+    {
+        var normalized = User.NormalizeEmail(email);
+
+        return await _dbContext.Users
             .FirstOrDefaultAsync(
                 u => u.NormalizedEmail == normalized,
                 cancellationToken);

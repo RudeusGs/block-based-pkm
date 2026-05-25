@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Notifications.Commands.MarkNotificationAsRead;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Notifications.Models;
 
-public sealed record MarkNotificationAsReadCommand(Guid NotificationId);
+namespace Pkm.Application.Features.Notifications.Commands.MarkNotificationAsRead;
+
+public sealed record MarkNotificationAsReadCommand(Guid NotificationId) : ICommand<NotificationDto>;

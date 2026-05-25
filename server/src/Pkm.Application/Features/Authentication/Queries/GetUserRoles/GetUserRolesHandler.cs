@@ -1,10 +1,11 @@
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Authentication;
 
 namespace Pkm.Application.Features.Authentication.Queries.GetUserRoles;
 
-public sealed class GetUserRolesHandler
+public sealed class GetUserRolesHandler : IQueryHandler<GetUserRolesQuery, IEnumerable<string>>
 {
     private readonly IUserRepository _userRepository;
     private readonly IUserRoleService _userRoleService;

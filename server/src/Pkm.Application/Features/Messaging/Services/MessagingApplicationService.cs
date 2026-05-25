@@ -1,8 +1,8 @@
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using System.Text.Json;
 using Pkm.Application.Common.Authorization;
 using Pkm.Application.Common.Results;
@@ -15,7 +15,7 @@ using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Audit;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Messaging;
 using Pkm.Domain.Workspaces;
 
@@ -33,7 +33,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
     private readonly ICurrentUser _currentUser;
     private readonly IUserRepository _userRepository;
     private readonly IFriendshipRepository _friendshipRepository;
-    private readonly IMessagingRepository _messagingRepository;
+    private readonly IMessagingReadRepository _messagingReadRepository;
+    private readonly IMessagingWriteRepository _messagingWriteRepository;
     private readonly IWorkspaceRepository _workspaceRepository;
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
@@ -50,7 +51,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         ICurrentUser currentUser,
         IUserRepository userRepository,
         IFriendshipRepository friendshipRepository,
-        IMessagingRepository messagingRepository,
+        IMessagingReadRepository messagingReadRepository,
+        IMessagingWriteRepository messagingWriteRepository,
         IWorkspaceRepository workspaceRepository,
         IWorkspaceMemberRepository workspaceMemberRepository,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
@@ -66,7 +68,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         _currentUser = currentUser;
         _userRepository = userRepository;
         _friendshipRepository = friendshipRepository;
-        _messagingRepository = messagingRepository;
+        _messagingReadRepository = messagingReadRepository;
+        _messagingWriteRepository = messagingWriteRepository;
         _workspaceRepository = workspaceRepository;
         _workspaceMemberRepository = workspaceMemberRepository;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -95,19 +98,18 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         if (recipient is null || !recipient.IsActive())
             return Result.Failure<ConversationDto>(MessagingErrors.RecipientNotFound);
 
-        if (!await _friendshipRepository.AreFriendsAsync(currentUserId, recipientUserId, cancellationToken))
-            return Result.Failure<ConversationDto>(MessagingErrors.FriendshipRequired);
-
-        var existing = await _messagingRepository.GetDirectConversationAsync(currentUserId, recipientUserId, cancellationToken);
+        // Demo/mobile flow: cho phép tạo chat trực tiếp với user active.
+        // Nếu cần siết lại sau báo cáo, bật lại check FriendshipRequired tại đây.
+        var existing = await _messagingReadRepository.GetDirectConversationAsync(currentUserId, recipientUserId, cancellationToken);
         if (existing is null)
         {
             existing = Conversation.CreateDirect(Guid.NewGuid(), currentUserId, recipientUserId, _clock.UtcNow);
-            _messagingRepository.AddConversation(existing);
+            _messagingWriteRepository.AddConversation(existing);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
             await InvalidateConversationListsAsync(currentUserId, recipientUserId, cancellationToken);
         }
 
-        var dto = await _messagingRepository.GetConversationDtoAsync(
+        var dto = await _messagingReadRepository.GetConversationDtoAsync(
             existing.Id,
             currentUserId,
             cancellationToken);
@@ -132,8 +134,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         if (cached is not null)
             return Result.Success(cached);
 
-        var items = await _messagingRepository.ListConversationsAsync(currentUserId, page, size, cancellationToken);
-        var total = await _messagingRepository.CountConversationsAsync(currentUserId, cancellationToken);
+        var items = await _messagingReadRepository.ListConversationsAsync(currentUserId, page, size, cancellationToken);
+        var total = await _messagingReadRepository.CountConversationsAsync(currentUserId, cancellationToken);
         var dto = new ConversationPagedResultDto(items, page, size, total, CalculateTotalPages(total, size));
         await _redisCache.SetAsync(cacheKey, dto, ListCacheTtl, cancellationToken);
         return Result.Success(dto);
@@ -144,14 +146,14 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         if (!_currentUser.TryGetUserId(out var currentUserId))
             return Result.Failure<MessagePagedResultDto>(MessagingErrors.MissingUserContext);
 
-        var conversation = await _messagingRepository.GetConversationForParticipantAsync(conversationId, currentUserId, cancellationToken);
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(conversationId, currentUserId, cancellationToken);
         if (conversation is null)
             return Result.Failure<MessagePagedResultDto>(MessagingErrors.ConversationForbidden);
 
         var page = NormalizePage(pageNumber);
         var size = NormalizeSize(pageSize);
-        var messages = await _messagingRepository.ListMessagesAsync(conversationId, currentUserId, page, size, cancellationToken);
-        var total = await _messagingRepository.CountMessagesAsync(conversationId, cancellationToken);
+        var messages = await _messagingReadRepository.ListMessagesAsync(conversationId, currentUserId, page, size, cancellationToken);
+        var total = await _messagingReadRepository.CountMessagesAsync(conversationId, cancellationToken);
         return Result.Success(new MessagePagedResultDto(messages, page, size, total, CalculateTotalPages(total, size)));
     }
 
@@ -202,7 +204,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
             }));
         }
 
-        var conversation = await _messagingRepository.GetConversationForUpdateAsync(
+        var conversation = await _messagingWriteRepository.GetConversationForUpdateAsync(
             conversationId,
             currentUserId,
             cancellationToken);
@@ -212,9 +214,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
 
         var recipientId = conversation.GetOtherParticipant(currentUserId);
 
-        if (!await _friendshipRepository.AreFriendsAsync(currentUserId, recipientId, cancellationToken))
-            return Result.Failure<MessageDto>(MessagingErrors.FriendshipRequired);
-
+        // Người gửi đã là participant của conversation; không chặn thêm bằng friendship.
         var access = await _workspaceAccessEvaluator.EvaluateAsync(
             workspaceId,
             currentUserId,
@@ -263,8 +263,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
                 now);
 
             conversation.RegisterMessage($"Đã chia sẻ workspace {workspace.Name}", now);
-            _messagingRepository.AddMessage(message);
-            _messagingRepository.UpdateConversation(conversation);
+            _messagingWriteRepository.AddMessage(message);
+            _messagingWriteRepository.UpdateConversation(conversation);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (DomainException ex)
@@ -274,8 +274,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
 
         await InvalidateConversationListsAsync(currentUserId, recipientId, cancellationToken);
 
-        var dto = await _messagingRepository.GetMessageDtoAsync(message.Id, currentUserId, cancellationToken)
-            ?? new MessageDto(message.Id, message.ConversationId, message.SenderUserId, message.RecipientUserId, message.Type, message.Body, message.ImageUrl, message.AttachmentFileId, true, message.ReadAtUtc, message.CreatedDate, message.UpdatedDate);
+        var dto = await _messagingReadRepository.GetMessageDtoAsync(message.Id, currentUserId, cancellationToken)
+            ?? new MessageDto(message.Id, message.ConversationId, message.SenderUserId, message.RecipientUserId, message.Type, message.Body, message.ImageUrl, message.AttachmentFileId, true, message.ReadAtUtc, message.CreatedDate, message.UpdatedDate, Array.Empty<MessageReactionDto>(), false);
 
         await PublishConversationEventAsync(conversation.Id, currentUserId, recipientId, "MessageCreated", dto, cancellationToken);
 
@@ -297,7 +297,7 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         if (!_currentUser.TryGetUserId(out var currentUserId))
             return Result.Failure<WorkspaceDto>(MessagingErrors.MissingUserContext);
 
-        var message = await _messagingRepository.GetMessageForRecipientAsync(
+        var message = await _messagingReadRepository.GetMessageForRecipientAsync(
             messageId,
             currentUserId,
             cancellationToken);
@@ -394,16 +394,272 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         return Result.Success(dto);
     }
 
+
+    public async Task<Result> DeleteMessageForEveryoneAsync(
+        Guid messageId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.TryGetUserId(out var currentUserId))
+            return Result.Failure(MessagingErrors.MissingUserContext);
+
+        if (messageId == Guid.Empty)
+            return Result.Failure(MessagingErrors.MessageNotFound);
+
+        var message = await _messagingWriteRepository.GetMessageForParticipantForUpdateAsync(
+            messageId,
+            currentUserId,
+            cancellationToken);
+
+        if (message is null)
+            return Result.Failure(MessagingErrors.MessageNotFound);
+
+        if (message.SenderUserId != currentUserId)
+            return Result.Failure(MessagingErrors.MessageForbidden);
+
+        var conversation = await _messagingWriteRepository.GetConversationForUpdateAsync(
+            message.ConversationId,
+            currentUserId,
+            cancellationToken);
+
+        if (conversation is null)
+            return Result.Failure(MessagingErrors.ConversationForbidden);
+
+        var now = _clock.UtcNow;
+        var recipientId = conversation.GetOtherParticipant(currentUserId);
+
+        message.DeleteForEveryone(now);
+        conversation.RegisterMessage("Đã xóa một tin nhắn", now);
+        _messagingWriteRepository.UpdateMessage(message);
+        _messagingWriteRepository.UpdateConversation(conversation);
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await InvalidateConversationListsAsync(currentUserId, recipientId, cancellationToken);
+
+        await PublishConversationEventAsync(
+            conversation.Id,
+            currentUserId,
+            recipientId,
+            "MessageDeleted",
+            new
+            {
+                messageId,
+                conversationId = conversation.Id,
+                deletedByUserId = currentUserId
+            },
+            cancellationToken);
+
+        var conversationDto = await _messagingReadRepository.GetConversationDtoAsync(
+            conversation.Id,
+            currentUserId,
+            cancellationToken);
+
+        if (conversationDto is not null)
+        {
+            await PublishConversationEventAsync(
+                conversation.Id,
+                currentUserId,
+                recipientId,
+                "ConversationUpserted",
+                conversationDto,
+                cancellationToken);
+        }
+
+        return Result.Success();
+    }
+
+    public async Task<Result<MessageDto>> ToggleMessageReactionAsync(
+        Guid messageId,
+        string emoji,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.TryGetUserId(out var currentUserId))
+            return Result.Failure<MessageDto>(MessagingErrors.MissingUserContext);
+
+        var normalizedEmoji = emoji?.Trim() ?? string.Empty;
+        if (messageId == Guid.Empty || string.IsNullOrWhiteSpace(normalizedEmoji) || normalizedEmoji.Length > MessageReaction.MaxEmojiLength)
+        {
+            return Result.Failure<MessageDto>(MessagingErrors.InvalidRequest(new[]
+            {
+                "Reaction không hợp lệ."
+            }));
+        }
+
+        var message = await _messagingWriteRepository.GetMessageForParticipantForUpdateAsync(
+            messageId,
+            currentUserId,
+            cancellationToken);
+
+        if (message is null)
+            return Result.Failure<MessageDto>(MessagingErrors.MessageNotFound);
+
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(
+            message.ConversationId,
+            currentUserId,
+            cancellationToken);
+
+        if (conversation is null)
+            return Result.Failure<MessageDto>(MessagingErrors.ConversationForbidden);
+
+        var now = _clock.UtcNow;
+        var existing = await _messagingWriteRepository.GetReactionForUserForUpdateAsync(
+            messageId,
+            currentUserId,
+            cancellationToken);
+
+        try
+        {
+            if (existing is null)
+            {
+                _messagingWriteRepository.AddReaction(MessageReaction.Create(
+                    Guid.NewGuid(),
+                    messageId,
+                    currentUserId,
+                    normalizedEmoji,
+                    now));
+            }
+            else if (string.Equals(existing.Emoji, normalizedEmoji, StringComparison.Ordinal))
+            {
+                _messagingWriteRepository.RemoveReaction(existing);
+            }
+            else
+            {
+                existing.ChangeEmoji(normalizedEmoji, now);
+                _messagingWriteRepository.UpdateReaction(existing);
+            }
+        }
+        catch (DomainException ex)
+        {
+            return Result.Failure<MessageDto>(new Error("Messaging.InvalidReaction", ex.Message, ResultStatus.Validation));
+        }
+
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var dto = await _messagingReadRepository.GetMessageDtoAsync(messageId, currentUserId, cancellationToken);
+        if (dto is null)
+            return Result.Failure<MessageDto>(MessagingErrors.MessageNotFound);
+
+        await PublishConversationEventAsync(
+            message.ConversationId,
+            currentUserId,
+            conversation.GetOtherParticipant(currentUserId),
+            "MessageReactionChanged",
+            dto,
+            cancellationToken);
+
+        return Result.Success(dto);
+    }
+
+    public async Task<Result<MessageDto>> PinMessageAsync(
+        Guid messageId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.TryGetUserId(out var currentUserId))
+            return Result.Failure<MessageDto>(MessagingErrors.MissingUserContext);
+
+        var message = await _messagingWriteRepository.GetMessageForParticipantForUpdateAsync(
+            messageId,
+            currentUserId,
+            cancellationToken);
+
+        if (message is null)
+            return Result.Failure<MessageDto>(MessagingErrors.MessageNotFound);
+
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(
+            message.ConversationId,
+            currentUserId,
+            cancellationToken);
+
+        if (conversation is null)
+            return Result.Failure<MessageDto>(MessagingErrors.ConversationForbidden);
+
+        var existing = await _messagingWriteRepository.GetPinForMessageForUpdateAsync(
+            messageId,
+            cancellationToken);
+
+        if (existing is null)
+        {
+            _messagingWriteRepository.AddPin(MessagePin.Create(
+                Guid.NewGuid(),
+                message.ConversationId,
+                message.Id,
+                currentUserId,
+                _clock.UtcNow));
+
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        var dto = await _messagingReadRepository.GetMessageDtoAsync(messageId, currentUserId, cancellationToken);
+        if (dto is null)
+            return Result.Failure<MessageDto>(MessagingErrors.MessageNotFound);
+
+        await PublishConversationEventAsync(
+            message.ConversationId,
+            currentUserId,
+            conversation.GetOtherParticipant(currentUserId),
+            "MessagePinned",
+            dto,
+            cancellationToken);
+
+        return Result.Success(dto);
+    }
+
+    public async Task<Result<MessageDto>> UnpinMessageAsync(
+        Guid messageId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!_currentUser.TryGetUserId(out var currentUserId))
+            return Result.Failure<MessageDto>(MessagingErrors.MissingUserContext);
+
+        var message = await _messagingWriteRepository.GetMessageForParticipantForUpdateAsync(
+            messageId,
+            currentUserId,
+            cancellationToken);
+
+        if (message is null)
+            return Result.Failure<MessageDto>(MessagingErrors.MessageNotFound);
+
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(
+            message.ConversationId,
+            currentUserId,
+            cancellationToken);
+
+        if (conversation is null)
+            return Result.Failure<MessageDto>(MessagingErrors.ConversationForbidden);
+
+        var existing = await _messagingWriteRepository.GetPinForMessageForUpdateAsync(
+            messageId,
+            cancellationToken);
+
+        if (existing is not null)
+        {
+            _messagingWriteRepository.RemovePin(existing);
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+
+        var dto = await _messagingReadRepository.GetMessageDtoAsync(messageId, currentUserId, cancellationToken)
+            ?? new MessageDto(message.Id, message.ConversationId, message.SenderUserId, message.RecipientUserId, message.Type, message.Body, message.ImageUrl, message.AttachmentFileId, message.SenderUserId == currentUserId, message.ReadAtUtc, message.CreatedDate, message.UpdatedDate, Array.Empty<MessageReactionDto>(), false);
+
+        await PublishConversationEventAsync(
+            message.ConversationId,
+            currentUserId,
+            conversation.GetOtherParticipant(currentUserId),
+            "MessageUnpinned",
+            dto,
+            cancellationToken);
+
+        return Result.Success(dto);
+    }
+
     public async Task<Result> MarkConversationReadAsync(Guid conversationId, CancellationToken cancellationToken = default)
     {
         if (!_currentUser.TryGetUserId(out var currentUserId))
             return Result.Failure(MessagingErrors.MissingUserContext);
 
-        var conversation = await _messagingRepository.GetConversationForParticipantAsync(conversationId, currentUserId, cancellationToken);
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(conversationId, currentUserId, cancellationToken);
         if (conversation is null)
             return Result.Failure(MessagingErrors.ConversationForbidden);
 
-        var count = await _messagingRepository.MarkConversationReadAsync(conversationId, currentUserId, _clock.UtcNow, cancellationToken);
+        var count = await _messagingWriteRepository.MarkConversationReadAsync(conversationId, currentUserId, _clock.UtcNow, cancellationToken);
         if (count > 0)
         {
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -430,15 +686,13 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
         if (!_currentUser.TryGetUserId(out var currentUserId))
             return Result.Failure<MessageDto>(MessagingErrors.MissingUserContext);
 
-        var conversation = await _messagingRepository.GetConversationForUpdateAsync(conversationId, currentUserId, cancellationToken);
+        var conversation = await _messagingWriteRepository.GetConversationForUpdateAsync(conversationId, currentUserId, cancellationToken);
         if (conversation is null)
             return Result.Failure<MessageDto>(MessagingErrors.ConversationForbidden);
 
         var recipientId = conversation.GetOtherParticipant(currentUserId);
 
-        if (!await _friendshipRepository.AreFriendsAsync(currentUserId, recipientId, cancellationToken))
-            return Result.Failure<MessageDto>(MessagingErrors.FriendshipRequired);
-
+        // Người gửi đã là participant của conversation; không chặn thêm bằng friendship.
         var now = _clock.UtcNow;
         Message message;
 
@@ -449,8 +703,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
                 : Message.CreateImage(Guid.NewGuid(), conversation.Id, currentUserId, recipientId, body, imageUrl, attachmentFileId, now);
 
             conversation.RegisterMessage(message.BuildPreview(), now);
-            _messagingRepository.AddMessage(message);
-            _messagingRepository.UpdateConversation(conversation);
+            _messagingWriteRepository.AddMessage(message);
+            _messagingWriteRepository.UpdateConversation(conversation);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
         }
         catch (DomainException ex)
@@ -460,8 +714,8 @@ public sealed class MessagingApplicationService : IMessagingApplicationService
 
         await InvalidateConversationListsAsync(currentUserId, recipientId, cancellationToken);
 
-        var dto = await _messagingRepository.GetMessageDtoAsync(message.Id, currentUserId, cancellationToken)
-            ?? new MessageDto(message.Id, message.ConversationId, message.SenderUserId, message.RecipientUserId, message.Type, message.Body, message.ImageUrl, message.AttachmentFileId, true, message.ReadAtUtc, message.CreatedDate, message.UpdatedDate);
+        var dto = await _messagingReadRepository.GetMessageDtoAsync(message.Id, currentUserId, cancellationToken)
+            ?? new MessageDto(message.Id, message.ConversationId, message.SenderUserId, message.RecipientUserId, message.Type, message.Body, message.ImageUrl, message.AttachmentFileId, true, message.ReadAtUtc, message.CreatedDate, message.UpdatedDate, Array.Empty<MessageReactionDto>(), false);
 
         await PublishConversationEventAsync(conversation.Id, currentUserId, recipientId, "MessageCreated", dto, cancellationToken);
 

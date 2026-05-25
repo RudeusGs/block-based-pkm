@@ -1,14 +1,15 @@
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Authentication.Models;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Users;
 
 namespace Pkm.Application.Features.Authentication.Commands.Register;
 
-public sealed class RegisterHandler
+public sealed class RegisterHandler : ICommandHandler<RegisterCommand, AuthUserDto>
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
@@ -62,14 +63,16 @@ public sealed class RegisterHandler
                     AuthenticationErrors.DuplicateEmail);
             }
 
+            User.EnsurePasswordMeetsPolicy(request.Password);
+            var passwordHash = _passwordHasher.HashPassword(request.Password);
+
             var user = User.Create(
                 Guid.NewGuid(),
                 request.UserName,
                 request.Email,
                 request.FullName,
                 request.AvatarUrl,
-                request.Password,
-                _passwordHasher,
+                passwordHash,
                 _clock.UtcNow);
 
             _userRepository.Add(user);

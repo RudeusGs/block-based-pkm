@@ -1,4 +1,4 @@
-﻿using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Domain.Tasks;
 
@@ -114,12 +114,24 @@ public sealed class WorkTask : EntityBase
         DateTimeOffset now)
     {
         EnsureEditable(actorId);
+        EnsureValidStatus(newStatus);
 
         if (Status == newStatus)
             return;
 
+        if (!CanChangeStatusTo(newStatus))
+            throw new DomainException("Completed tasks cannot be moved back to another status.");
+
         Status = newStatus;
         RegisterModification(actorId, now);
+    }
+
+    public bool CanChangeStatusTo(StatusWorkTask newStatus)
+    {
+        if (!Enum.IsDefined(typeof(StatusWorkTask), newStatus))
+            return false;
+
+        return Status != StatusWorkTask.Done || newStatus == StatusWorkTask.Done;
     }
 
     public void Start(Guid actorId, DateTimeOffset now)
@@ -168,5 +180,11 @@ public sealed class WorkTask : EntityBase
     {
         LastModifiedById = actorId;
         Touch(now);
+    }
+
+    private static void EnsureValidStatus(StatusWorkTask status)
+    {
+        if (!Enum.IsDefined(typeof(StatusWorkTask), status))
+            throw new DomainException("Task status is invalid.");
     }
 }

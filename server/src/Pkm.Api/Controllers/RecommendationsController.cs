@@ -1,52 +1,35 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Pkm.Api.Mapping;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Recommendations;
 using Pkm.Api.Contracts.Responses.Recommendations;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Recommendations;
 using Pkm.Application.Features.Recommendations.Commands.AcceptTaskRecommendation;
 using Pkm.Application.Features.Recommendations.Commands.CompleteTaskRecommendation;
 using Pkm.Application.Features.Recommendations.Commands.GenerateTaskRecommendations;
 using Pkm.Application.Features.Recommendations.Commands.RejectTaskRecommendation;
 using Pkm.Application.Features.Recommendations.Commands.UpdateUserTaskPreference;
+using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Application.Features.Recommendations.Queries.GetUserTaskPreference;
 using Pkm.Application.Features.Recommendations.Queries.ListTaskRecommendations;
-using Pkm.Domain.Recommendations;
-using Pkm.Domain.Tasks;
 
 namespace Pkm.Api.Controllers;
 
 [Authorize]
 public sealed class RecommendationsController : BaseController
 {
-    private readonly GenerateTaskRecommendationsHandler _generateHandler;
-    private readonly ListTaskRecommendationsHandler _listHandler;
-    private readonly AcceptTaskRecommendationHandler _acceptHandler;
-    private readonly RejectTaskRecommendationHandler _rejectHandler;
-    private readonly CompleteTaskRecommendationHandler _completeHandler;
-    private readonly GetUserTaskPreferenceHandler _getPreferenceHandler;
-    private readonly UpdateUserTaskPreferenceHandler _updatePreferenceHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public RecommendationsController(
         ICurrentUser currentUser,
-        GenerateTaskRecommendationsHandler generateHandler,
-        ListTaskRecommendationsHandler listHandler,
-        AcceptTaskRecommendationHandler acceptHandler,
-        RejectTaskRecommendationHandler rejectHandler,
-        CompleteTaskRecommendationHandler completeHandler,
-        GetUserTaskPreferenceHandler getPreferenceHandler,
-        UpdateUserTaskPreferenceHandler updatePreferenceHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _generateHandler = generateHandler;
-        _listHandler = listHandler;
-        _acceptHandler = acceptHandler;
-        _rejectHandler = rejectHandler;
-        _completeHandler = completeHandler;
-        _getPreferenceHandler = getPreferenceHandler;
-        _updatePreferenceHandler = updatePreferenceHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/workspaces/{workspaceId:guid}/task-recommendations:generate")]
@@ -61,7 +44,7 @@ public sealed class RecommendationsController : BaseController
         [FromBody] GenerateTaskRecommendationsRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _generateHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<GenerateTaskRecommendationsCommand, IReadOnlyList<TaskRecommendationDto>>(
             new GenerateTaskRecommendationsCommand(
                 workspaceId,
                 request.PageId,
@@ -85,7 +68,7 @@ public sealed class RecommendationsController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        if (!TryParseNullableStatus(status, out var parsedStatus))
+        if (!EnumRequestParsers.TryParseNullableRecommendationStatus(status, out var parsedStatus))
         {
             return HandleResult<TaskRecommendationPagedResultResponse>(
                 Result.Failure<TaskRecommendationPagedResultResponse>(
@@ -95,7 +78,7 @@ public sealed class RecommendationsController : BaseController
                     })));
         }
 
-        var result = await _listHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListTaskRecommendationsQuery, TaskRecommendationPagedResultDto>(
             new ListTaskRecommendationsQuery(
                 workspaceId,
                 parsedStatus,
@@ -117,7 +100,7 @@ public sealed class RecommendationsController : BaseController
         [FromRoute] Guid recommendationId,
         CancellationToken cancellationToken)
     {
-        var result = await _acceptHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<AcceptTaskRecommendationCommand, TaskRecommendationDto>(
             new AcceptTaskRecommendationCommand(recommendationId),
             cancellationToken);
 
@@ -135,7 +118,7 @@ public sealed class RecommendationsController : BaseController
         [FromRoute] Guid recommendationId,
         CancellationToken cancellationToken)
     {
-        var result = await _rejectHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<RejectTaskRecommendationCommand, TaskRecommendationDto>(
             new RejectTaskRecommendationCommand(recommendationId),
             cancellationToken);
 
@@ -154,7 +137,7 @@ public sealed class RecommendationsController : BaseController
         [FromBody] CompleteTaskRecommendationRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _completeHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<CompleteTaskRecommendationCommand, TaskRecommendationDto>(
             new CompleteTaskRecommendationCommand(
                 recommendationId,
                 request.Notes),
@@ -172,7 +155,7 @@ public sealed class RecommendationsController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _getPreferenceHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetUserTaskPreferenceQuery, UserTaskPreferenceDto>(
             new GetUserTaskPreferenceQuery(workspaceId),
             cancellationToken);
 
@@ -191,7 +174,7 @@ public sealed class RecommendationsController : BaseController
         [FromBody] UpdateUserTaskPreferenceRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryParsePriority(request.MinPriorityForRecommendation, out var minPriority))
+        if (!EnumRequestParsers.TryParseTaskPriority(request.MinPriorityForRecommendation, out var minPriority))
         {
             return HandleResult<UserTaskPreferenceResponse>(
                 Result.Failure<UserTaskPreferenceResponse>(
@@ -201,7 +184,7 @@ public sealed class RecommendationsController : BaseController
                     })));
         }
 
-        var result = await _updatePreferenceHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<UpdateUserTaskPreferenceCommand, UserTaskPreferenceDto>(
             new UpdateUserTaskPreferenceCommand(
                 workspaceId,
                 request.WorkDayStartHour,
@@ -215,61 +198,5 @@ public sealed class RecommendationsController : BaseController
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
-    }
-
-    private static bool TryParseNullableStatus(
-        string? raw,
-        out StatusTaskRecommendation? status)
-    {
-        status = null;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        switch (raw.Trim().ToLowerInvariant())
-        {
-            case "pending":
-                status = StatusTaskRecommendation.Pending;
-                return true;
-            case "accepted":
-                status = StatusTaskRecommendation.Accepted;
-                return true;
-            case "rejected":
-                status = StatusTaskRecommendation.Rejected;
-                return true;
-            case "completed":
-                status = StatusTaskRecommendation.Completed;
-                return true;
-            case "expired":
-                status = StatusTaskRecommendation.Expired;
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static bool TryParsePriority(
-        string? raw,
-        out PriorityWorkTask priority)
-    {
-        priority = default;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        switch (raw.Trim().ToLowerInvariant())
-        {
-            case "low":
-                priority = PriorityWorkTask.Low;
-                return true;
-            case "medium":
-                priority = PriorityWorkTask.Medium;
-                return true;
-            case "high":
-                priority = PriorityWorkTask.High;
-                return true;
-            default:
-                return false;
-        }
     }
 }

@@ -76,4 +76,11 @@ public static class AuthenticationErrors
             "Dữ liệu logout không hợp lệ.",
             ResultStatus.Validation,
             details);
+
+    public static Error InvalidForgotPasswordRequest(IReadOnlyList<string> details)
+        => new(
+            "Auth.InvalidForgotPasswordRequest",
+            "Dữ liệu lấy lại mật khẩu không hợp lệ.",
+            ResultStatus.Validation,
+            details);
 }

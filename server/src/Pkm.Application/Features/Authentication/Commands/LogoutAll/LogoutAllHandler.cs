@@ -1,11 +1,12 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 
 namespace Pkm.Application.Features.Authentication.Commands.LogoutAll;
 
-public sealed class LogoutAllHandler
+public sealed class LogoutAllHandler : ICommandHandler<LogoutAllCommand>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IUserRepository _userRepository;

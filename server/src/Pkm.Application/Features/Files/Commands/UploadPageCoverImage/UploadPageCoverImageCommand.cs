@@ -1,3 +1,6 @@
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Pages.Models;
+
 namespace Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
 
 public sealed record UploadPageCoverImageCommand(
@@ -6,4 +9,4 @@ public sealed record UploadPageCoverImageCommand(
     string FileName,
     string ContentType,
     long SizeBytes,
-    Stream Content);
+    Stream Content) : ICommand<PageDto>;

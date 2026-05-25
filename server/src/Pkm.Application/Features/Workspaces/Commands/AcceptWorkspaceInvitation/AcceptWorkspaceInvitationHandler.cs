@@ -1,8 +1,9 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Domain.Audit;
 using Pkm.Application.Features.Notifications;
@@ -13,7 +14,7 @@ using Pkm.Domain.Workspaces;
 
 namespace Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
 
-public sealed class AcceptWorkspaceInvitationHandler
+public sealed class AcceptWorkspaceInvitationHandler : ICommandHandler<AcceptWorkspaceInvitationCommand, WorkspaceMemberDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IUserRepository _userRepository;

@@ -1,5 +1,5 @@
-﻿using System.Collections.Concurrent;
-using Pkm.Application.Abstractions.Caching;
+using System.Collections.Concurrent;
+using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Infrastructure.Cache;
 

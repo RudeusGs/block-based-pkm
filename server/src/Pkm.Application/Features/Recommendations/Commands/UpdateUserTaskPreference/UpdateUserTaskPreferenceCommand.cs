@@ -1,4 +1,6 @@
-﻿using Pkm.Domain.Tasks;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Recommendations.Models;
+using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Recommendations.Commands.UpdateUserTaskPreference;
 
@@ -11,4 +13,4 @@ public sealed record UpdateUserTaskPreferenceCommand(
     PriorityWorkTask MinPriorityForRecommendation,
     int RecommendationSensitivity,
     int RecommendationIntervalMinutes,
-    bool EnableAutoRecommendation);
+    bool EnableAutoRecommendation) : ICommand<UserTaskPreferenceDto>;

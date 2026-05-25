@@ -3,8 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Social;
 using Pkm.Api.Contracts.Responses.Social;
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Features.Social.Services;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Social.Commands;
+using Pkm.Application.Features.Social.Models;
+using Pkm.Application.Features.Social.Queries;
 
 namespace Pkm.Api.Controllers;
 
@@ -14,14 +17,14 @@ public sealed class SocialController : BaseController
 {
     private const long MaxRequestBodySizeBytes = 10 * 1024 * 1024;
 
-    private readonly ISocialApplicationService _socialApplicationService;
+    private readonly IUseCaseDispatcher _useCaseDispatcher;
 
     public SocialController(
         ICurrentUser currentUser,
-        ISocialApplicationService socialApplicationService)
+        IUseCaseDispatcher useCaseDispatcher)
         : base(currentUser)
     {
-        _socialApplicationService = socialApplicationService;
+        _useCaseDispatcher = useCaseDispatcher;
     }
 
     [HttpGet("users/search")]
@@ -34,10 +37,8 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.SearchUsersAsync(
-            keyword ?? string.Empty,
-            pageNumber,
-            pageSize,
+        var result = await _useCaseDispatcher.QueryAsync<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>(
+            new SearchUsersQuery(keyword ?? string.Empty, pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => (IReadOnlyList<UserSearchResultResponse>)x.Select(y => y.ToResponse()).ToArray());
@@ -51,7 +52,9 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid userId,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.GetProfileAsync(userId, cancellationToken);
+        var result = await _useCaseDispatcher.QueryAsync<GetProfileQuery, UserProfilePageDto>(
+            new GetProfileQuery(userId),
+            cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -64,9 +67,8 @@ public sealed class SocialController : BaseController
         [FromBody] UpdateMyProfilePageRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.UpdateMyProfilePageAsync(
-            request.Bio,
-            request.CoverImageUrl,
+        var result = await _useCaseDispatcher.ExecuteAsync<UpdateMyProfilePageCommand, UserProfilePageDto>(
+            new UpdateMyProfilePageCommand(request.Bio, request.CoverImageUrl),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -91,11 +93,12 @@ public sealed class SocialController : BaseController
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _socialApplicationService.UploadMyProfileCoverImageAsync(
-            file.FileName,
-            ResolveContentType(file),
-            file.Length,
-            stream,
+        var result = await _useCaseDispatcher.ExecuteAsync<UploadMyProfileCoverImageCommand, UserProfilePageDto>(
+            new UploadMyProfileCoverImageCommand(
+                file.FileName,
+                ResolveContentType(file),
+                file.Length,
+                stream),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -112,8 +115,8 @@ public sealed class SocialController : BaseController
         [FromBody] SendFriendRequestRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.SendFriendRequestAsync(
-            request.AddresseeUserId,
+        var result = await _useCaseDispatcher.ExecuteAsync<SendFriendRequestCommand, FriendRequestDto>(
+            new SendFriendRequestCommand(request.AddresseeUserId),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -127,9 +130,8 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.ListIncomingRequestsAsync(
-            pageNumber,
-            pageSize,
+        var result = await _useCaseDispatcher.QueryAsync<ListIncomingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
+            new ListIncomingFriendRequestsQuery(pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => (IReadOnlyList<FriendRequestResponse>)x.Select(y => y.ToResponse()).ToArray());
@@ -143,9 +145,8 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.ListOutgoingRequestsAsync(
-            pageNumber,
-            pageSize,
+        var result = await _useCaseDispatcher.QueryAsync<ListOutgoingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
+            new ListOutgoingFriendRequestsQuery(pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => (IReadOnlyList<FriendRequestResponse>)x.Select(y => y.ToResponse()).ToArray());
@@ -161,7 +162,9 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid requestId,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.AcceptFriendRequestAsync(requestId, cancellationToken);
+        var result = await _useCaseDispatcher.ExecuteAsync<AcceptFriendRequestCommand, FriendRequestDto>(
+            new AcceptFriendRequestCommand(requestId),
+            cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -175,7 +178,9 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid requestId,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.RejectFriendRequestAsync(requestId, cancellationToken);
+        var result = await _useCaseDispatcher.ExecuteAsync<RejectFriendRequestCommand, FriendRequestDto>(
+            new RejectFriendRequestCommand(requestId),
+            cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -189,7 +194,9 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid requestId,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.CancelFriendRequestAsync(requestId, cancellationToken);
+        var result = await _useCaseDispatcher.ExecuteAsync<CancelFriendRequestCommand, FriendRequestDto>(
+            new CancelFriendRequestCommand(requestId),
+            cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -201,9 +208,8 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.ListFriendsAsync(
-            pageNumber,
-            pageSize,
+        var result = await _useCaseDispatcher.QueryAsync<ListFriendsQuery, IReadOnlyList<FriendDto>>(
+            new ListFriendsQuery(pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => (IReadOnlyList<FriendResponse>)x.Select(y => y.ToResponse()).ToArray());
@@ -217,7 +223,9 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid friendUserId,
         CancellationToken cancellationToken)
     {
-        var result = await _socialApplicationService.RemoveFriendAsync(friendUserId, cancellationToken);
+        var result = await _useCaseDispatcher.ExecuteAsync(
+            new RemoveFriendCommand(friendUserId),
+            cancellationToken);
         return HandleResult(result);
     }
 
@@ -237,9 +245,4 @@ public sealed class SocialController : BaseController
         => string.IsNullOrWhiteSpace(file.ContentType)
             ? "application/octet-stream"
             : file.ContentType;
-}
-
-public sealed class UploadProfileCoverImageFormRequest
-{
-    public IFormFile? File { get; init; }
 }

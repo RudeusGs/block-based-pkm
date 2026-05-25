@@ -1,6 +1,6 @@
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Storage;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Storage;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Files.Models;
 using Pkm.Domain.Files;

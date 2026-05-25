@@ -1,12 +1,13 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Notifications.Models;
 
 namespace Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
 
-public sealed class GetUnreadNotificationCountHandler
+public sealed class GetUnreadNotificationCountHandler : IQueryHandler<GetUnreadNotificationCountQuery, NotificationUnreadCountDto>
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromSeconds(15);
 

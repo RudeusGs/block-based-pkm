@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Pkm.Application.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Infrastructure.Cache;
 using Pkm.Infrastructure.Realtime.Locks;
 using Pkm.Infrastructure.Realtime.Presence;

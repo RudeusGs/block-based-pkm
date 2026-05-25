@@ -1,4 +1,4 @@
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Authorization;
 using Pkm.Domain.Workspaces;
 

@@ -1,4 +1,4 @@
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Time;
 
 namespace Pkm.Infrastructure.Time;
 

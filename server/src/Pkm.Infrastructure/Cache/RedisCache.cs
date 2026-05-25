@@ -1,5 +1,5 @@
 using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Caching;
 using StackExchange.Redis;
 
 namespace Pkm.Infrastructure.Cache;

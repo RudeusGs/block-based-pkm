@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Files;
 using Pkm.Domain.Messaging;
 using Pkm.Domain.Notifications;
@@ -33,6 +33,8 @@ public sealed class DataContext : DbContext
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<Conversation> Conversations => Set<Conversation>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageReaction> MessageReactions => Set<MessageReaction>();
+    public DbSet<MessagePin> MessagePins => Set<MessagePin>();
     public DbSet<Page> Pages => Set<Page>();
     public DbSet<PageFavorite> PageFavorites => Set<PageFavorite>();
     public DbSet<PageRecent> PageRecents => Set<PageRecent>();
@@ -55,7 +57,24 @@ public sealed class DataContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
+        IgnoreDomainEvents(modelBuilder);
         ApplySoftDeleteQueryFilters(modelBuilder);
+    }
+
+    private static void IgnoreDomainEvents(ModelBuilder modelBuilder)
+    {
+        var entityTypes = modelBuilder.Model
+            .GetEntityTypes()
+            .Where(x =>
+                x.ClrType is not null &&
+                typeof(EntityBase).IsAssignableFrom(x.ClrType));
+
+        foreach (var entityType in entityTypes)
+        {
+            modelBuilder
+                .Entity(entityType.ClrType)
+                .Ignore(nameof(EntityBase.DomainEvents));
+        }
     }
 
     private static void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)

@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Workspaces.Models;
 
-public sealed record ListWorkspaceMembersQuery(Guid WorkspaceId);
+namespace Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
+
+public sealed record ListWorkspaceMembersQuery(Guid WorkspaceId) : IQuery<IReadOnlyList<WorkspaceMemberDto>>;

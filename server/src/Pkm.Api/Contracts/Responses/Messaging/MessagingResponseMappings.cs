@@ -15,6 +15,12 @@ public static class MessagingResponseMappings
             dto.CreatedDate,
             dto.UpdatedDate);
 
+    public static MessageReactionResponse ToResponse(this MessageReactionDto dto)
+        => new(
+            dto.Emoji,
+            dto.Count,
+            dto.ReactedByMe);
+
     public static MessageResponse ToResponse(this MessageDto dto)
         => new(
             dto.Id,
@@ -28,7 +34,9 @@ public static class MessagingResponseMappings
             dto.IsMine,
             dto.ReadAtUtc,
             dto.CreatedDate,
-            dto.UpdatedDate);
+            dto.UpdatedDate,
+            dto.Reactions.Select(x => x.ToResponse()).ToArray(),
+            dto.IsPinned);
 
     public static ConversationPagedResultResponse ToResponse(this ConversationPagedResultDto dto)
         => new(

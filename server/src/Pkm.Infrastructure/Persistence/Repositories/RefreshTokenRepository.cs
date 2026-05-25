@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Pkm.Application.Abstractions.Authentication;
+using Microsoft.EntityFrameworkCore;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Domain.Users;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;

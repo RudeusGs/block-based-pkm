@@ -1,50 +1,40 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Pkm.Api.Mapping;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Account;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Account;
 using Pkm.Api.Contracts.Responses.Workspaces;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Account.Commands.ChangeMyPassword;
+using Pkm.Application.Features.Account.Models;
 using Pkm.Application.Features.Account.Commands.UpdateMyProfile;
 using Pkm.Application.Features.Account.Queries.GetMyProfile;
 using Pkm.Application.Features.Authentication;
 using Pkm.Application.Features.Authentication.Queries.GetUserRoles;
+using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
 using Pkm.Api.Contracts.Responses.Tasks;
 using Pkm.Application.Features.Tasks;
+using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Queries.ListMyAssignedTasks;
-using Pkm.Domain.Tasks;
 namespace Pkm.Api.Controllers;
 
 [Authorize]
 [Route("api/v1/me")]
 public sealed class MeController : BaseController
 {
-    private readonly GetMyProfileHandler _getMyProfileHandler;
-    private readonly UpdateMyProfileHandler _updateMyProfileHandler;
-    private readonly ChangeMyPasswordHandler _changeMyPasswordHandler;
-    private readonly GetUserRolesHandler _getUserRolesHandler;
-    private readonly ListMyWorkspacesHandler _listMyWorkspacesHandler;
-    private readonly ListMyAssignedTasksHandler _listMyAssignedTasksHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
+
     public MeController(
         ICurrentUser currentUser,
-        GetMyProfileHandler getMyProfileHandler,
-        UpdateMyProfileHandler updateMyProfileHandler,
-        ChangeMyPasswordHandler changeMyPasswordHandler,
-        GetUserRolesHandler getUserRolesHandler,
-        ListMyWorkspacesHandler listMyWorkspacesHandler,
-        ListMyAssignedTasksHandler listMyAssignedTasksHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _getMyProfileHandler = getMyProfileHandler;
-        _updateMyProfileHandler = updateMyProfileHandler;
-        _changeMyPasswordHandler = changeMyPasswordHandler;
-        _getUserRolesHandler = getUserRolesHandler;
-        _listMyWorkspacesHandler = listMyWorkspacesHandler;
-        _listMyAssignedTasksHandler = listMyAssignedTasksHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpGet]
@@ -54,7 +44,7 @@ public sealed class MeController : BaseController
     public async Task<ActionResult<ApiResult<UserProfileResponse>>> GetMyProfile(
         CancellationToken cancellationToken)
     {
-        var result = await _getMyProfileHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetMyProfileQuery, UserProfileDto>(
             new GetMyProfileQuery(),
             cancellationToken);
 
@@ -71,7 +61,7 @@ public sealed class MeController : BaseController
         [FromBody] UpdateMyProfileRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _updateMyProfileHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<UpdateMyProfileCommand, UserProfileDto>(
             new UpdateMyProfileCommand(
                 request.FullName,
                 request.AvatarUrl),
@@ -91,7 +81,7 @@ public sealed class MeController : BaseController
         [FromBody] ChangeMyPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _changeMyPasswordHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new ChangeMyPasswordCommand(
                 request.CurrentPassword,
                 request.NewPassword,
@@ -115,7 +105,7 @@ public sealed class MeController : BaseController
                     AuthenticationErrors.MissingUserContext));
         }
 
-        var result = await _getUserRolesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetUserRolesQuery, IEnumerable<string>>(
             new GetUserRolesQuery(currentUserId),
             cancellationToken);
 
@@ -130,7 +120,7 @@ public sealed class MeController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listMyWorkspacesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListMyWorkspacesQuery, WorkspacePagedResultDto>(
             new ListMyWorkspacesQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -154,7 +144,7 @@ public sealed class MeController : BaseController
     [FromQuery] int pageSize = 20,
     CancellationToken cancellationToken = default)
     {
-        if (!TryParseNullableStatus(status, out var parsedStatus))
+        if (!EnumRequestParsers.TryParseNullableTaskStatus(status, out var parsedStatus))
         {
             return HandleResult<WorkTaskPagedResultResponse>(
                 Result.Failure<WorkTaskPagedResultResponse>(
@@ -164,7 +154,7 @@ public sealed class MeController : BaseController
                     })));
         }
 
-        if (!TryParseNullablePriority(priority, out var parsedPriority))
+        if (!EnumRequestParsers.TryParseNullableTaskPriority(priority, out var parsedPriority))
         {
             return HandleResult<WorkTaskPagedResultResponse>(
                 Result.Failure<WorkTaskPagedResultResponse>(
@@ -174,7 +164,7 @@ public sealed class MeController : BaseController
                     })));
         }
 
-        var result = await _listMyAssignedTasksHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListMyAssignedTasksQuery, WorkTaskPagedResultDto>(
             new ListMyAssignedTasksQuery(
                 workspaceId,
                 keyword,
@@ -191,82 +181,4 @@ public sealed class MeController : BaseController
     }
     private string? GetClientIpAddress()
         => HttpContext.Connection.RemoteIpAddress?.ToString();
-    private static bool TryParsePriority(string? raw, out PriorityWorkTask priority)
-    {
-        priority = default;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        switch (raw.Trim().ToLowerInvariant())
-        {
-            case "low":
-                priority = PriorityWorkTask.Low;
-                return true;
-            case "medium":
-                priority = PriorityWorkTask.Medium;
-                return true;
-            case "high":
-                priority = PriorityWorkTask.High;
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static bool TryParseNullablePriority(string? raw, out PriorityWorkTask? priority)
-    {
-        priority = null;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        if (TryParsePriority(raw, out var parsed))
-        {
-            priority = parsed;
-            return true;
-        }
-
-        return false;
-    }
-
-    private static bool TryParseStatus(string? raw, out StatusWorkTask status)
-    {
-        status = default;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return false;
-
-        switch (raw.Trim().ToLowerInvariant().Replace("-", "_"))
-        {
-            case "todo":
-            case "to_do":
-                status = StatusWorkTask.ToDo;
-                return true;
-            case "doing":
-                status = StatusWorkTask.Doing;
-                return true;
-            case "done":
-                status = StatusWorkTask.Done;
-                return true;
-            default:
-                return false;
-        }
-    }
-
-    private static bool TryParseNullableStatus(string? raw, out StatusWorkTask? status)
-    {
-        status = null;
-
-        if (string.IsNullOrWhiteSpace(raw))
-            return true;
-
-        if (TryParseStatus(raw, out var parsed))
-        {
-            status = parsed;
-            return true;
-        }
-
-        return false;
-    }
 }

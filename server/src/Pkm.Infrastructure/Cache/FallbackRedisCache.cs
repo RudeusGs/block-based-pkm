@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using Pkm.Application.Abstractions.Caching;
+using Microsoft.Extensions.Logging;
+using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Infrastructure.Cache;
 

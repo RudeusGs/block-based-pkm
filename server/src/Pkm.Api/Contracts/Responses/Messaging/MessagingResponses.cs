@@ -11,6 +11,11 @@ public sealed record ConversationResponse(
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);
 
+public sealed record MessageReactionResponse(
+    string Emoji,
+    int Count,
+    bool ReactedByMe);
+
 public sealed record MessageResponse(
     Guid Id,
     Guid ConversationId,
@@ -23,7 +28,9 @@ public sealed record MessageResponse(
     bool IsMine,
     DateTimeOffset? ReadAtUtc,
     DateTimeOffset CreatedDate,
-    DateTimeOffset? UpdatedDate);
+    DateTimeOffset? UpdatedDate,
+    IReadOnlyList<MessageReactionResponse> Reactions,
+    bool IsPinned);
 
 public sealed record ConversationPagedResultResponse(
     IReadOnlyList<ConversationResponse> Items,
