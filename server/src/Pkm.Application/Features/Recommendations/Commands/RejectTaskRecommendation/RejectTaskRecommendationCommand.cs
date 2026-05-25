@@ -1,4 +1,6 @@
-﻿namespace Pkm.Application.Features.Recommendations.Commands.RejectTaskRecommendation;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Recommendations.Models;
 
-public sealed record RejectTaskRecommendationCommand(
-    Guid RecommendationId);
+namespace Pkm.Application.Features.Recommendations.Commands.RejectTaskRecommendation;
+
+public sealed record RejectTaskRecommendationCommand(Guid RecommendationId) : ICommand<TaskRecommendationDto>;

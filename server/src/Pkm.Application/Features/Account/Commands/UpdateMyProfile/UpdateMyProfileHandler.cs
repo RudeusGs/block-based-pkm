@@ -1,14 +1,15 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Account.Models;
 using Pkm.Application.Features.Authentication;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Application.Features.Account.Commands.UpdateMyProfile;
 
-public sealed class UpdateMyProfileHandler
+public sealed class UpdateMyProfileHandler : ICommandHandler<UpdateMyProfileCommand, UserProfileDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IUserRepository _userRepository;

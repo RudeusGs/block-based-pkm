@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Domain.Users;
 
 namespace Pkm.Infrastructure.Authentication;

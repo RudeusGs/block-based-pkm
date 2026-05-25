@@ -1,7 +1,7 @@
-﻿using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Domain.Audit;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Application.Features.Activity.Services;
 

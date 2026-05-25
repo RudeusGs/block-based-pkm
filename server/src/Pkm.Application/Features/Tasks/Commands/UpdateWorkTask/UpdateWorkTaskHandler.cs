@@ -1,19 +1,20 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Domain.Audit;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
 
-public sealed class UpdateWorkTaskHandler
+public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskCommand, WorkTaskDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkTaskRepository _workTaskRepository;

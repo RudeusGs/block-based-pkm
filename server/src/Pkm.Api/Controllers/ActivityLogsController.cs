@@ -1,8 +1,8 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Responses.ActivityLogs;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
 
 namespace Pkm.Api.Controllers;

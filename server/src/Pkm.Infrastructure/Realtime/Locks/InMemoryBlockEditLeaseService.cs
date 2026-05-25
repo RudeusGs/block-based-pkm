@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 
 namespace Pkm.Infrastructure.Realtime.Locks;
 

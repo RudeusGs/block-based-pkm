@@ -1,11 +1,12 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 
 namespace Pkm.Application.Features.Authentication.Commands.Logout;
 
-public sealed class LogoutHandler
+public sealed class LogoutHandler : ICommandHandler<LogoutCommand>
 {
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IRefreshTokenService _refreshTokenService;

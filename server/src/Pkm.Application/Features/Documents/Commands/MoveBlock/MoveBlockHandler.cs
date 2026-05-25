@@ -1,8 +1,8 @@
-﻿using System.Text.Json;
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using System.Text.Json;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
@@ -10,7 +10,7 @@ using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.MoveBlock;

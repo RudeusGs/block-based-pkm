@@ -1,21 +1,22 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 
 namespace Pkm.Application.Features.Tasks.Queries.GetWorkTaskById;
 
-public sealed class GetWorkTaskByIdHandler
+public sealed class GetWorkTaskByIdHandler : IQueryHandler<GetWorkTaskByIdQuery, WorkTaskDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskReadRepository _workTaskRepository;
 
     public GetWorkTaskByIdHandler(
         ICurrentUser currentUser,
         ITaskAccessEvaluator taskAccessEvaluator,
-        IWorkTaskRepository workTaskRepository)
+        IWorkTaskReadRepository workTaskRepository)
     {
         _currentUser = currentUser;
         _taskAccessEvaluator = taskAccessEvaluator;

@@ -1,4 +1,4 @@
-﻿using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Domain.Recommendations;

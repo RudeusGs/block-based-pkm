@@ -1,5 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore;
-using Pkm.Application.Abstractions.Persistence;
+using Microsoft.EntityFrameworkCore;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Domain.Recommendations;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;

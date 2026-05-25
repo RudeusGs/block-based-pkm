@@ -1,9 +1,10 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
@@ -12,14 +13,14 @@ using Pkm.Application.Features.Recommendations.Services;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Audit;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Notifications;
 using Pkm.Domain.Recommendations;
 using Pkm.Domain.Workspaces;
 
 namespace Pkm.Application.Features.Recommendations.Commands.GenerateTaskRecommendations;
 
-public sealed class GenerateTaskRecommendationsHandler
+public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<GenerateTaskRecommendationsCommand, IReadOnlyList<TaskRecommendationDto>>
 {
     private const int CandidateTake = 100;
     private const int RecommendationValidHours = 24;
@@ -577,6 +578,5 @@ public sealed class GenerateTaskRecommendationsHandler
         }
     }
 }
-
 
 

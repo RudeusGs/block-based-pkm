@@ -1,4 +1,6 @@
-﻿using Pkm.Domain.Tasks;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Tasks.Models;
+using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
 
@@ -8,4 +10,4 @@ public sealed record CreateWorkTaskCommand(
     string? Description,
     PriorityWorkTask Priority,
     DateTimeOffset? DueDate,
-    IReadOnlyList<Guid>? AssigneeUserIds = null);
+    IReadOnlyList<Guid>? AssigneeUserIds = null) : ICommand<WorkTaskDto>;

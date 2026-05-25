@@ -1,12 +1,13 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
 
 namespace Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
 
-public sealed class ListWorkspaceMembersHandler
+public sealed class ListWorkspaceMembersHandler : IQueryHandler<ListWorkspaceMembersQuery, IReadOnlyList<WorkspaceMemberDto>>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;

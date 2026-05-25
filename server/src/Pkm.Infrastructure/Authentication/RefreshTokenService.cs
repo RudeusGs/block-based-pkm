@@ -1,7 +1,7 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using System.Text;
 using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 
 namespace Pkm.Infrastructure.Authentication;
 

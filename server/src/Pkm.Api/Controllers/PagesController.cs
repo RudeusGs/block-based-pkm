@@ -1,10 +1,10 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Pages;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Pages;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Features.Documents.Queries.GetPagePresence;
 using Pkm.Application.Features.Pages.Commands.CreatePage;
 using Pkm.Application.Features.Pages.Commands.DeletePage;

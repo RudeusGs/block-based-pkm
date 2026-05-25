@@ -1,9 +1,9 @@
-﻿using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Features.Notifications.Models;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Notifications;
 
 namespace Pkm.Application.Features.Notifications.Services;

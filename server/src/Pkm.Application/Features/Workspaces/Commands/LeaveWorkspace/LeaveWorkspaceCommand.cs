@@ -1,3 +1,5 @@
+using Pkm.Application.Common.UseCases;
+
 namespace Pkm.Application.Features.Workspaces.Commands.LeaveWorkspace;
 
-public sealed record LeaveWorkspaceCommand(Guid WorkspaceId);
+public sealed record LeaveWorkspaceCommand(Guid WorkspaceId) : ICommand;

@@ -1,4 +1,6 @@
-﻿using Pkm.Domain.Tasks;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Tasks.Models;
+using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
 
@@ -8,4 +10,4 @@ public sealed record UpdateWorkTaskCommand(
     string Title,
     string? Description,
     PriorityWorkTask Priority,
-    DateTimeOffset? DueDate);
+    DateTimeOffset? DueDate) : ICommand<WorkTaskDto>;

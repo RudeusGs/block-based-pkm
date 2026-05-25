@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Pages.Policies;
@@ -21,7 +21,7 @@ public sealed class CollaborationHub : Hub
     private readonly IPagePresenceService _pagePresenceService;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
-    private readonly IMessagingRepository _messagingRepository;
+    private readonly IMessagingReadRepository _messagingReadRepository;
     private readonly IClock _clock;
 
     public CollaborationHub(
@@ -32,7 +32,7 @@ public sealed class CollaborationHub : Hub
         IPagePresenceService pagePresenceService,
         IBlockEditLeaseService blockEditLeaseService,
         IDocumentRealtimePublisher realtimePublisher,
-        IMessagingRepository messagingRepository,
+        IMessagingReadRepository messagingReadRepository,
         IClock clock)
     {
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -42,7 +42,7 @@ public sealed class CollaborationHub : Hub
         _pagePresenceService = pagePresenceService;
         _blockEditLeaseService = blockEditLeaseService;
         _realtimePublisher = realtimePublisher;
-        _messagingRepository = messagingRepository;
+        _messagingReadRepository = messagingReadRepository;
         _clock = clock;
     }
 
@@ -53,7 +53,7 @@ public sealed class CollaborationHub : Hub
 
         var userId = GetRequiredUserId();
 
-        var conversation = await _messagingRepository.GetConversationForParticipantAsync(
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(
             conversationId,
             userId,
             Context.ConnectionAborted);
@@ -74,7 +74,7 @@ public sealed class CollaborationHub : Hub
 
         var userId = GetRequiredUserId();
 
-        var conversation = await _messagingRepository.GetConversationForParticipantAsync(
+        var conversation = await _messagingReadRepository.GetConversationForParticipantAsync(
             request.ConversationId,
             userId,
             Context.ConnectionAborted);

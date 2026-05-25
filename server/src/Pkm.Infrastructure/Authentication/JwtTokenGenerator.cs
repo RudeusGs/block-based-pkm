@@ -3,8 +3,8 @@ using System.Security.Claims;
 using System.Text;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Domain.Users;
 
 namespace Pkm.Infrastructure.Authentication;

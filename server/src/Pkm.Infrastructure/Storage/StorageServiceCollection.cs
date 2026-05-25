@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Pkm.Application.Abstractions.Storage;
+using Pkm.Application.Common.Abstractions.Storage;
 
 namespace Pkm.Infrastructure.Storage;
 

@@ -1,12 +1,13 @@
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Files.Models;
 using Pkm.Application.Features.Files.Services;
 
 namespace Pkm.Application.Features.Files.Commands.UploadImage;
 
-public sealed class UploadImageHandler
+public sealed class UploadImageHandler : ICommandHandler<UploadImageCommand, StoredFileDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IFileUploadApplicationService _fileUploadApplicationService;

@@ -23,6 +23,11 @@ public sealed record WorkspaceSharePayloadDto(
     string SharedByDisplayName,
     DateTimeOffset SharedAtUtc);
 
+public sealed record MessageReactionDto(
+    string Emoji,
+    int Count,
+    bool ReactedByMe);
+
 public sealed record MessageDto(
     Guid Id,
     Guid ConversationId,
@@ -35,7 +40,9 @@ public sealed record MessageDto(
     bool IsMine,
     DateTimeOffset? ReadAtUtc,
     DateTimeOffset CreatedDate,
-    DateTimeOffset? UpdatedDate);
+    DateTimeOffset? UpdatedDate,
+    IReadOnlyList<MessageReactionDto> Reactions,
+    bool IsPinned);
 
 public sealed record ConversationPagedResultDto(
     IReadOnlyList<ConversationDto> Items,

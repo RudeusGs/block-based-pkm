@@ -1,6 +1,6 @@
-﻿using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Pkm.Application.Abstractions.Email;
+using Pkm.Application.Common.Abstractions.Email;
 
 namespace Pkm.Infrastructure.Email;
 

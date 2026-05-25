@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Logging;
-using Pkm.Application.Abstractions.Realtime;
+using Microsoft.Extensions.Logging;
+using Pkm.Application.Common.Abstractions.Realtime;
 using StackExchange.Redis;
 
 namespace Pkm.Infrastructure.Realtime.Locks;

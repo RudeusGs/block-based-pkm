@@ -1,6 +1,8 @@
-﻿namespace Pkm.Application.Features.Account.Commands.ChangeMyPassword;
+using Pkm.Application.Common.UseCases;
+
+namespace Pkm.Application.Features.Account.Commands.ChangeMyPassword;
 
 public sealed record ChangeMyPasswordCommand(
     string CurrentPassword,
     string NewPassword,
-    string? IpAddress = null);
+    string? IpAddress = null) : ICommand;

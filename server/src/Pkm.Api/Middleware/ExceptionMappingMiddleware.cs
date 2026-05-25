@@ -1,5 +1,5 @@
 ﻿using System.Text.Json;
-using Pkm.Api.Common;
+using Pkm.Api.Common.Errors;
 
 namespace Pkm.Api.Middleware;
 

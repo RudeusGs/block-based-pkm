@@ -1,7 +1,7 @@
 using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Storage;
+using Pkm.Application.Common.Abstractions.Storage;
 
 namespace Pkm.Infrastructure.Storage;
 

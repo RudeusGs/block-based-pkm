@@ -1,8 +1,9 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
@@ -11,7 +12,7 @@ using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 
-public sealed class RemoveWorkspaceMemberHandler
+public sealed class RemoveWorkspaceMemberHandler : ICommandHandler<RemoveWorkspaceMemberCommand>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;

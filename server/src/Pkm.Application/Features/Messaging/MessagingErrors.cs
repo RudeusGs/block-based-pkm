@@ -39,6 +39,16 @@ public static class MessagingErrors
         "Tin nhắn không được để trống.",
         ResultStatus.Validation);
 
+    public static readonly Error MessageNotFound = new(
+        "Messaging.MessageNotFound",
+        "Không tìm thấy tin nhắn.",
+        ResultStatus.NotFound);
+
+    public static readonly Error MessageForbidden = new(
+        "Messaging.MessageForbidden",
+        "Không có quyền thao tác với tin nhắn này.",
+        ResultStatus.Forbidden);
+
     public static Error InvalidRequest(IReadOnlyList<string> details)
         => new(
             "Messaging.InvalidRequest",

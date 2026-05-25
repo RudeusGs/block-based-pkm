@@ -1,8 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Infrastructure.Persistence.Repositories;
 
 namespace Pkm.Infrastructure.Persistence;
@@ -35,7 +35,10 @@ public static class PersistenceServiceCollection
         services.AddScoped<IWorkspaceRepository, WorkspaceRepository>();
         services.AddScoped<IFriendshipRepository, FriendshipRepository>();
         services.AddScoped<IUserProfileRepository, UserProfileRepository>();
-        services.AddScoped<IMessagingRepository, MessagingRepository>();
+        services.AddScoped<MessagingRepository>();
+        services.AddScoped<IMessagingRepository>(sp => sp.GetRequiredService<MessagingRepository>());
+        services.AddScoped<IMessagingReadRepository>(sp => sp.GetRequiredService<MessagingRepository>());
+        services.AddScoped<IMessagingWriteRepository>(sp => sp.GetRequiredService<MessagingRepository>());
         services.AddScoped<IWorkspaceMemberRepository, WorkspaceMemberRepository>();
         services.AddScoped<IWorkspaceInvitationRepository, WorkspaceInvitationRepository>();
         services.AddScoped<IPageRepository, PageRepository>();
@@ -43,7 +46,11 @@ public static class PersistenceServiceCollection
         services.AddScoped<IBlockRepository, BlockRepository>();
         services.AddScoped<IPageRevisionRepository, PageRevisionRepository>();
         services.AddScoped<IBlockOperationRepository, BlockOperationRepository>();
-        services.AddScoped<IWorkTaskRepository, WorkTaskRepository>();
+        services.AddScoped<WorkTaskRepository>();
+        services.AddScoped<IWorkTaskRepository>(sp => sp.GetRequiredService<WorkTaskRepository>());
+        services.AddScoped<IWorkTaskWriteRepository>(sp => sp.GetRequiredService<WorkTaskRepository>());
+        services.AddScoped<IWorkTaskReadRepository>(sp => sp.GetRequiredService<WorkTaskRepository>());
+        services.AddScoped<IWorkTaskRecommendationReadRepository>(sp => sp.GetRequiredService<WorkTaskRepository>());
         services.AddScoped<ITaskAssigneeRepository, TaskAssigneeRepository>();
         services.AddScoped<ITaskCommentRepository, TaskCommentRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();

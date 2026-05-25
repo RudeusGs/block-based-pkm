@@ -4,38 +4,29 @@ using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Auth;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Auth;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Authentication.Commands.ForgotPassword;
 using Pkm.Application.Features.Authentication.Commands.Login;
 using Pkm.Application.Features.Authentication.Commands.Logout;
 using Pkm.Application.Features.Authentication.Commands.LogoutAll;
 using Pkm.Application.Features.Authentication.Commands.RefreshToken;
 using Pkm.Application.Features.Authentication.Commands.Register;
+using Pkm.Application.Features.Authentication.Models;
 
 namespace Pkm.Api.Controllers;
 
 [Route("api/v1/auth")]
 public sealed class AuthController : BaseController
 {
-    private readonly LoginHandler _loginHandler;
-    private readonly RegisterHandler _registerHandler;
-    private readonly RefreshTokenHandler _refreshTokenHandler;
-    private readonly LogoutHandler _logoutHandler;
-    private readonly LogoutAllHandler _logoutAllHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public AuthController(
         ICurrentUser currentUser,
-        LoginHandler loginHandler,
-        RegisterHandler registerHandler,
-        RefreshTokenHandler refreshTokenHandler,
-        LogoutHandler logoutHandler,
-        LogoutAllHandler logoutAllHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _loginHandler = loginHandler;
-        _registerHandler = registerHandler;
-        _refreshTokenHandler = refreshTokenHandler;
-        _logoutHandler = logoutHandler;
-        _logoutAllHandler = logoutAllHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpPost("login")]
@@ -53,7 +44,7 @@ public sealed class AuthController : BaseController
             request.Password,
             GetClientIpAddress());
 
-        var result = await _loginHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<LoginCommand, AuthTokenDto>(command, cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
     }
@@ -75,9 +66,27 @@ public sealed class AuthController : BaseController
             request.Password,
             request.AvatarUrl);
 
-        var result = await _registerHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<RegisterCommand, AuthUserDto>(command, cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpPost("forgot-password")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(ApiResult), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult>> ForgotPassword(
+        [FromBody] ForgotPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.ExecuteAsync(
+            new ForgotPasswordCommand(
+                request.Email,
+                GetClientIpAddress()),
+            cancellationToken);
+
+        return HandleResult(result);
     }
 
     [HttpPost("refresh")]
@@ -90,7 +99,7 @@ public sealed class AuthController : BaseController
         [FromBody] RefreshTokenRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _refreshTokenHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<RefreshTokenCommand, AuthTokenDto>(
             new RefreshTokenCommand(
                 request.RefreshToken,
                 GetClientIpAddress()),
@@ -107,7 +116,7 @@ public sealed class AuthController : BaseController
         [FromBody] LogoutRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _logoutHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new LogoutCommand(
                 request.RefreshToken,
                 GetClientIpAddress()),
@@ -123,7 +132,7 @@ public sealed class AuthController : BaseController
     public async Task<ActionResult<ApiResult>> LogoutAll(
         CancellationToken cancellationToken)
     {
-        var result = await _logoutAllHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new LogoutAllCommand(GetClientIpAddress()),
             cancellationToken);
 

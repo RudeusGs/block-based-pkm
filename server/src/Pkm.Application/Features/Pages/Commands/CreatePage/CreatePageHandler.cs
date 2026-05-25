@@ -1,12 +1,12 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Pages;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;

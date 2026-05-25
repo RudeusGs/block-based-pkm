@@ -4,13 +4,13 @@ using Pkm.Application.Features.Workspaces.Models;
 
 namespace Pkm.Application.Features.Messaging.Services;
 
-public interface IMessagingApplicationService
+public interface IMessagingApplicationService : IMessagingCommandService, IMessagingQueryService
+{
+}
+
+public interface IMessagingCommandService
 {
     Task<Result<ConversationDto>> CreateOrGetDirectConversationAsync(Guid recipientUserId, CancellationToken cancellationToken = default);
-
-    Task<Result<ConversationPagedResultDto>> ListConversationsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
-
-    Task<Result<MessagePagedResultDto>> ListMessagesAsync(Guid conversationId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     Task<Result<MessageDto>> SendTextMessageAsync(Guid conversationId, string body, CancellationToken cancellationToken = default);
 
@@ -20,5 +20,20 @@ public interface IMessagingApplicationService
 
     Task<Result<WorkspaceDto>> AcceptWorkspaceShareAsync(Guid messageId, CancellationToken cancellationToken = default);
 
+    Task<Result> DeleteMessageForEveryoneAsync(Guid messageId, CancellationToken cancellationToken = default);
+
+    Task<Result<MessageDto>> ToggleMessageReactionAsync(Guid messageId, string emoji, CancellationToken cancellationToken = default);
+
+    Task<Result<MessageDto>> PinMessageAsync(Guid messageId, CancellationToken cancellationToken = default);
+
+    Task<Result<MessageDto>> UnpinMessageAsync(Guid messageId, CancellationToken cancellationToken = default);
+
     Task<Result> MarkConversationReadAsync(Guid conversationId, CancellationToken cancellationToken = default);
+}
+
+public interface IMessagingQueryService
+{
+    Task<Result<ConversationPagedResultDto>> ListConversationsAsync(int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    Task<Result<MessagePagedResultDto>> ListMessagesAsync(Guid conversationId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 }

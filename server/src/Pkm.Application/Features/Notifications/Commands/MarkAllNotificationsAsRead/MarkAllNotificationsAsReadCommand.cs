@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Notifications.Models;
 
-public sealed record MarkAllNotificationsAsReadCommand(Guid? WorkspaceId = null);
+namespace Pkm.Application.Features.Notifications.Commands.MarkAllNotificationsAsRead;
+
+public sealed record MarkAllNotificationsAsReadCommand(Guid? WorkspaceId = null) : ICommand<NotificationUnreadCountDto>;

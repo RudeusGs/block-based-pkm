@@ -1,4 +1,6 @@
-﻿namespace Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Notifications.Models;
 
-public sealed record GetUnreadNotificationCountQuery(
-    Guid? WorkspaceId = null);
+namespace Pkm.Application.Features.Notifications.Queries.GetUnreadNotificationCount;
+
+public sealed record GetUnreadNotificationCountQuery(Guid? WorkspaceId = null) : IQuery<NotificationUnreadCountDto>;

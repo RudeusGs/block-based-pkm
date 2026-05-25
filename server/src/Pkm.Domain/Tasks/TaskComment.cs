@@ -1,4 +1,4 @@
-﻿using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Domain.Tasks;
 

@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
-using Pkm.Api.Common;
+using Pkm.Api.Common.Errors;
 using Pkm.Api.Contracts.Common;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
 
 namespace Pkm.Api.Controllers;

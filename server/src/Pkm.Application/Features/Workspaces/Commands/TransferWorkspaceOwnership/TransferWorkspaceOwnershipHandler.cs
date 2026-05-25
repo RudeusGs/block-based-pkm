@@ -1,9 +1,10 @@
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Authorization;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Domain.Audit;
@@ -11,7 +12,7 @@ using Pkm.Domain.Workspaces;
 
 namespace Pkm.Application.Features.Workspaces.Commands.TransferWorkspaceOwnership;
 
-public sealed class TransferWorkspaceOwnershipHandler
+public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<TransferWorkspaceOwnershipCommand, WorkspaceDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceRepository _workspaceRepository;
@@ -105,12 +106,12 @@ public sealed class TransferWorkspaceOwnershipHandler
         workspace.TransferOwnership(request.NewOwnerUserId, currentUserId, now);
         _workspaceRepository.Update(workspace);
 
-        newOwnerMember.ChangeRole(WorkspaceRole.Owner, now);
+        newOwnerMember.PromoteToOwner(now);
         _workspaceMemberRepository.Update(newOwnerMember);
 
         if (oldOwnerMember is not null)
         {
-            oldOwnerMember.ChangeRole(WorkspaceRole.Manager, now);
+            oldOwnerMember.DemoteOwnerToManager(now);
             _workspaceMemberRepository.Update(oldOwnerMember);
         }
 

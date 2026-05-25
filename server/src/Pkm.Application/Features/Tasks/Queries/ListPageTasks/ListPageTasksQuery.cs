@@ -1,4 +1,6 @@
-﻿using Pkm.Domain.Tasks;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Tasks.Models;
+using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Queries.ListPageTasks;
 
@@ -12,4 +14,4 @@ public sealed record ListPageTasksQuery(
     DateTimeOffset? DueTo = null,
     bool IncludeCompleted = true,
     int PageNumber = 1,
-    int PageSize = 20);
+    int PageSize = 20) : IQuery<WorkTaskPagedResultDto>;

@@ -1,5 +1,5 @@
-﻿using Microsoft.Extensions.Options;
-using Pkm.Application.Abstractions.Email;
+using Microsoft.Extensions.Options;
+using Pkm.Application.Common.Abstractions.Email;
 
 namespace Pkm.Infrastructure.Email;
 

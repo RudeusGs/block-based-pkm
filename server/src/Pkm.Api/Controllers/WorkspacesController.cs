@@ -1,11 +1,13 @@
-﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Pkm.Api.Mapping;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Workspaces;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Workspaces;
-using Pkm.Application.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Commands.AcceptWorkspaceInvitation;
 using Pkm.Application.Features.Workspaces.Commands.AddWorkspaceMember;
@@ -17,6 +19,7 @@ using Pkm.Application.Features.Workspaces.Commands.TransferWorkspaceOwnership;
 using Pkm.Application.Features.Workspaces.Commands.LeaveWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
+using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
 using Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
 using Pkm.Domain.Workspaces;
@@ -27,47 +30,14 @@ namespace Pkm.Api.Controllers;
 [Route("api/v1/workspaces")]
 public sealed class WorkspacesController : BaseController
 {
-    private readonly CreateWorkspaceHandler _createWorkspaceHandler;
-    private readonly UpdateWorkspaceHandler _updateWorkspaceHandler;
-    private readonly DeleteWorkspaceHandler _deleteWorkspaceHandler;
-    private readonly GetWorkspaceByIdHandler _getWorkspaceByIdHandler;
-    private readonly ListWorkspaceMembersHandler _listWorkspaceMembersHandler;
-    private readonly AddWorkspaceMemberHandler _addWorkspaceMemberHandler;
-    private readonly AcceptWorkspaceInvitationHandler _acceptWorkspaceInvitationHandler;
-    private readonly ChangeWorkspaceMemberRoleHandler _changeWorkspaceMemberRoleHandler;
-    private readonly RemoveWorkspaceMemberHandler _removeWorkspaceMemberHandler;
-    private readonly JoinPublicWorkspaceAsViewerHandler _joinPublicWorkspaceAsViewerHandler;
-    private readonly LeaveWorkspaceHandler _leaveWorkspaceHandler;
-    private readonly TransferWorkspaceOwnershipHandler _transferWorkspaceOwnershipHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public WorkspacesController(
         ICurrentUser currentUser,
-        CreateWorkspaceHandler createWorkspaceHandler,
-        UpdateWorkspaceHandler updateWorkspaceHandler,
-        DeleteWorkspaceHandler deleteWorkspaceHandler,
-        GetWorkspaceByIdHandler getWorkspaceByIdHandler,
-        ListWorkspaceMembersHandler listWorkspaceMembersHandler,
-        AddWorkspaceMemberHandler addWorkspaceMemberHandler,
-        AcceptWorkspaceInvitationHandler acceptWorkspaceInvitationHandler,
-        ChangeWorkspaceMemberRoleHandler changeWorkspaceMemberRoleHandler,
-        RemoveWorkspaceMemberHandler removeWorkspaceMemberHandler,
-        JoinPublicWorkspaceAsViewerHandler joinPublicWorkspaceAsViewerHandler,
-        LeaveWorkspaceHandler leaveWorkspaceHandler,
-        TransferWorkspaceOwnershipHandler transferWorkspaceOwnershipHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _createWorkspaceHandler = createWorkspaceHandler;
-        _updateWorkspaceHandler = updateWorkspaceHandler;
-        _deleteWorkspaceHandler = deleteWorkspaceHandler;
-        _getWorkspaceByIdHandler = getWorkspaceByIdHandler;
-        _listWorkspaceMembersHandler = listWorkspaceMembersHandler;
-        _addWorkspaceMemberHandler = addWorkspaceMemberHandler;
-        _acceptWorkspaceInvitationHandler = acceptWorkspaceInvitationHandler;
-        _changeWorkspaceMemberRoleHandler = changeWorkspaceMemberRoleHandler;
-        _removeWorkspaceMemberHandler = removeWorkspaceMemberHandler;
-        _joinPublicWorkspaceAsViewerHandler = joinPublicWorkspaceAsViewerHandler;
-        _leaveWorkspaceHandler = leaveWorkspaceHandler;
-        _transferWorkspaceOwnershipHandler = transferWorkspaceOwnershipHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpPost]
@@ -79,7 +49,7 @@ public sealed class WorkspacesController : BaseController
         [FromBody] CreateWorkspaceRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryParseWorkspaceVisibility(request.Visibility, out var visibility))
+        if (!EnumRequestParsers.TryParseWorkspaceVisibility(request.Visibility, out var visibility))
         {
             return HandleResult<WorkspaceResponse>(
                 Result.Failure<WorkspaceResponse>(
@@ -94,7 +64,7 @@ public sealed class WorkspacesController : BaseController
             request.Description,
             visibility ?? WorkspaceVisibility.Private);
 
-        var result = await _createWorkspaceHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<CreateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -109,7 +79,7 @@ public sealed class WorkspacesController : BaseController
         [FromBody] UpdateWorkspaceRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryParseWorkspaceVisibility(request.Visibility, out var visibility))
+        if (!EnumRequestParsers.TryParseWorkspaceVisibility(request.Visibility, out var visibility))
         {
             return HandleResult<WorkspaceResponse>(
                 Result.Failure<WorkspaceResponse>(
@@ -125,7 +95,7 @@ public sealed class WorkspacesController : BaseController
             request.Description,
             visibility);
 
-        var result = await _updateWorkspaceHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<UpdateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -137,7 +107,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _deleteWorkspaceHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new DeleteWorkspaceCommand(workspaceId),
             cancellationToken);
 
@@ -152,7 +122,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _getWorkspaceByIdHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetWorkspaceByIdQuery, WorkspaceDto>(
             new GetWorkspaceByIdQuery(workspaceId),
             cancellationToken);
 
@@ -167,7 +137,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _listWorkspaceMembersHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListWorkspaceMembersQuery, IReadOnlyList<WorkspaceMemberDto>>(
             new ListWorkspaceMembersQuery(workspaceId),
             cancellationToken);
 
@@ -186,7 +156,7 @@ public sealed class WorkspacesController : BaseController
         [FromBody] AddWorkspaceMemberRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryParseWorkspaceRole(request.Role, out var role))
+        if (!EnumRequestParsers.TryParseWorkspaceRole(request.Role, out var role))
         {
             return HandleResult<WorkspaceInvitationResponse>(
                 Result.Failure<WorkspaceInvitationResponse>(
@@ -201,7 +171,7 @@ public sealed class WorkspacesController : BaseController
             request.Email,
             role);
 
-        var result = await _addWorkspaceMemberHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<AddWorkspaceMemberCommand, WorkspaceInvitationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -216,7 +186,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _joinPublicWorkspaceAsViewerHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<JoinPublicWorkspaceAsViewerCommand, WorkspaceDto>(
             new JoinPublicWorkspaceAsViewerCommand(workspaceId),
             cancellationToken);
 
@@ -232,7 +202,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _leaveWorkspaceHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new LeaveWorkspaceCommand(workspaceId),
             cancellationToken);
 
@@ -251,7 +221,7 @@ public sealed class WorkspacesController : BaseController
         [FromBody] TransferWorkspaceOwnershipRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _transferWorkspaceOwnershipHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<TransferWorkspaceOwnershipCommand, WorkspaceDto>(
             new TransferWorkspaceOwnershipCommand(workspaceId, request.NewOwnerUserId),
             cancellationToken);
 
@@ -270,7 +240,7 @@ public sealed class WorkspacesController : BaseController
         [FromQuery] string token,
         CancellationToken cancellationToken)
     {
-        var result = await _acceptWorkspaceInvitationHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<AcceptWorkspaceInvitationCommand, WorkspaceMemberDto>(
             new AcceptWorkspaceInvitationCommand(token),
             cancellationToken);
 
@@ -289,7 +259,7 @@ public sealed class WorkspacesController : BaseController
         [FromBody] ChangeWorkspaceMemberRoleRequest request,
         CancellationToken cancellationToken)
     {
-        if (!TryParseWorkspaceRole(request.Role, out var role))
+        if (!EnumRequestParsers.TryParseWorkspaceRole(request.Role, out var role))
         {
             return HandleResult<WorkspaceMemberResponse>(
                 Result.Failure<WorkspaceMemberResponse>(
@@ -304,7 +274,7 @@ public sealed class WorkspacesController : BaseController
             userId,
             role);
 
-        var result = await _changeWorkspaceMemberRoleHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<ChangeWorkspaceMemberRoleCommand, WorkspaceMemberDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -318,67 +288,10 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid userId,
         CancellationToken cancellationToken)
     {
-        var result = await _removeWorkspaceMemberHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new RemoveWorkspaceMemberCommand(workspaceId, userId),
             cancellationToken);
 
         return HandleResult(result);
-    }
-
-    private static bool TryParseWorkspaceRole(string? rawRole, out WorkspaceRole role)
-    {
-        role = default;
-
-        if (string.IsNullOrWhiteSpace(rawRole))
-            return false;
-
-        switch (rawRole.Trim().ToLowerInvariant())
-        {
-            case "owner":
-                role = WorkspaceRole.Owner;
-                return true;
-
-            case "manager":
-                role = WorkspaceRole.Manager;
-                return true;
-
-            case "member":
-                role = WorkspaceRole.Member;
-                return true;
-
-            case "viewer":
-                role = WorkspaceRole.Viewer;
-                return true;
-
-            default:
-                return false;
-        }
-    }
-
-    private static bool TryParseWorkspaceVisibility(
-        string? rawVisibility,
-        out WorkspaceVisibility? visibility)
-    {
-        visibility = null;
-
-        if (rawVisibility is null)
-            return true;
-
-        if (string.IsNullOrWhiteSpace(rawVisibility))
-            return false;
-
-        switch (rawVisibility.Trim().ToLowerInvariant())
-        {
-            case "private":
-                visibility = WorkspaceVisibility.Private;
-                return true;
-
-            case "public":
-                visibility = WorkspaceVisibility.Public;
-                return true;
-
-            default:
-                return false;
-        }
     }
 }

@@ -1,12 +1,13 @@
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Workspaces.Models;
 
 namespace Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
 
-public sealed class ListMyWorkspacesHandler
+public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuery, WorkspacePagedResultDto>
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
     private const int DefaultPageNumber = 1;

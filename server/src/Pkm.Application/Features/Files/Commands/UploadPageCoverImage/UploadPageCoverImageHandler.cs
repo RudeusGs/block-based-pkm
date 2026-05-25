@@ -1,8 +1,9 @@
-using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Application.Features.Files.Services;
 using Pkm.Application.Features.Notifications;
@@ -10,12 +11,12 @@ using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
 
-public sealed class UploadPageCoverImageHandler
+public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCoverImageCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageRepository _pageRepository;

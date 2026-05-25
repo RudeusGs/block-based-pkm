@@ -1,21 +1,22 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Realtime;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Domain.Audit;
-using Pkm.Domain.Common;
+using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.CreateTaskComment;
 
-public sealed class CreateTaskCommentHandler
+public sealed class CreateTaskCommentHandler : ICommandHandler<CreateTaskCommentCommand, TaskCommentDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkTaskRepository _workTaskRepository;

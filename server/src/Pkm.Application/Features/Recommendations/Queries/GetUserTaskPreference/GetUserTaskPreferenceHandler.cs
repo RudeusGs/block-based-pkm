@@ -1,8 +1,9 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Caching;
-using Pkm.Application.Abstractions.Persistence;
-using Pkm.Application.Abstractions.Time;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Recommendations.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
@@ -10,7 +11,7 @@ using Pkm.Domain.Recommendations;
 
 namespace Pkm.Application.Features.Recommendations.Queries.GetUserTaskPreference;
 
-public sealed class GetUserTaskPreferenceHandler
+public sealed class GetUserTaskPreferenceHandler : IQueryHandler<GetUserTaskPreferenceQuery, UserTaskPreferenceDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;

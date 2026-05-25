@@ -1,3 +1,6 @@
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Authentication.Models;
+
 namespace Pkm.Application.Features.Authentication.Commands.Register;
 
 public sealed record RegisterCommand(
@@ -5,4 +8,4 @@ public sealed record RegisterCommand(
     string Email,
     string FullName,
     string Password,
-    string? AvatarUrl);
+    string? AvatarUrl) : ICommand<AuthUserDto>;

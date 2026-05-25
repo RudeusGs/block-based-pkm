@@ -1,4 +1,4 @@
-using Pkm.Application.Abstractions.Caching;
+using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Application.Features.Social;
 

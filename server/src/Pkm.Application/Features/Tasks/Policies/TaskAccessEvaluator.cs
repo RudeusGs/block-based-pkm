@@ -1,4 +1,4 @@
-﻿using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Authorization;
 using Pkm.Domain.Workspaces;
 
@@ -6,9 +6,9 @@ namespace Pkm.Application.Features.Tasks.Policies;
 
 public sealed class TaskAccessEvaluator : ITaskAccessEvaluator
 {
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskReadRepository _workTaskRepository;
 
-    public TaskAccessEvaluator(IWorkTaskRepository workTaskRepository)
+    public TaskAccessEvaluator(IWorkTaskReadRepository workTaskRepository)
     {
         _workTaskRepository = workTaskRepository;
     }

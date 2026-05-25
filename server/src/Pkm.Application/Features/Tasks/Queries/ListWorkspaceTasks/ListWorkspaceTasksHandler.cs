@@ -1,24 +1,25 @@
-﻿using Pkm.Application.Abstractions.Authentication;
-using Pkm.Application.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 
 namespace Pkm.Application.Features.Tasks.Queries.ListWorkspaceTasks;
 
-public sealed class ListWorkspaceTasksHandler
+public sealed class ListWorkspaceTasksHandler : IQueryHandler<ListWorkspaceTasksQuery, WorkTaskPagedResultDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskReadRepository _workTaskRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
     private readonly ListWorkspaceTasksQueryValidator _validator;
 
     public ListWorkspaceTasksHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskReadRepository workTaskRepository,
         ITaskAssigneeRepository taskAssigneeRepository,
         ListWorkspaceTasksQueryValidator validator)
     {
