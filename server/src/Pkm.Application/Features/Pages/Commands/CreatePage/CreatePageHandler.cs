@@ -1,5 +1,6 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
@@ -12,6 +13,7 @@ using Pkm.Domain.Pages;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
+using Pkm.Application.Features.Pages.Realtime;
 using Pkm.Domain.Audit;
 namespace Pkm.Application.Features.Pages.Commands.CreatePage;
 
@@ -25,6 +27,7 @@ public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageD
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
+    private readonly IPageRealtimePublisher _pageRealtimePublisher;
     private readonly IActivityLogService _activityLogService;
     public CreatePageHandler(
         ICurrentUser currentUser,
@@ -35,6 +38,7 @@ public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageD
         IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService,
+        IPageRealtimePublisher pageRealtimePublisher,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
@@ -45,6 +49,7 @@ public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageD
         _unitOfWork = unitOfWork;
         _clock = clock;
         _notificationService = notificationService;
+        _pageRealtimePublisher = pageRealtimePublisher;
         _activityLogService = activityLogService;
     }
 
@@ -129,6 +134,15 @@ public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageD
                     })),
                 cancellationToken);
 
+            var dto = page.ToDto();
+
+            await _pageRealtimePublisher.PublishWorkspacePageChangedAsync(
+                PageRealtimeEventNames.Created,
+                dto,
+                currentUserId,
+                now,
+                cancellationToken);
+
             await _notificationService.NotifyWorkspaceAsync(
                 page.WorkspaceId,
                 NotificationTemplates.PageCreated(
@@ -139,7 +153,8 @@ public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageD
                     page.Title),
                 excludeUserIds: new[] { currentUserId },
                 cancellationToken);
-            return Result.Success(page.ToDto());
+
+            return Result.Success(dto);
         }
         catch (DomainException ex)
         {
@@ -150,3 +165,6 @@ public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageD
         }
     }
 }
+
+
+

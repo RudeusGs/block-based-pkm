@@ -181,6 +181,100 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
             .FirstOrDefaultAsync(cancellationToken);
     }
 
+    public async Task<int> SoftDeleteExpiredArchivedPagesAsync(
+        DateTimeOffset archiveCutoffUtc,
+        DateTimeOffset deletedAtUtc,
+        int batchSize,
+        CancellationToken cancellationToken = default)
+    {
+        batchSize = batchSize <= 0 ? 100 : Math.Min(batchSize, 500);
+
+        var rootPageIds = await _dataContext.Pages
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted
+                        && x.IsArchived
+                        && x.ArchivedAt.HasValue
+                        && x.ArchivedAt.Value <= archiveCutoffUtc)
+            .OrderBy(x => x.ArchivedAt)
+            .Select(x => x.Id)
+            .Take(batchSize)
+            .ToListAsync(cancellationToken);
+
+        if (rootPageIds.Count == 0)
+            return 0;
+
+        var pageIdsToDelete = await CollectPageTreeIdsAsync(rootPageIds, cancellationToken);
+
+        var pages = await _dataContext.Pages
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted && pageIdsToDelete.Contains(x.Id))
+            .ToListAsync(cancellationToken);
+
+        foreach (var page in pages)
+            page.SoftDelete(deletedAtUtc);
+
+        var blocks = await _dataContext.Blocks
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted && pageIdsToDelete.Contains(x.PageId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var block in blocks)
+            block.SoftDelete(deletedAtUtc);
+
+        var favorites = await _dataContext.PageFavorites
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted && pageIdsToDelete.Contains(x.PageId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var favorite in favorites)
+            favorite.SoftDelete(deletedAtUtc);
+
+        var recents = await _dataContext.PageRecents
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted && pageIdsToDelete.Contains(x.PageId))
+            .ToListAsync(cancellationToken);
+
+        foreach (var recent in recents)
+            recent.SoftDelete(deletedAtUtc);
+
+        var tasks = await _dataContext.WorkTasks
+            .IgnoreQueryFilters()
+            .Where(x => !x.IsDeleted
+                        && x.PageId.HasValue
+                        && pageIdsToDelete.Contains(x.PageId.Value))
+            .ToListAsync(cancellationToken);
+
+        foreach (var task in tasks)
+            task.SoftDelete(deletedAtUtc);
+
+        return pages.Count;
+    }
+
+    private async Task<HashSet<Guid>> CollectPageTreeIdsAsync(
+        IReadOnlyCollection<Guid> rootPageIds,
+        CancellationToken cancellationToken)
+    {
+        var pageIds = rootPageIds.ToHashSet();
+        var frontier = rootPageIds.ToArray();
+
+        while (frontier.Length > 0)
+        {
+            var childIds = await _dataContext.Pages
+                .IgnoreQueryFilters()
+                .Where(x => !x.IsDeleted
+                            && x.ParentPageId.HasValue
+                            && frontier.Contains(x.ParentPageId.Value))
+                .Select(x => x.Id)
+                .ToArrayAsync(cancellationToken);
+
+            frontier = childIds
+                .Where(pageIds.Add)
+                .ToArray();
+        }
+
+        return pageIds;
+    }
+
     private IQueryable<Page> ApplySubPagesFilter(Guid parentPageId)
     {
         return _dataContext.Pages
@@ -190,3 +284,6 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
 
     public void Add(Page page) => _dataContext.Pages.Add(page);
 }
+
+
+

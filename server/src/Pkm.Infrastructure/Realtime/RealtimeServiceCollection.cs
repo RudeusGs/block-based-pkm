@@ -76,6 +76,7 @@ public static class RealtimeServiceCollection
         }
 
         services.AddSingleton<IDocumentRealtimePublisher, SignalRDocumentRealtimePublisher>();
+        services.AddSingleton<IPageRealtimePublisher, SignalRPageRealtimePublisher>();
         services.AddSingleton<ITaskRealtimePublisher, SignalRTaskRealtimePublisher>();
         services.AddSingleton<INotificationRealtimePublisher, SignalRNotificationRealtimePublisher>();
         services.AddSingleton<IRecommendationRealtimePublisher, SignalRRecommendationRealtimePublisher>();
@@ -84,3 +85,6 @@ public static class RealtimeServiceCollection
         return services;
     }
 }
+
+
+

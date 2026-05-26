@@ -16,6 +16,7 @@ using Pkm.Application.Features.Authentication;
 using Pkm.Application.Features.Authentication.Queries.GetUserRoles;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
+using Pkm.Application.Features.Workspaces.Queries.ListTrashedWorkspaces;
 using Pkm.Api.Contracts.Responses.Tasks;
 using Pkm.Application.Features.Tasks;
 using Pkm.Application.Features.Tasks.Models;
@@ -122,6 +123,21 @@ public sealed class MeController : BaseController
 
         return HandleResult(result, x => x.ToResponse());
     }
+    [HttpGet("workspaces/trash")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceTrashPagedResultResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    public async Task<ActionResult<ApiResult<WorkspaceTrashPagedResultResponse>>> ListTrashedWorkspaces(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await QueryAsync<ListTrashedWorkspacesQuery, WorkspaceTrashPagedResultDto>(
+            new ListTrashedWorkspacesQuery(pageNumber, pageSize),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
     [HttpGet("tasks")]
     [ProducesResponseType(typeof(ApiResult<WorkTaskPagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 400)]

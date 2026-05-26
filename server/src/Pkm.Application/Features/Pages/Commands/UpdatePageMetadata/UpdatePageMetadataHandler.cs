@@ -10,6 +10,7 @@ using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Application.Features.Pages.Realtime;
 using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Pages;
@@ -25,7 +26,7 @@ public sealed class UpdatePageMetadataHandler : ICommandHandler<UpdatePageMetada
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
-    private readonly IDocumentRealtimePublisher _realtimePublisher;
+    private readonly IPageRealtimePublisher _pageRealtimePublisher;
     private readonly IActivityLogService _activityLogService;
 
     public UpdatePageMetadataHandler(
@@ -36,7 +37,7 @@ public sealed class UpdatePageMetadataHandler : ICommandHandler<UpdatePageMetada
         IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService,
-        IDocumentRealtimePublisher realtimePublisher,
+        IPageRealtimePublisher pageRealtimePublisher,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
@@ -46,7 +47,7 @@ public sealed class UpdatePageMetadataHandler : ICommandHandler<UpdatePageMetada
         _unitOfWork = unitOfWork;
         _clock = clock;
         _notificationService = notificationService;
-        _realtimePublisher = realtimePublisher;
+        _pageRealtimePublisher = pageRealtimePublisher;
         _activityLogService = activityLogService;
     }
 
@@ -138,16 +139,11 @@ public sealed class UpdatePageMetadataHandler : ICommandHandler<UpdatePageMetada
                     })),
                 cancellationToken);
 
-            await _realtimePublisher.PublishToPageAsync(
-                new DocumentRealtimeEnvelope(
-                    EventName: "PageMetadataUpdated",
-                    WorkspaceId: page.WorkspaceId,
-                    PageId: page.Id,
-                    BlockId: null,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Revision: appliedRevision,
-                    Payload: dto),
+            await _pageRealtimePublisher.PublishWorkspacePageChangedAsync(
+                PageRealtimeEventNames.MetadataUpdated,
+                dto,
+                currentUserId,
+                now,
                 cancellationToken);
 
             await _notificationService.NotifyWorkspaceAsync(
@@ -172,3 +168,6 @@ public sealed class UpdatePageMetadataHandler : ICommandHandler<UpdatePageMetada
         }
     }
 }
+
+
+

@@ -95,4 +95,26 @@ public sealed class Workspace : EntityBase
         LastModifiedBy = actorId;
         Touch(now);
     }
+
+    public void MoveToTrash(Guid actorId, DateTimeOffset now)
+    {
+        DomainGuard.AgainstEmpty(actorId, nameof(actorId));
+
+        if (IsDeleted)
+            return;
+
+        LastModifiedBy = actorId;
+        SoftDelete(now);
+    }
+
+    public void RestoreFromTrash(Guid actorId, DateTimeOffset now)
+    {
+        DomainGuard.AgainstEmpty(actorId, nameof(actorId));
+
+        if (!IsDeleted)
+            return;
+
+        Restore(now);
+        LastModifiedBy = actorId;
+    }
 }

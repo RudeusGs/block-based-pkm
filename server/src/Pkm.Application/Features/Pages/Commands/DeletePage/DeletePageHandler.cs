@@ -1,11 +1,14 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
+using Pkm.Application.Features.Pages.Models;
+using Pkm.Application.Features.Pages.Realtime;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Domain.Audit;
 
@@ -19,6 +22,7 @@ public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
+    private readonly IPageRealtimePublisher _pageRealtimePublisher;
     private readonly IActivityLogService _activityLogService;
     public DeletePageHandler(
         ICurrentUser currentUser,
@@ -27,6 +31,7 @@ public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
         IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService,
+        IPageRealtimePublisher pageRealtimePublisher,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
@@ -34,6 +39,7 @@ public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
         _pageAccessEvaluator = pageAccessEvaluator;
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
+        _pageRealtimePublisher = pageRealtimePublisher;
         _clock = clock;
         _activityLogService = activityLogService;
     }
@@ -63,8 +69,12 @@ public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
         if (page is null)
             return Result.Failure(PageErrors.PageNotFound);
 
-        page.Archive(currentUserId, _clock.UtcNow);
+        var now = _clock.UtcNow;
+
+        page.Archive(currentUserId, now);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var dto = page.ToDto();
 
         await _activityLogService.RecordAsync(
             new ActivityLogRequest(
@@ -82,6 +92,13 @@ public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
                 })),
             cancellationToken);
 
+        await _pageRealtimePublisher.PublishWorkspacePageChangedAsync(
+            PageRealtimeEventNames.Deleted,
+            dto,
+            currentUserId,
+            now,
+            cancellationToken);
+
         await _notificationService.NotifyWorkspaceAsync(
             page.WorkspaceId,
             NotificationTemplates.PageDeleted(
@@ -92,6 +109,10 @@ public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
                 page.Title),
             excludeUserIds: new[] { currentUserId },
             cancellationToken);
+
         return Result.Success();
     }
 }
+
+
+

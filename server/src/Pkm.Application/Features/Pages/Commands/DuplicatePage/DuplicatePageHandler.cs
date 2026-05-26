@@ -1,11 +1,13 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Application.Features.Pages.Realtime;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.Audit;
@@ -27,6 +29,7 @@ public sealed class DuplicatePageHandler : ICommandHandler<DuplicatePageCommand,
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IActivityLogService _activityLogService;
+    private readonly IPageRealtimePublisher _pageRealtimePublisher;
 
     public DuplicatePageHandler(
         ICurrentUser currentUser,
@@ -38,7 +41,8 @@ public sealed class DuplicatePageHandler : ICommandHandler<DuplicatePageCommand,
         IBlockWriteRepository blockWriteRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IActivityLogService activityLogService)
+        IActivityLogService activityLogService,
+        IPageRealtimePublisher pageRealtimePublisher)
     {
         _currentUser = currentUser;
         _pageAccessEvaluator = pageAccessEvaluator;
@@ -50,6 +54,7 @@ public sealed class DuplicatePageHandler : ICommandHandler<DuplicatePageCommand,
         _unitOfWork = unitOfWork;
         _clock = clock;
         _activityLogService = activityLogService;
+        _pageRealtimePublisher = pageRealtimePublisher;
     }
 
     public async Task<Result<PageDto>> HandleAsync(DuplicatePageCommand request, CancellationToken cancellationToken)
@@ -171,3 +176,6 @@ public sealed class DuplicatePageHandler : ICommandHandler<DuplicatePageCommand,
         return copyTitle.Length <= 200 ? copyTitle : copyTitle[..200];
     }
 }
+
+
+

@@ -32,6 +32,19 @@ public static class WorkspaceResponseMappings
             dto.UpdatedDate,
             dto.CurrentUserRole.ToString());
 
+    public static WorkspaceTrashItemResponse ToResponse(this WorkspaceTrashItemDto dto)
+        => new(
+            dto.Id,
+            dto.Name,
+            dto.Description,
+            dto.AvatarUrl,
+            dto.Visibility.ToString(),
+            dto.OwnerId,
+            dto.CreatedDate,
+            dto.UpdatedDate,
+            dto.TrashedAt,
+            dto.CurrentUserRole.ToString());
+
     public static WorkspaceMemberResponse ToResponse(this WorkspaceMemberDto dto)
         => new(
             dto.WorkspaceId,
@@ -68,6 +81,13 @@ public static class WorkspaceResponseMappings
             dto.UpdatedDate);
 
     public static WorkspacePagedResultResponse ToResponse(this WorkspacePagedResultDto dto)
+        => new(
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.Items.Select(x => x.ToResponse()).ToArray());
+
+    public static WorkspaceTrashPagedResultResponse ToResponse(this WorkspaceTrashPagedResultDto dto)
         => new(
             dto.PageNumber,
             dto.PageSize,

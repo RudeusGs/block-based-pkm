@@ -11,6 +11,7 @@ using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Application.Features.Pages.Realtime;
 using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Pages;
 
@@ -26,7 +27,7 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
-    private readonly IDocumentRealtimePublisher _realtimePublisher;
+    private readonly IPageRealtimePublisher _pageRealtimePublisher;
 
     public UploadPageCoverImageHandler(
         ICurrentUser currentUser,
@@ -37,7 +38,7 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
         IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService,
-        IDocumentRealtimePublisher realtimePublisher)
+        IPageRealtimePublisher pageRealtimePublisher)
     {
         _currentUser = currentUser;
         _pageWriteRepository = pageWriteRepository;
@@ -47,7 +48,7 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
         _unitOfWork = unitOfWork;
         _clock = clock;
         _notificationService = notificationService;
-        _realtimePublisher = realtimePublisher;
+        _pageRealtimePublisher = pageRealtimePublisher;
     }
 
     public async Task<Result<PageDto>> HandleAsync(
@@ -127,16 +128,11 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
 
             var dto = page.ToDto();
 
-            await _realtimePublisher.PublishToPageAsync(
-                new DocumentRealtimeEnvelope(
-                    EventName: "PageMetadataUpdated",
-                    WorkspaceId: page.WorkspaceId,
-                    PageId: page.Id,
-                    BlockId: null,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Revision: appliedRevision,
-                    Payload: dto),
+            await _pageRealtimePublisher.PublishWorkspacePageChangedAsync(
+                PageRealtimeEventNames.MetadataUpdated,
+                dto,
+                currentUserId,
+                now,
                 cancellationToken);
 
             await _notificationService.NotifyWorkspaceAsync(
@@ -161,3 +157,6 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
         }
     }
 }
+
+
+

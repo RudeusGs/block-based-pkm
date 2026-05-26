@@ -6,6 +6,7 @@ using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Messaging;
 using Pkm.Infrastructure.Persistence.Repositories;
 using Pkm.Infrastructure.Persistence.Outbox;
+using Pkm.Infrastructure.Persistence.Cleanup;
 
 namespace Pkm.Infrastructure.Persistence;
 
@@ -36,6 +37,9 @@ public static class PersistenceServiceCollection
         services.AddScoped<IOutboxMessageDispatcher, OutboxMessageDispatcher>();
         services.AddScoped<IOutboxBatchProcessor, OutboxBatchProcessor>();
         services.AddHostedService<OutboxProcessorHostedService>();
+        services.Configure<PageTrashCleanupOptions>(
+            configuration.GetSection(PageTrashCleanupOptions.SectionName));
+        services.AddHostedService<PageTrashCleanupHostedService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
@@ -73,3 +77,6 @@ public static class PersistenceServiceCollection
         return services;
     }
 }
+
+
+

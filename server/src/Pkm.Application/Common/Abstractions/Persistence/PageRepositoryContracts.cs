@@ -67,5 +67,14 @@ public interface IPageWriteRepository
 
     Task<Page?> GetByIdIncludingArchivedForUpdateAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<int> SoftDeleteExpiredArchivedPagesAsync(
+        DateTimeOffset archiveCutoffUtc,
+        DateTimeOffset deletedAtUtc,
+        int batchSize,
+        CancellationToken cancellationToken = default);
+
     void Add(Page page);
 }
+
+
+

@@ -10,6 +10,8 @@ public interface IWorkspaceRepository
 
     Task<Workspace?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<Workspace?> GetTrashedByIdAsync(Guid id, CancellationToken cancellationToken = default);
+
     Task<WorkspaceMember?> GetMemberAsync(
         Guid workspaceId,
         Guid userId,
@@ -41,6 +43,16 @@ public interface IWorkspaceRepository
 
     Task<int> CountByUserAsync(
         Guid userId,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<WorkspaceTrashItemReadModel>> ListTrashedByOwnerAsync(
+        Guid ownerUserId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountTrashedByOwnerAsync(
+        Guid ownerUserId,
         CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<ProfileWorkspaceDto>> ListProfileWorkspacesAsync(

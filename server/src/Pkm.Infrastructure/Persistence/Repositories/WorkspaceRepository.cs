@@ -27,6 +27,13 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
             .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
     }
 
+    public async Task<Workspace?> GetTrashedByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        return await _dataContext.Workspaces
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(x => x.Id == id && x.IsDeleted, cancellationToken);
+    }
+
     public async Task<WorkspaceMember?> GetMemberAsync(
         Guid workspaceId,
         Guid userId,
@@ -156,6 +163,47 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 workspace => workspace.Id,
                 (_, _) => 1)
             .CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<WorkspaceTrashItemReadModel>> ListTrashedByOwnerAsync(
+        Guid ownerUserId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        var safePageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        var safePageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+        var skip = (safePageNumber - 1) * safePageSize;
+
+        return await _dataContext.Workspaces
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .Where(w => w.OwnerId == ownerUserId && w.IsDeleted)
+            .OrderByDescending(w => w.DeletedDate ?? w.UpdatedDate ?? w.CreatedDate)
+            .Skip(skip)
+            .Take(safePageSize)
+            .Select(w => new WorkspaceTrashItemReadModel(
+                w.Id,
+                w.Name,
+                w.Description,
+                w.AvatarUrl,
+                w.Visibility,
+                w.OwnerId,
+                w.CreatedDate,
+                w.UpdatedDate,
+                w.DeletedDate,
+                WorkspaceRole.Owner))
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountTrashedByOwnerAsync(
+        Guid ownerUserId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _dataContext.Workspaces
+            .IgnoreQueryFilters()
+            .AsNoTracking()
+            .CountAsync(w => w.OwnerId == ownerUserId && w.IsDeleted, cancellationToken);
     }
 
     public async Task<IReadOnlyList<ProfileWorkspaceDto>> ListProfileWorkspacesAsync(

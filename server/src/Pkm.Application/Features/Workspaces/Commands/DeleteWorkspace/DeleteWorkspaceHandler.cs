@@ -77,7 +77,7 @@ public sealed class DeleteWorkspaceHandler : ICommandHandler<DeleteWorkspaceComm
             request.WorkspaceId,
             cancellationToken);
 
-        workspace.SoftDelete(_clock.UtcNow);
+        workspace.MoveToTrash(currentUserId, _clock.UtcNow);
         _workspaceRepository.Update(workspace);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -86,10 +86,10 @@ public sealed class DeleteWorkspaceHandler : ICommandHandler<DeleteWorkspaceComm
             new ActivityLogRequest(
                 workspace.Id,
                 currentUserId,
-                ActivityAction.Delete,
+                ActivityAction.Archive,
                 ActivityEntityType.Workspace,
                 workspace.Id,
-                $"{_currentUser.UserName ?? "Có người"} đã xóa workspace '{workspace.Name}'."),
+                $"{_currentUser.UserName ?? "Có người"} đã đưa workspace '{workspace.Name}' vào Trash."),
             cancellationToken);
 
         await _cache.RemoveAsync(

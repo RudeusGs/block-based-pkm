@@ -9,6 +9,7 @@ using Pkm.Application.Features.Documents.Services;
 using Pkm.Application.Features.Files.Services;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Policies;
+using Pkm.Application.Features.Pages.Services;
 using Pkm.Application.Features.Recommendations.Services;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Application.Features.Workspaces.Policies;
@@ -47,6 +48,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
         services.AddScoped<IRecommendationCandidateDeduplicator, RecommendationCandidateDeduplicator>();
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
+        services.AddScoped<IPageTrashCleanupService, PageTrashCleanupService>();
         services.AddScoped<IBestEffortCache, BestEffortCache>();
 
         services.AddScoped<IDocumentMutationCoordinator, DocumentMutationCoordinator>();
@@ -101,3 +103,6 @@ public static class ApplicationServiceCollection
                  genericDefinition == typeof(IQueryHandler<,>) ||
                  genericDefinition == typeof(IDomainEventHandler<>)));
 }
+
+
+

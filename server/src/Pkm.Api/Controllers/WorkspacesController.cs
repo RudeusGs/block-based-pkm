@@ -17,6 +17,7 @@ using Pkm.Application.Features.Workspaces.Commands.JoinPublicWorkspaceAsViewer;
 using Pkm.Application.Features.Workspaces.Commands.TransferWorkspaceOwnership;
 using Pkm.Application.Features.Workspaces.Commands.LeaveWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.RemoveWorkspaceMember;
+using Pkm.Application.Features.Workspaces.Commands.RestoreWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
@@ -107,6 +108,23 @@ public sealed class WorkspacesController : BaseController
             cancellationToken);
 
         return HandleResult(result);
+    }
+
+    [HttpPost("{workspaceId:guid}/restore")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<WorkspaceResponse>>> Restore(
+        [FromRoute] Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var result = await ExecuteAsync<RestoreWorkspaceCommand, WorkspaceDto>(
+            new RestoreWorkspaceCommand(workspaceId),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpGet("{workspaceId:guid}")]

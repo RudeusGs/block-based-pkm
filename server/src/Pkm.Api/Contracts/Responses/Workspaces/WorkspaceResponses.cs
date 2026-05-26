@@ -26,6 +26,18 @@ public sealed record WorkspaceListItemResponse(
     DateTimeOffset? UpdatedDate,
     string CurrentUserRole);
 
+public sealed record WorkspaceTrashItemResponse(
+    Guid Id,
+    string Name,
+    string? Description,
+    string? AvatarUrl,
+    string Visibility,
+    Guid OwnerId,
+    DateTimeOffset CreatedDate,
+    DateTimeOffset? UpdatedDate,
+    DateTimeOffset? TrashedAt,
+    string CurrentUserRole);
+
 public sealed record WorkspaceMemberResponse(
     Guid WorkspaceId,
     Guid UserId,
@@ -63,3 +75,9 @@ public sealed record WorkspacePagedResultResponse(
     int PageSize,
     int TotalCount,
     IReadOnlyList<WorkspaceListItemResponse> Items);
+
+public sealed record WorkspaceTrashPagedResultResponse(
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    IReadOnlyList<WorkspaceTrashItemResponse> Items);
