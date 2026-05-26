@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Abstractions.Messaging;
 using Pkm.Infrastructure.Persistence.Repositories;
+using Pkm.Infrastructure.Persistence.Outbox;
 
 namespace Pkm.Infrastructure.Persistence;
 
@@ -28,6 +30,9 @@ public static class PersistenceServiceCollection
             poolSize: 256);
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
+        services.AddScoped<IOutboxMessageSerializer, SystemTextJsonOutboxMessageSerializer>();
+        services.AddScoped<IOutboxDomainEventWriter, OutboxDomainEventWriter>();
+        services.AddScoped<IIntegrationEventOutbox, EfCoreIntegrationEventOutbox>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

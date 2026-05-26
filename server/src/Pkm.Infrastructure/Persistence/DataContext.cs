@@ -13,6 +13,7 @@ using Pkm.Domain.Social;
 using Pkm.Domain.Tasks;
 using Pkm.Domain.Users;
 using Pkm.Domain.Workspaces;
+using Pkm.Infrastructure.Persistence.Outbox;
 
 namespace Pkm.Infrastructure.Persistence;
 
@@ -51,6 +52,8 @@ public sealed class DataContext : DbContext
     public DbSet<TaskPerformanceMetric> TaskPerformanceMetrics => Set<TaskPerformanceMetric>();
     public DbSet<UserTaskPreference> UserTaskPreferences => Set<UserTaskPreference>();
     public DbSet<UserTaskHistory> UserTaskHistories => Set<UserTaskHistory>();
+
+    internal DbSet<OutboxMessage> OutboxMessages => Set<OutboxMessage>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
