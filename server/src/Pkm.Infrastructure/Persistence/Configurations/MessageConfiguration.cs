@@ -13,8 +13,6 @@ internal sealed class MessageConfiguration : IEntityTypeConfiguration<Message>
         builder.ToTable("Messages");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.Property(x => x.Type)
             .IsRequired()
             .HasConversion<string>()

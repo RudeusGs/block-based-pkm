@@ -402,10 +402,10 @@ internal sealed class WorkTaskRepository :
     {
         if (!string.IsNullOrWhiteSpace(filter.Keyword))
         {
-            var keyword = filter.Keyword.Trim();
+            var pattern = LikePattern.Contains(filter.Keyword);
             query = query.Where(x =>
-                x.Title.Contains(keyword) ||
-                (x.Description != null && x.Description.Contains(keyword)));
+                EF.Functions.ILike(x.Title, pattern) ||
+                (x.Description != null && EF.Functions.ILike(x.Description, pattern)));
         }
 
         if (filter.Status.HasValue)

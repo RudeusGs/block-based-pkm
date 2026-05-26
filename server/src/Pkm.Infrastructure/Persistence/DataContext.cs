@@ -60,8 +60,30 @@ public sealed class DataContext : DbContext
         base.OnModelCreating(modelBuilder);
 
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(DataContext).Assembly);
+        ApplyRowVersionConcurrencyTokens(modelBuilder);
         IgnoreDomainEvents(modelBuilder);
         ApplySoftDeleteQueryFilters(modelBuilder);
+    }
+
+    private static void ApplyRowVersionConcurrencyTokens(ModelBuilder modelBuilder)
+    {
+        var entityTypes = modelBuilder.Model
+            .GetEntityTypes()
+            .Where(x =>
+                x.ClrType is not null &&
+                !x.IsOwned() &&
+                typeof(EntityBase).IsAssignableFrom(x.ClrType));
+
+        foreach (var entityType in entityTypes)
+        {
+            modelBuilder
+                .Entity(entityType.ClrType)
+                .Property<uint>(nameof(EntityBase.RowVersion))
+                .HasColumnName("xmin")
+                .HasColumnType("xid")
+                .ValueGeneratedOnAddOrUpdate()
+                .IsConcurrencyToken();
+        }
     }
 
     private static void IgnoreDomainEvents(ModelBuilder modelBuilder)

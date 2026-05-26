@@ -12,8 +12,6 @@ internal sealed class UserProfilePageConfiguration : IEntityTypeConfiguration<Us
         builder.ToTable("UserProfilePages");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.Property(x => x.Bio)
             .HasMaxLength(UserProfilePage.MaxBioLength);
 

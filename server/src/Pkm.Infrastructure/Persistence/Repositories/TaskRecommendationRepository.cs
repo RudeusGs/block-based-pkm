@@ -6,6 +6,8 @@ namespace Pkm.Infrastructure.Persistence.Repositories;
 
 internal sealed class TaskRecommendationRepository : ITaskRecommendationRepository
 {
+    private const int PreviouslyRecommendedTaskScanLimit = 1000;
+
     private readonly DataContext _context;
 
     public TaskRecommendationRepository(DataContext context)
@@ -93,7 +95,9 @@ internal sealed class TaskRecommendationRepository : ITaskRecommendationReposito
             .Where(x =>
                 x.UserId == userId &&
                 x.WorkspaceId == workspaceId)
+            .OrderByDescending(x => x.CreatedDate)
             .Select(x => x.TaskId)
+            .Take(PreviouslyRecommendedTaskScanLimit)
             .Distinct()
             .ToListAsync(cancellationToken);
 

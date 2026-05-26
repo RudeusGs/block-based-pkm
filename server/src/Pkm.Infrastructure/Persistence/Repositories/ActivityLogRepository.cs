@@ -174,7 +174,7 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
             return query;
         }
 
-        var pattern = $"%{EscapeLikePattern(search.Trim())}%";
+        var pattern = LikePattern.Contains(search);
 
         var matchingUserIds = _context.Users
             .AsNoTracking()
@@ -189,11 +189,4 @@ internal sealed class ActivityLogRepository : IActivityLogRepository
             matchingUserIds.Contains(log.UserId));
     }
 
-    private static string EscapeLikePattern(string value)
-    {
-        return value
-            .Replace(@"\", @"\\", StringComparison.Ordinal)
-            .Replace("%", @"\%", StringComparison.Ordinal)
-            .Replace("_", @"\_", StringComparison.Ordinal);
-    }
 }

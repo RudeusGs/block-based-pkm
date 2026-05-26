@@ -12,20 +12,17 @@ public sealed class MarkAllNotificationsAsReadHandler : ICommandHandler<MarkAllN
 {
     private readonly ICurrentUser _currentUser;
     private readonly INotificationRepository _notificationRepository;
-    private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
 
     public MarkAllNotificationsAsReadHandler(
         ICurrentUser currentUser,
         INotificationRepository notificationRepository,
-        IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService)
     {
         _currentUser = currentUser;
         _notificationRepository = notificationRepository;
-        _unitOfWork = unitOfWork;
         _clock = clock;
         _notificationService = notificationService;
     }
@@ -46,24 +43,18 @@ public sealed class MarkAllNotificationsAsReadHandler : ICommandHandler<MarkAllN
                 NotificationErrors.MissingUserContext);
         }
 
-        var unreadNotifications = await _notificationRepository.ListUnreadByUserAsync(
+        var updatedCount = await _notificationRepository.MarkUnreadAsReadAsync(
             currentUserId,
             request.WorkspaceId,
+            _clock.UtcNow,
             cancellationToken);
 
-        var now = _clock.UtcNow;
-
-        foreach (var notification in unreadNotifications)
+        if (updatedCount > 0)
         {
-            notification.MarkAsRead(now);
-            _notificationRepository.Update(notification);
+            await _notificationService.InvalidateUserAsync(
+                currentUserId,
+                cancellationToken);
         }
-
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
-
-        await _notificationService.InvalidateUserAsync(
-            currentUserId,
-            cancellationToken);
 
         await _notificationService.PublishUnreadCountChangedAsync(
             currentUserId,

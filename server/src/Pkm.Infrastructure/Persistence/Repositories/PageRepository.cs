@@ -127,12 +127,12 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
     {
         pageNumber = pageNumber <= 0 ? 1 : pageNumber;
         pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
-        keyword = (keyword ?? string.Empty).Trim();
+        var pattern = LikePattern.Contains(keyword ?? string.Empty);
 
         return await _dataContext.Pages
             .AsNoTracking()
             .Where(x => x.WorkspaceId == workspaceId && !x.IsArchived)
-            .Where(x => EF.Functions.ILike(x.Title, $"%{keyword}%"))
+            .Where(x => EF.Functions.ILike(x.Title, pattern))
             .OrderByDescending(x => x.CreatedDate)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)
@@ -144,13 +144,13 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
         string keyword,
         CancellationToken cancellationToken = default)
     {
-        keyword = (keyword ?? string.Empty).Trim();
+        var pattern = LikePattern.Contains(keyword ?? string.Empty);
 
         return await _dataContext.Pages
             .CountAsync(
                 x => x.WorkspaceId == workspaceId
                      && !x.IsArchived
-                     && EF.Functions.ILike(x.Title, $"%{keyword}%"),
+                     && EF.Functions.ILike(x.Title, pattern),
                 cancellationToken);
     }
 

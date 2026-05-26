@@ -12,8 +12,6 @@ internal sealed class MessagePinConfiguration : IEntityTypeConfiguration<Message
         builder.ToTable("MessagePins");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.HasIndex(x => new { x.ConversationId, x.MessageId })
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");

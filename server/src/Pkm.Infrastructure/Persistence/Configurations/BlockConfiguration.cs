@@ -13,12 +13,6 @@ internal sealed class BlockConfiguration : IEntityTypeConfiguration<Block>
 
         builder.HasKey(x => x.Id);
 
-        builder.Property(x => x.RowVersion)
-            .HasColumnName("xmin")
-            .HasColumnType("xid")
-            .ValueGeneratedOnAddOrUpdate()
-            .IsConcurrencyToken();
-
         builder.Property(x => x.OrderKey)
             .IsRequired()
             .HasMaxLength(100);

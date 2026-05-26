@@ -12,8 +12,6 @@ internal sealed class FriendRequestConfiguration : IEntityTypeConfiguration<Frie
         builder.ToTable("FriendRequests");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.Property(x => x.Status)
             .IsRequired()
             .HasConversion<string>()

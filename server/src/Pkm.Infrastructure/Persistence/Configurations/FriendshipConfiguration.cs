@@ -12,8 +12,6 @@ internal sealed class FriendshipConfiguration : IEntityTypeConfiguration<Friends
         builder.ToTable("Friendships");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.HasIndex(x => new { x.FirstUserId, x.SecondUserId })
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");

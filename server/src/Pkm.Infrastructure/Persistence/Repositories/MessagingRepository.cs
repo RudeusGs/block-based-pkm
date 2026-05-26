@@ -247,18 +247,17 @@ internal sealed class MessagingRepository : IMessagingReadRepository, IMessaging
         DateTimeOffset readAtUtc,
         CancellationToken cancellationToken = default)
     {
-        var messages = await _context.Messages
+        return await _context.Messages
             .Where(x =>
                 x.ConversationId == conversationId &&
                 x.RecipientUserId == readerUserId &&
                 x.ReadAtUtc == null &&
                 !x.IsDeletedForEveryone)
-            .ToListAsync(cancellationToken);
-
-        foreach (var message in messages)
-            message.MarkRead(readAtUtc);
-
-        return messages.Count;
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.ReadAtUtc, readAtUtc)
+                    .SetProperty(x => x.UpdatedDate, readAtUtc),
+                cancellationToken);
     }
 
     public Task<MessageReaction?> GetReactionForUserForUpdateAsync(

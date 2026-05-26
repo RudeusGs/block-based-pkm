@@ -321,10 +321,6 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
             workspaceId,
             userId);
 
-        var cached = await _cache.GetAsync<UserTaskPreferenceDto>(
-            cacheKey,
-            cancellationToken);
-
         var preference = await _preferenceRepository.GetByUserAndWorkspaceAsync(
             userId,
             workspaceId,

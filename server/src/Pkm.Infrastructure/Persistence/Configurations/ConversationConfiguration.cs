@@ -12,8 +12,6 @@ internal sealed class ConversationConfiguration : IEntityTypeConfiguration<Conve
         builder.ToTable("Conversations");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.Property(x => x.LastMessagePreview)
             .HasMaxLength(Conversation.MaxPreviewLength);
 

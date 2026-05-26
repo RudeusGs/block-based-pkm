@@ -23,12 +23,6 @@ internal sealed class PageConfiguration : IEntityTypeConfiguration<Page>
         builder.Property(x => x.CoverImage)
             .HasMaxLength(2048);
 
-        builder.Property(x => x.RowVersion)
-            .HasColumnName("xmin")
-            .HasColumnType("xid")
-            .ValueGeneratedOnAddOrUpdate()
-            .IsConcurrencyToken();
-
         builder.Property(x => x.CurrentRevision)
             .IsRequired();
 

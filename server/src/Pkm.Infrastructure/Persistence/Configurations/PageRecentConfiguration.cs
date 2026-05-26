@@ -12,8 +12,6 @@ internal sealed class PageRecentConfiguration : IEntityTypeConfiguration<PageRec
         builder.ToTable("PageRecents");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.Property(x => x.LastVisitedAtUtc)
             .IsRequired();
 

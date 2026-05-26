@@ -12,8 +12,6 @@ internal sealed class MessageReactionConfiguration : IEntityTypeConfiguration<Me
         builder.ToTable("MessageReactions");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.Property(x => x.Emoji)
             .IsRequired()
             .HasMaxLength(MessageReaction.MaxEmojiLength);

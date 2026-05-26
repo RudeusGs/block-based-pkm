@@ -170,12 +170,12 @@ internal sealed class FriendshipRepository : IFriendshipRepository
 
     private IQueryable<User> ApplyUserSearch(string keyword)
     {
-        keyword = (keyword ?? string.Empty).Trim();
+        var pattern = LikePattern.Contains(keyword ?? string.Empty);
 
         return _context.Users
             .AsNoTracking()
             .Where(x => x.Status == UserStatus.Active)
-            .Where(x => EF.Functions.ILike(x.FullName, $"%{keyword}%") || EF.Functions.ILike(x.UserName, $"%{keyword}%"));
+            .Where(x => EF.Functions.ILike(x.FullName, pattern) || EF.Functions.ILike(x.UserName, pattern));
     }
 
     private async Task<IReadOnlyList<FriendRequestDto>> ListRequestsAsync(

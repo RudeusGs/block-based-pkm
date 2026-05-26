@@ -124,13 +124,13 @@ public sealed class NotificationService : INotificationService
                     OccurredAtUtc: now,
                     Payload: dto),
                 cancellationToken);
-
-            await PublishUnreadCountChangedAsync(
-                dto.UserId,
-                dto.WorkspaceId,
-                request.ActorUserId,
-                cancellationToken);
         }
+
+        await PublishUnreadCountChangedAsync(
+            dtos.Select(x => x.UserId).ToArray(),
+            request.WorkspaceId,
+            request.ActorUserId,
+            cancellationToken);
 
         return dtos;
     }
@@ -201,36 +201,60 @@ public sealed class NotificationService : INotificationService
         Guid? actorUserId,
         CancellationToken cancellationToken = default)
     {
-        if (userId == Guid.Empty)
+        await PublishUnreadCountChangedAsync(
+            new[] { userId },
+            workspaceId,
+            actorUserId,
+            cancellationToken);
+    }
+
+    private async Task PublishUnreadCountChangedAsync(
+        IReadOnlyCollection<Guid> userIds,
+        Guid? workspaceId,
+        Guid? actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedUserIds = userIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        if (normalizedUserIds.Length == 0)
             return;
 
-        var totalUnread = await _notificationRepository.CountUnreadByUserAsync(
-            userId,
+        var totalUnreadByUser = await _notificationRepository.CountUnreadByUsersAsync(
+            normalizedUserIds,
             workspaceId: null,
             cancellationToken);
 
-        var workspaceUnread = workspaceId.HasValue && workspaceId.Value != Guid.Empty
-            ? await _notificationRepository.CountUnreadByUserAsync(
-                userId,
+        var workspaceUnreadByUser = workspaceId.HasValue && workspaceId.Value != Guid.Empty
+            ? await _notificationRepository.CountUnreadByUsersAsync(
+                normalizedUserIds,
                 workspaceId,
                 cancellationToken)
-            : totalUnread;
+            : totalUnreadByUser;
 
-        await _notificationRealtimePublisher.PublishToUserAsync(
-            new NotificationRealtimeEnvelope(
-                EventName: "NotificationUnreadCountChanged",
-                UserId: userId,
-                WorkspaceId: workspaceId,
-                ActorId: actorUserId,
-                OccurredAtUtc: _clock.UtcNow,
-                Payload: new
-                {
-                    userId,
-                    workspaceId,
-                    unreadCount = workspaceUnread,
-                    totalUnreadCount = totalUnread
-                }),
-            cancellationToken);
+        foreach (var userId in normalizedUserIds)
+        {
+            totalUnreadByUser.TryGetValue(userId, out var totalUnread);
+            workspaceUnreadByUser.TryGetValue(userId, out var workspaceUnread);
+
+            await _notificationRealtimePublisher.PublishToUserAsync(
+                new NotificationRealtimeEnvelope(
+                    EventName: "NotificationUnreadCountChanged",
+                    UserId: userId,
+                    WorkspaceId: workspaceId,
+                    ActorId: actorUserId,
+                    OccurredAtUtc: _clock.UtcNow,
+                    Payload: new
+                    {
+                        userId,
+                        workspaceId,
+                        unreadCount = workspaceUnread,
+                        totalUnreadCount = totalUnread
+                    }),
+                cancellationToken);
+        }
     }
 
 }

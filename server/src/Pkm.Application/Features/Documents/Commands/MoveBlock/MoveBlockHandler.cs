@@ -28,7 +28,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
     private readonly IBlockOperationRepository _blockOperationRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IOrderKeyGenerator _orderKeyGenerator;
+    private readonly IBlockOrderPlanner _blockOrderPlanner;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
     private readonly IActivityLogService _activityLogService;
 
@@ -43,7 +43,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
         IBlockOperationRepository blockOperationRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IOrderKeyGenerator orderKeyGenerator,
+        IBlockOrderPlanner blockOrderPlanner,
         IDocumentRealtimePublisher realtimePublisher,
         IActivityLogService activityLogService)
     {
@@ -57,7 +57,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
         _blockOperationRepository = blockOperationRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _orderKeyGenerator = orderKeyGenerator;
+        _blockOrderPlanner = blockOrderPlanner;
         _realtimePublisher = realtimePublisher;
         _activityLogService = activityLogService;
     }
@@ -122,35 +122,30 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
         if (revisionError is not null)
             return Result.Failure<BlockMutationDto>(revisionError);
 
-        var previous = request.PreviousBlockId.HasValue
-            ? await _blockReadRepository.GetByIdAsync(request.PreviousBlockId.Value, cancellationToken)
-            : null;
-
-        var next = request.NextBlockId.HasValue
-            ? await _blockReadRepository.GetByIdAsync(request.NextBlockId.Value, cancellationToken)
-            : null;
-
-        if (previous is not null &&
-            (previous.PageId != block.PageId || previous.ParentBlockId != request.NewParentBlockId))
-        {
-            return Result.Failure<BlockMutationDto>(DocumentErrors.ParentBlockDifferentPage);
-        }
-
-        if (next is not null &&
-            (next.PageId != block.PageId || next.ParentBlockId != request.NewParentBlockId))
-        {
-            return Result.Failure<BlockMutationDto>(DocumentErrors.ParentBlockDifferentPage);
-        }
-
         try
         {
             var now = _clock.UtcNow;
             var baseRevision = page.CurrentRevision;
             var oldParentBlockId = block.ParentBlockId;
             var oldOrderKey = block.OrderKey;
-            var newOrderKey = _orderKeyGenerator.CreateBetween(previous?.OrderKey, next?.OrderKey);
+            var siblings = await _blockWriteRepository.ListSiblingsForUpdateAsync(
+                block.PageId,
+                request.NewParentBlockId,
+                cancellationToken);
 
-            block.MoveTo(request.NewParentBlockId, newOrderKey, currentUserId, now);
+            var orderKeyResult = _blockOrderPlanner.CreateOrderKeyOrRebalance(
+                siblings.Where(x => x.Id != block.Id).ToArray(),
+                request.PreviousBlockId,
+                request.NextBlockId,
+                request.NewParentBlockId,
+                currentUserId,
+                now,
+                block.Id);
+
+            if (orderKeyResult.IsFailure)
+                return Result.Failure<BlockMutationDto>(orderKeyResult.Error);
+
+            block.MoveTo(request.NewParentBlockId, orderKeyResult.Value, currentUserId, now);
 
             var appliedRevision = page.IncreaseRevision(currentUserId, now);
 

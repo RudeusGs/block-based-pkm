@@ -28,9 +28,15 @@ public interface INotificationRepository
         Guid? workspaceId = null,
         CancellationToken cancellationToken = default);
 
-    Task<IReadOnlyList<Notification>> ListUnreadByUserAsync(
-        Guid userId,
+    Task<IReadOnlyDictionary<Guid, int>> CountUnreadByUsersAsync(
+        IReadOnlyCollection<Guid> userIds,
         Guid? workspaceId = null,
+        CancellationToken cancellationToken = default);
+
+    Task<int> MarkUnreadAsReadAsync(
+        Guid userId,
+        Guid? workspaceId,
+        DateTimeOffset readAtUtc,
         CancellationToken cancellationToken = default);
 
     void Add(Notification notification);

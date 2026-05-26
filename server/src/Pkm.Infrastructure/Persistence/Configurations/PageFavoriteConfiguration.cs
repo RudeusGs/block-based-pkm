@@ -12,8 +12,6 @@ internal sealed class PageFavoriteConfiguration : IEntityTypeConfiguration<PageF
         builder.ToTable("PageFavorites");
         builder.HasKey(x => x.Id);
 
-        builder.Ignore(x => x.RowVersion);
-
         builder.HasIndex(x => new { x.UserId, x.PageId })
             .IsUnique()
             .HasFilter("\"IsDeleted\" = false");

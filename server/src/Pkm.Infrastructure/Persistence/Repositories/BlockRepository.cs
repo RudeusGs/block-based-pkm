@@ -81,8 +81,9 @@ internal sealed class BlockRepository : IBlockReadRepository, IBlockWriteReposit
             return true;
 
         Guid? current = candidateParentBlockId;
+        var visited = new HashSet<Guid>();
 
-        while (current.HasValue)
+        while (current.HasValue && visited.Add(current.Value))
         {
             if (current.Value == blockId)
                 return true;

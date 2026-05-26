@@ -75,18 +75,53 @@ internal sealed class NotificationRepository : INotificationRepository
             .CountAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Notification>> ListUnreadByUserAsync(
-        Guid userId,
+    public async Task<IReadOnlyDictionary<Guid, int>> CountUnreadByUsersAsync(
+        IReadOnlyCollection<Guid> userIds,
         Guid? workspaceId = null,
         CancellationToken cancellationToken = default)
     {
-        return await ApplyUserFilter(
+        var normalizedUserIds = userIds
+            .Where(x => x != Guid.Empty)
+            .Distinct()
+            .ToArray();
+
+        if (normalizedUserIds.Length == 0)
+            return new Dictionary<Guid, int>();
+
+        var query = _context.Notifications
+            .AsNoTracking()
+            .Where(x => normalizedUserIds.Contains(x.UserId) && !x.IsRead);
+
+        if (workspaceId.HasValue && workspaceId.Value != Guid.Empty)
+        {
+            query = query.Where(x => x.WorkspaceId == workspaceId.Value);
+        }
+
+        var rows = await query
+            .GroupBy(x => x.UserId)
+            .Select(x => new { UserId = x.Key, Count = x.Count() })
+            .ToListAsync(cancellationToken);
+
+        return rows.ToDictionary(x => x.UserId, x => x.Count);
+    }
+
+    public Task<int> MarkUnreadAsReadAsync(
+        Guid userId,
+        Guid? workspaceId,
+        DateTimeOffset readAtUtc,
+        CancellationToken cancellationToken = default)
+    {
+        return ApplyUserFilter(
                 _context.Notifications,
                 userId,
                 workspaceId,
                 unreadOnly: true)
-            .OrderByDescending(x => x.CreatedDate)
-            .ToListAsync(cancellationToken);
+            .ExecuteUpdateAsync(
+                setters => setters
+                    .SetProperty(x => x.IsRead, true)
+                    .SetProperty(x => x.ReadAtUtc, readAtUtc)
+                    .SetProperty(x => x.UpdatedDate, readAtUtc),
+                cancellationToken);
     }
 
     public void Add(Notification notification)
