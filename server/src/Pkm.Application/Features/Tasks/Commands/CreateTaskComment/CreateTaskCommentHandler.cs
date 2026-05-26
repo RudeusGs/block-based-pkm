@@ -1,16 +1,11 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Caching;
 using Pkm.Application.Common.Abstractions.Persistence;
-using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
-using Pkm.Application.Features.Activity.Services;
-using Pkm.Application.Features.Notifications;
-using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
-using Pkm.Domain.Audit;
 using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Tasks;
 
@@ -19,47 +14,32 @@ namespace Pkm.Application.Features.Tasks.Commands.CreateTaskComment;
 public sealed class CreateTaskCommentHandler : ICommandHandler<CreateTaskCommentCommand, TaskCommentDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
-    private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskCommentRepository _taskCommentRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ITaskRealtimePublisher _taskRealtimePublisher;
-    private readonly INotificationService _notificationService;
     private readonly IApplicationCache _cache;
     private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly CreateTaskCommentCommandValidator _validator;
-    private readonly IActivityLogService _activityLogService;
 
     public CreateTaskCommentHandler(
         ICurrentUser currentUser,
-        IWorkTaskWriteRepository workTaskWriteRepository,
-        IWorkTaskReadRepository workTaskReadRepository,
         ITaskCommentRepository taskCommentRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
-        ITaskRealtimePublisher taskRealtimePublisher,
-        INotificationService notificationService,
         IApplicationCache cache,
         ICacheKeyFactory cacheKeyFactory,
         IClock clock,
-        CreateTaskCommentCommandValidator validator,
-        IActivityLogService activityLogService)
+        CreateTaskCommentCommandValidator validator)
     {
         _currentUser = currentUser;
-        _workTaskWriteRepository = workTaskWriteRepository;
-        _workTaskReadRepository = workTaskReadRepository;
         _taskCommentRepository = taskCommentRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
-        _taskRealtimePublisher = taskRealtimePublisher;
-        _notificationService = notificationService;
         _cache = cache;
         _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _validator = validator;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<TaskCommentDto>> HandleAsync(
@@ -96,21 +76,9 @@ public sealed class CreateTaskCommentHandler : ICommandHandler<CreateTaskComment
                 TaskCommentErrors.CommentCreateForbidden);
         }
 
-        var task = await _workTaskWriteRepository.GetByIdAsync(
-            request.TaskId,
-            cancellationToken);
-
-        if (task is null)
-        {
-            return Result.Failure<TaskCommentDto>(
-                TaskErrors.TaskNotFound);
-        }
-
-        TaskComment? parentComment = null;
-
         if (request.ParentId.HasValue)
         {
-            parentComment = await _taskCommentRepository.GetByIdAsync(
+            var parentComment = await _taskCommentRepository.GetByIdAsync(
                 request.ParentId.Value,
                 cancellationToken);
 
@@ -141,70 +109,9 @@ public sealed class CreateTaskCommentHandler : ICommandHandler<CreateTaskComment
             _taskCommentRepository.Add(comment);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
-            await InvalidateCommentListCacheAsync(task.Id, cancellationToken);
+            await InvalidateCommentListCacheAsync(request.TaskId, cancellationToken);
 
             var dto = comment.ToDto();
-
-            await _activityLogService.RecordAsync(
-                new ActivityLogRequest(
-                    task.WorkspaceId,
-                    currentUserId,
-                    ActivityAction.Create,
-                    ActivityEntityType.TaskComment,
-                    comment.Id,
-                    request.ParentId.HasValue
-                        ? $"{_currentUser.UserName ?? "Có người"} đã phản hồi trong task \"{task.Title}\"."
-                        : $"{_currentUser.UserName ?? "Có người"} đã bình luận trong task \"{task.Title}\".",
-                    ActivityLogMetadata.Serialize(new
-                    {
-                        taskId = task.Id,
-                        taskTitle = task.Title,
-                        pageId = task.PageId,
-                        commentId = comment.Id,
-                        parentCommentId = request.ParentId,
-                        contentPreview = Preview(request.Content)
-                    })),
-                cancellationToken);
-
-            await _taskRealtimePublisher.PublishToPageAsync(
-                new TaskRealtimeEnvelope(
-                    EventName: "TaskCommentCreated",
-                    WorkspaceId: task.WorkspaceId,
-                    PageId: task.PageId,
-                    TaskId: task.Id,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Payload: new
-                    {
-                        comment = dto
-                    }),
-                cancellationToken);
-
-            var taskDetail = await _workTaskReadRepository.GetDetailAsync(
-                task.Id,
-                cancellationToken);
-
-            var recipients = taskDetail is null
-                ? new[] { task.CreatedById }
-                : taskDetail.Assignees
-                    .Select(x => x.UserId)
-                    .Append(taskDetail.CreatedById)
-                    .Concat(parentComment is null ? Array.Empty<Guid>() : new[] { parentComment.UserId })
-                    .Distinct()
-                    .ToArray();
-
-            await _notificationService.NotifyManyAsync(
-                recipients,
-                NotificationTemplates.TaskCommentCreated(
-                    currentUserId,
-                    _currentUser.UserName ?? "Có người",
-                    task.WorkspaceId,
-                    task.Id,
-                    comment.Id,
-                    task.Title,
-                    request.ParentId.HasValue),
-                excludeUserIds: new[] { currentUserId },
-                cancellationToken);
 
             return Result.Success(dto);
         }
@@ -229,12 +136,4 @@ public sealed class CreateTaskCommentHandler : ICommandHandler<CreateTaskComment
             cancellationToken: cancellationToken);
     }
 
-    private static string Preview(string value)
-    {
-        var normalized = value.Trim();
-
-        return normalized.Length <= 160
-            ? normalized
-            : $"{normalized[..160]}...";
-    }
 }

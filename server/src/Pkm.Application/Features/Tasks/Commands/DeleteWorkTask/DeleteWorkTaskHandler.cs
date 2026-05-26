@@ -1,14 +1,9 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
-using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
-using Pkm.Application.Features.Activity.Services;
-using Pkm.Application.Features.Notifications;
-using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Policies;
-using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
 
@@ -19,11 +14,8 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
     private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly DeleteWorkTaskCommandValidator _validator;
-    private readonly INotificationService _notificationService;
-    private readonly IActivityLogService _activityLogService;
 
     public DeleteWorkTaskHandler(
         ICurrentUser currentUser,
@@ -31,22 +23,16 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
         IWorkTaskReadRepository workTaskReadRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
-        ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        DeleteWorkTaskCommandValidator validator,
-        INotificationService notificationService,
-        IActivityLogService activityLogService)
+        DeleteWorkTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskWriteRepository = workTaskWriteRepository;
         _workTaskReadRepository = workTaskReadRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
-        _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
-        _notificationService = notificationService;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result> HandleAsync(
@@ -94,51 +80,11 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
             .Select(x => x.UserId)
             .ToArray() ?? Array.Empty<Guid>();
 
-        task.Delete(currentUserId, now);
+        task.Delete(currentUserId, now, assigneeIds);
         _workTaskWriteRepository.Update(task);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _activityLogService.RecordAsync(
-            new ActivityLogRequest(
-                task.WorkspaceId,
-                currentUserId,
-                ActivityAction.Delete,
-                ActivityEntityType.WorkTask,
-                task.Id,
-                $"{_currentUser.UserName ?? "Có người"} đã xóa task \"{task.Title}\".",
-                ActivityLogMetadata.Serialize(new
-                {
-                    taskId = task.Id,
-                    title = task.Title,
-                    pageId = task.PageId,
-                    assigneeUserIds = assigneeIds
-                })),
-            cancellationToken);
-
-        await _taskRealtimePublisher.PublishToPageAsync(
-            new TaskRealtimeEnvelope(
-                EventName: "TaskDeleted",
-                WorkspaceId: task.WorkspaceId,
-                PageId: task.PageId,
-                TaskId: task.Id,
-                ActorId: currentUserId,
-                OccurredAtUtc: now,
-                Payload: new
-                {
-                    taskId = task.Id
-                }),
-            cancellationToken);
-        await _notificationService.NotifyManyAsync(
-            assigneeIds,
-            NotificationTemplates.TaskDeleted(
-                currentUserId,
-                _currentUser.UserName ?? "Có người",
-                task.WorkspaceId,
-                task.Id,
-                task.Title),
-            excludeUserIds: new[] { currentUserId },
-            cancellationToken);
         return Result.Success();
     }
 }

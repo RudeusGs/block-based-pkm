@@ -126,7 +126,7 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
                         currentUserId,
                         now));
 
-                task.RecordAssignmentChange(currentUserId, now);
+                task.AssignTo(currentUserId, currentUserId, now);
                 _workTaskWriteRepository.Update(task);
             }
 
@@ -211,22 +211,6 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
                         recommendation = recommendationDto,
                         taskId = task.Id,
                         recommendationId = recommendation.Id,
-                        assigneeUserId = currentUserId
-                    }),
-                cancellationToken);
-
-            await _taskRealtimePublisher.PublishToPageAsync(
-                new TaskRealtimeEnvelope(
-                    EventName: "TaskAssigned",
-                    WorkspaceId: task.WorkspaceId,
-                    PageId: task.PageId,
-                    TaskId: task.Id,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Payload: new
-                    {
-                        task = taskDto,
-                        taskId = task.Id,
                         assigneeUserId = currentUserId
                     }),
                 cancellationToken);

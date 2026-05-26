@@ -69,4 +69,37 @@ internal sealed class OutboxMessage
             string.IsNullOrWhiteSpace(traceId) ? null : traceId.Trim(),
             correlationId);
     }
+
+    public void MarkProcessed(DateTimeOffset processedAtUtc)
+    {
+        Status = OutboxMessageStatus.Processed;
+        ProcessedAtUtc = processedAtUtc;
+        LockId = null;
+        LockedUntilUtc = null;
+        LastError = null;
+    }
+
+    public void MarkFailed(string error, int maxRetries)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxRetries);
+
+        RetryCount += 1;
+        LastError = TrimError(error);
+        LockId = null;
+        LockedUntilUtc = null;
+        Status = RetryCount >= maxRetries
+            ? OutboxMessageStatus.Failed
+            : OutboxMessageStatus.Pending;
+    }
+
+    private static string TrimError(string error)
+    {
+        var normalized = string.IsNullOrWhiteSpace(error)
+            ? "Unknown outbox processing error."
+            : error.Trim();
+
+        return normalized.Length <= 4000
+            ? normalized
+            : normalized[..4000];
+    }
 }

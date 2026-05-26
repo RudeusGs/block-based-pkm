@@ -14,4 +14,14 @@ internal sealed class SystemTextJsonOutboxMessageSerializer : IOutboxMessageSeri
         ArgumentNullException.ThrowIfNull(payload);
         return JsonSerializer.Serialize(payload, payload.GetType(), SerializerOptions);
     }
+
+    public object Deserialize(string payloadJson, Type payloadType)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(payloadJson);
+        ArgumentNullException.ThrowIfNull(payloadType);
+
+        return JsonSerializer.Deserialize(payloadJson, payloadType, SerializerOptions)
+            ?? throw new InvalidOperationException(
+                $"Outbox payload could not be deserialized as '{payloadType.FullName}'.");
+    }
 }

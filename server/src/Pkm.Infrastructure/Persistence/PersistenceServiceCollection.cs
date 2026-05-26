@@ -33,6 +33,9 @@ public static class PersistenceServiceCollection
         services.AddScoped<IOutboxMessageSerializer, SystemTextJsonOutboxMessageSerializer>();
         services.AddScoped<IOutboxDomainEventWriter, OutboxDomainEventWriter>();
         services.AddScoped<IIntegrationEventOutbox, EfCoreIntegrationEventOutbox>();
+        services.AddScoped<IOutboxMessageDispatcher, OutboxMessageDispatcher>();
+        services.AddScoped<IOutboxBatchProcessor, OutboxBatchProcessor>();
+        services.AddHostedService<OutboxProcessorHostedService>();
 
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();

@@ -1,15 +1,10 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
-using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
-using Pkm.Application.Features.Activity.Services;
-using Pkm.Application.Features.Notifications;
-using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
-using Pkm.Domain.Audit;
 using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
@@ -22,11 +17,9 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IPageReadRepository _pageReadRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly UpdateWorkTaskCommandValidator _validator;
-    private readonly INotificationService _notificationService;
-    private readonly IActivityLogService _activityLogService;
+
     public UpdateWorkTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskWriteRepository workTaskWriteRepository,
@@ -34,23 +27,17 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
         ITaskAccessEvaluator taskAccessEvaluator,
         IPageReadRepository pageReadRepository,
         IUnitOfWork unitOfWork,
-        ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        UpdateWorkTaskCommandValidator validator,
-        INotificationService notificationService,
-        IActivityLogService activityLogService)
+        UpdateWorkTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _workTaskWriteRepository = workTaskWriteRepository;
         _workTaskReadRepository = workTaskReadRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _pageReadRepository = pageReadRepository;
-        _notificationService = notificationService;
         _unitOfWork = unitOfWork;
-        _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -105,32 +92,19 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
             return Result.Failure<WorkTaskDto>(TaskErrors.PageDifferentWorkspace);
         }
 
-        var oldTitle = task.Title;
-        var oldDescription = task.Description;
-        var oldPriority = task.Priority;
-        var oldDueDate = task.DueDate;
-        var oldPageId = task.PageId;
-
         try
         {
             var now = _clock.UtcNow;
 
-            task.UpdateDetails(
+            task.UpdateDetailsAndLocation(
                 request.Title,
                 request.Description,
                 request.Priority,
                 request.DueDate,
+                page.WorkspaceId,
+                page.Id,
                 currentUserId,
                 now);
-
-            if (task.PageId != page.Id)
-            {
-                task.ChangeLocation(
-                    page.WorkspaceId,
-                    page.Id,
-                    currentUserId,
-                    now);
-            }
 
             _workTaskWriteRepository.Update(task);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -138,53 +112,6 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
             var detail = await _workTaskReadRepository.GetDetailAsync(task.Id, cancellationToken);
             var dto = detail is null ? task.ToDto() : detail.ToDto();
 
-            await _activityLogService.RecordAsync(
-                new ActivityLogRequest(
-                    task.WorkspaceId,
-                    currentUserId,
-                    oldPageId == task.PageId ? ActivityAction.Update : ActivityAction.Move,
-                    ActivityEntityType.WorkTask,
-                    task.Id,
-                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật task \"{task.Title}\".",
-                    ActivityLogMetadata.Serialize(new
-                    {
-                        taskId = task.Id,
-                        oldTitle,
-                        newTitle = task.Title,
-                        oldDescription,
-                        newDescription = task.Description,
-                        oldPriority = oldPriority.ToString(),
-                        newPriority = task.Priority.ToString(),
-                        oldDueDate,
-                        newDueDate = task.DueDate,
-                        oldPageId,
-                        newPageId = task.PageId
-                    })),
-                cancellationToken);
-
-            await _taskRealtimePublisher.PublishToPageAsync(
-                new TaskRealtimeEnvelope(
-                    EventName: "TaskUpdated",
-                    WorkspaceId: task.WorkspaceId,
-                    PageId: task.PageId,
-                    TaskId: task.Id,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Payload: dto),
-                cancellationToken);
-
-            var assigneeIds = dto.Assignees.Select(x => x.UserId).ToArray();
-
-            await _notificationService.NotifyManyAsync(
-                assigneeIds,
-                NotificationTemplates.TaskUpdated(
-                    currentUserId,
-                    _currentUser.UserName ?? "Có người",
-                    task.WorkspaceId,
-                    task.Id,
-                    task.Title),
-                excludeUserIds: new[] { currentUserId },
-                cancellationToken);
             return Result.Success(dto);
         }
         catch (DomainException ex)

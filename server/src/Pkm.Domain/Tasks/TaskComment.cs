@@ -1,4 +1,5 @@
 using Pkm.Domain.SharedKernel;
+using Pkm.Domain.Tasks.Events;
 
 namespace Pkm.Domain.Tasks;
 
@@ -39,12 +40,22 @@ public sealed class TaskComment : EntityBase
         string content,
         DateTimeOffset now)
     {
-        return new TaskComment(
+        var comment = new TaskComment(
             Guid.NewGuid(),
             taskId,
             userId,
             content,
             now);
+
+        comment.RaiseDomainEvent(new TaskCommentCreatedDomainEvent(
+            comment.Id,
+            comment.TaskId,
+            comment.UserId,
+            comment.ParentId,
+            comment.Content,
+            now));
+
+        return comment;
     }
 
     public static TaskComment CreateReply(
@@ -56,13 +67,23 @@ public sealed class TaskComment : EntityBase
     {
         DomainGuard.AgainstEmpty(parentId, nameof(parentId));
 
-        return new TaskComment(
+        var comment = new TaskComment(
             Guid.NewGuid(),
             taskId,
             userId,
             content,
             now,
             parentId);
+
+        comment.RaiseDomainEvent(new TaskCommentCreatedDomainEvent(
+            comment.Id,
+            comment.TaskId,
+            comment.UserId,
+            comment.ParentId,
+            comment.Content,
+            now));
+
+        return comment;
     }
 
     public void UpdateContent(string newContent, Guid actorId, DateTimeOffset now)
@@ -70,8 +91,17 @@ public sealed class TaskComment : EntityBase
         ThrowIfDeleted();
         EnsureOwner(actorId);
 
+        var oldContent = Content;
         Content = NormalizeContent(newContent);
         Touch(now);
+
+        RaiseDomainEvent(new TaskCommentUpdatedDomainEvent(
+            Id,
+            TaskId,
+            UserId,
+            oldContent,
+            Content,
+            now));
     }
 
     public void DeleteByOwner(Guid actorId, DateTimeOffset now)
@@ -82,8 +112,18 @@ public sealed class TaskComment : EntityBase
         if (OriginalContent is null)
             OriginalContent = Content;
 
+        var oldContent = Content;
         Content = DeletedMessage;
         SoftDelete(now);
+
+        RaiseDomainEvent(new TaskCommentDeletedDomainEvent(
+            Id,
+            TaskId,
+            UserId,
+            actorId,
+            false,
+            oldContent,
+            now));
     }
 
     public void RestoreByOwner(Guid actorId, DateTimeOffset now)
@@ -99,6 +139,13 @@ public sealed class TaskComment : EntityBase
             Content = OriginalContent;
 
         OriginalContent = null;
+
+        RaiseDomainEvent(new TaskCommentRestoredDomainEvent(
+            Id,
+            TaskId,
+            UserId,
+            Content,
+            now));
     }
 
     public void ModerateDelete(Guid actorId, DateTimeOffset now)
@@ -111,8 +158,18 @@ public sealed class TaskComment : EntityBase
         if (OriginalContent is null)
             OriginalContent = Content;
 
+        var oldContent = Content;
         Content = DeletedMessage;
         SoftDelete(now);
+
+        RaiseDomainEvent(new TaskCommentDeletedDomainEvent(
+            Id,
+            TaskId,
+            UserId,
+            actorId,
+            true,
+            oldContent,
+            now));
     }
 
     private void EnsureOwner(Guid actorId)

@@ -1,15 +1,10 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
-using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
-using Pkm.Application.Features.Activity.Services;
-using Pkm.Application.Features.Notifications;
-using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Policies;
-using Pkm.Domain.Audit;
 using Pkm.Domain.Tasks;
 
 namespace Pkm.Application.Features.Tasks.Commands.AssignTask;
@@ -23,10 +18,8 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
-    private readonly INotificationService _notificationService;
-    private readonly IActivityLogService _activityLogService;
+
     public AssignTaskHandler(
         ICurrentUser currentUser,
         IWorkTaskWriteRepository workTaskWriteRepository,
@@ -35,10 +28,7 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
         IWorkspaceMemberRepository workspaceMemberRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
-        ITaskRealtimePublisher taskRealtimePublisher,
-        IClock clock,
-        INotificationService notificationService,
-        IActivityLogService activityLogService)
+        IClock clock)
     {
         _currentUser = currentUser;
         _workTaskWriteRepository = workTaskWriteRepository;
@@ -47,10 +37,7 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
         _workspaceMemberRepository = workspaceMemberRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
-        _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
-        _notificationService = notificationService;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -103,7 +90,7 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
 
         var now = _clock.UtcNow;
 
-        task.RecordAssignmentChange(currentUserId, now);
+        task.AssignTo(request.AssigneeUserId, currentUserId, now);
         _workTaskWriteRepository.Update(task);
 
         _taskAssigneeRepository.Add(TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
@@ -113,43 +100,6 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
         var detail = await _workTaskReadRepository.GetDetailAsync(task.Id, cancellationToken);
         var dto = detail is null ? task.ToDto() : detail.ToDto();
 
-        await _activityLogService.RecordAsync(
-            new ActivityLogRequest(
-                task.WorkspaceId,
-                currentUserId,
-                ActivityAction.Assign,
-                ActivityEntityType.TaskAssignee,
-                task.Id,
-                $"{_currentUser.UserName ?? "Có người"} đã phân công task \"{task.Title}\".",
-                ActivityLogMetadata.Serialize(new
-                {
-                    taskId = task.Id,
-                    title = task.Title,
-                    pageId = task.PageId,
-                    assigneeUserId = request.AssigneeUserId
-                })),
-            cancellationToken);
-
-        await _taskRealtimePublisher.PublishToPageAsync(
-            new TaskRealtimeEnvelope(
-                EventName: "TaskAssigned",
-                WorkspaceId: task.WorkspaceId,
-                PageId: task.PageId,
-                TaskId: task.Id,
-                ActorId: currentUserId,
-                OccurredAtUtc: now,
-                Payload: dto),
-            cancellationToken);
-
-        await _notificationService.NotifyAsync(
-            request.AssigneeUserId,
-            NotificationTemplates.TaskAssigned(
-                currentUserId,
-                _currentUser.UserName ?? "Có người",
-                task.WorkspaceId,
-                task.Id,
-                task.Title),
-            cancellationToken);
         return Result.Success(dto);
     }
 }

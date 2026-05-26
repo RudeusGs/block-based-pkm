@@ -1,6 +1,5 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
-using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
@@ -10,10 +9,7 @@ using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Tasks;
-using Pkm.Application.Features.Activity.Services;
-using Pkm.Application.Features.Notifications;
-using Pkm.Application.Features.Notifications.Services;
-using Pkm.Domain.Audit;
+
 namespace Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
 
 public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskCommand, WorkTaskDto>
@@ -26,11 +22,9 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
     private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
     private readonly CreateWorkTaskCommandValidator _validator;
-    private readonly INotificationService _notificationService;
-    private readonly IActivityLogService _activityLogService;
+
     public CreateWorkTaskHandler(
         ICurrentUser currentUser,
         IPageReadRepository pageReadRepository,
@@ -40,11 +34,8 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
         IWorkTaskReadRepository workTaskReadRepository,
         ITaskAssigneeRepository taskAssigneeRepository,
         IUnitOfWork unitOfWork,
-        ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
-        CreateWorkTaskCommandValidator validator,
-        INotificationService notificationService,
-        IActivityLogService activityLogService)
+        CreateWorkTaskCommandValidator validator)
     {
         _currentUser = currentUser;
         _pageReadRepository = pageReadRepository;
@@ -54,11 +45,8 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
         _workTaskReadRepository = workTaskReadRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
         _unitOfWork = unitOfWork;
-        _taskRealtimePublisher = taskRealtimePublisher;
         _clock = clock;
         _validator = validator;
-        _notificationService = notificationService;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkTaskDto>> HandleAsync(
@@ -142,7 +130,8 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
                 page.Id,
                 request.Priority,
                 request.Description,
-                request.DueDate);
+                request.DueDate,
+                assigneeIds);
 
             _workTaskWriteRepository.Add(task);
 
@@ -159,56 +148,6 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
                 ? task.ToDto()
                 : detail.ToDto();
 
-            await _activityLogService.RecordAsync(
-                new ActivityLogRequest(
-                    task.WorkspaceId,
-                    currentUserId,
-                    ActivityAction.Create,
-                    ActivityEntityType.WorkTask,
-                    task.Id,
-                    $"{_currentUser.UserName ?? "Có người"} đã tạo task \"{task.Title}\".",
-                    ActivityLogMetadata.Serialize(new
-                    {
-                        taskId = task.Id,
-                        title = task.Title,
-                        pageId = task.PageId,
-                        priority = task.Priority.ToString(),
-                        dueDate = task.DueDate,
-                        assigneeUserIds = assigneeIds
-                    })),
-                cancellationToken);
-
-            await _taskRealtimePublisher.PublishToPageAsync(
-                new TaskRealtimeEnvelope(
-                    EventName: "TaskCreated",
-                    WorkspaceId: page.WorkspaceId,
-                    PageId: page.Id,
-                    TaskId: task.Id,
-                    ActorId: currentUserId,
-                    OccurredAtUtc: now,
-                    Payload: dto),
-                cancellationToken);
-            await _notificationService.NotifyWorkspaceAsync(
-                page.WorkspaceId,
-                NotificationTemplates.TaskCreated(
-                    currentUserId,
-                    _currentUser.UserName ?? "Có người",
-                    page.WorkspaceId,
-                    task.Id,
-                    task.Title),
-                excludeUserIds: new[] { currentUserId }.Concat(assigneeIds),
-                cancellationToken);
-
-            await _notificationService.NotifyManyAsync(
-                assigneeIds,
-                NotificationTemplates.TaskAssigned(
-                    currentUserId,
-                    _currentUser.UserName ?? "Có người",
-                    task.WorkspaceId,
-                    task.Id,
-                    task.Title),
-                excludeUserIds: new[] { currentUserId },
-                cancellationToken);
             return Result.Success(dto);
         }
         catch (DomainException ex)

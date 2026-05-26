@@ -1,5 +1,6 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Pkm.Application.Common.Abstractions.Messaging;
 using Pkm.Application.Common.Caching;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
@@ -97,5 +98,6 @@ public static class ApplicationServiceCollection
                 type.GetGenericTypeDefinition() is var genericDefinition &&
                 (genericDefinition == typeof(ICommandHandler<>) ||
                  genericDefinition == typeof(ICommandHandler<,>) ||
-                 genericDefinition == typeof(IQueryHandler<,>)));
+                 genericDefinition == typeof(IQueryHandler<,>) ||
+                 genericDefinition == typeof(IDomainEventHandler<>)));
 }
