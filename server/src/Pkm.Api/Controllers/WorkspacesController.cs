@@ -21,6 +21,7 @@ using Pkm.Application.Features.Workspaces.Commands.RestoreWorkspace;
 using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
+using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceDashboard;
 using Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
 
 namespace Pkm.Api.Controllers;
@@ -137,6 +138,22 @@ public sealed class WorkspacesController : BaseController
     {
         var result = await QueryAsync<GetWorkspaceByIdQuery, WorkspaceDto>(
             new GetWorkspaceByIdQuery(workspaceId),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpGet("{workspaceId:guid}/dashboard")]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceDashboardResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    public async Task<ActionResult<ApiResult<WorkspaceDashboardResponse>>> GetDashboard(
+        [FromRoute] Guid workspaceId,
+        CancellationToken cancellationToken)
+    {
+        var result = await QueryAsync<GetWorkspaceDashboardQuery, WorkspaceDashboardDto>(
+            new GetWorkspaceDashboardQuery(workspaceId),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());

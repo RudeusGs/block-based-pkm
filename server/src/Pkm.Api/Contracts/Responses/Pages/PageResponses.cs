@@ -1,4 +1,6 @@
-﻿namespace Pkm.Api.Contracts.Responses.Pages;
+﻿using Pkm.Api.Contracts.Responses.Blocks;
+
+namespace Pkm.Api.Contracts.Responses.Pages;
 
 public sealed record PageResponse(
     Guid Id,
@@ -9,6 +11,10 @@ public sealed record PageResponse(
     string? CoverImage,
     bool IsArchived,
     DateTimeOffset? ArchivedAt,
+    bool IsPublished,
+    string? PublicToken,
+    DateTimeOffset? PublishedAt,
+    Guid? PublishedBy,
     long CurrentRevision,
     Guid CreatedBy,
     Guid? LastModifiedBy,
@@ -57,3 +63,40 @@ public sealed record PagePresenceResponse(
     Guid WorkspaceId,
     Guid PageId,
     IReadOnlyList<PagePresenceUserResponse> ActiveUsers);
+
+
+
+
+
+public sealed record PagePublishResponse(
+    Guid PageId,
+    bool IsPublished,
+    string? PublicToken,
+    string? PublicViewerPath,
+    string? PublicApiPath,
+    DateTimeOffset? PublishedAt,
+    Guid? PublishedBy);
+
+public sealed record PublishedBlockResponse(
+    Guid Id,
+    Guid? ParentBlockId,
+    string Type,
+    string? TextContent,
+    string? PropsJson,
+    int SchemaVersion,
+    string OrderKey,
+    DateTimeOffset CreatedDate,
+    DateTimeOffset? UpdatedDate);
+
+public sealed record PublishedPageDocumentResponse(
+    Guid PageId,
+    string Title,
+    string? Icon,
+    string? CoverImage,
+    long CurrentRevision,
+    DateTimeOffset PublishedAt,
+    IReadOnlyList<PublishedBlockResponse> Blocks,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);

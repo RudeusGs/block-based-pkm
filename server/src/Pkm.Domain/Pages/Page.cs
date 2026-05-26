@@ -10,6 +10,7 @@ public sealed class Page : EntityBase
     private const int MaxTitleLength = 200;
     private const int MaxIconLength = 500;
     private const int MaxCoverImageLength = 2048;
+    private const int MaxPublicTokenLength = 128;
 
     public Guid WorkspaceId { get; private set; }
     public Guid? ParentPageId { get; private set; }
@@ -23,6 +24,11 @@ public sealed class Page : EntityBase
 
     public bool IsArchived { get; private set; }
     public DateTimeOffset? ArchivedAt { get; private set; }
+
+    public bool IsPublished { get; private set; }
+    public string? PublicToken { get; private set; }
+    public DateTimeOffset? PublishedAt { get; private set; }
+    public Guid? PublishedBy { get; private set; }
 
     public long CurrentRevision { get; private set; }
 
@@ -45,6 +51,7 @@ public sealed class Page : EntityBase
         ParentPageId = parentPageId;
         CreatedBy = createdBy;
         IsArchived = false;
+        IsPublished = false;
         CurrentRevision = 0;
 
         Title = TextRules.NormalizeOrDefault(title, "Untitled", MaxTitleLength, nameof(Title));
@@ -116,6 +123,41 @@ public sealed class Page : EntityBase
         RegisterModification(actorId, now);
     }
 
+
+    public void Publish(string publicToken, Guid actorId, DateTimeOffset now)
+    {
+        EnsureEditable();
+        EnsureValidActor(actorId);
+
+        var normalizedToken = TextRules.NormalizeRequired(
+            publicToken,
+            MaxPublicTokenLength,
+            nameof(PublicToken));
+
+        IsPublished = true;
+        PublicToken = normalizedToken;
+        PublishedAt = now;
+        PublishedBy = actorId;
+
+        RegisterModification(actorId, now);
+    }
+
+    public void Unpublish(Guid actorId, DateTimeOffset now)
+    {
+        EnsureEditable();
+        EnsureValidActor(actorId);
+
+        if (!IsPublished && PublicToken is null)
+            return;
+
+        IsPublished = false;
+        PublicToken = null;
+        PublishedAt = null;
+        PublishedBy = null;
+
+        RegisterModification(actorId, now);
+    }
+
     public long IncreaseRevision(Guid actorId, DateTimeOffset now)
     {
         EnsureEditable();
@@ -144,3 +186,6 @@ public sealed class Page : EntityBase
     private static void EnsureValidActor(Guid actorId)
         => DomainGuard.AgainstEmpty(actorId, "ActorId");
 }
+
+
+

@@ -31,6 +31,42 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
         => await _dataContext.Pages
             .AnyAsync(x => x.Id == id && !x.IsArchived, cancellationToken);
 
+    public async Task<bool> ExistsByPublicTokenAsync(
+        string publicToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(publicToken))
+            return false;
+
+        return await
+            (from page in _dataContext.Pages.AsNoTracking()
+             join workspace in _dataContext.Workspaces.AsNoTracking()
+                 on page.WorkspaceId equals workspace.Id
+             where page.IsPublished
+                   && page.PublicToken == publicToken
+                   && !page.IsArchived
+             select page.Id)
+            .AnyAsync(cancellationToken);
+    }
+
+    public async Task<Page?> GetPublishedByTokenAsync(
+        string publicToken,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(publicToken))
+            return null;
+
+        return await
+            (from page in _dataContext.Pages.AsNoTracking()
+             join workspace in _dataContext.Workspaces.AsNoTracking()
+                 on page.WorkspaceId equals workspace.Id
+             where page.IsPublished
+                   && page.PublicToken == publicToken
+                   && !page.IsArchived
+             select page)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<Page>> ListByWorkspaceAsync(
         Guid workspaceId,
         int pageNumber,
@@ -44,6 +80,25 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
             .AsNoTracking()
             .Where(x => x.WorkspaceId == workspaceId && !x.IsArchived)
             .OrderBy(x => x.ParentPageId)
+            .ThenByDescending(x => x.CreatedDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Page>> ListRecentlyUpdatedByWorkspaceAsync(
+        Guid workspaceId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+
+        return await _dataContext.Pages
+            .AsNoTracking()
+            .Where(x => x.WorkspaceId == workspaceId && !x.IsArchived)
+            .OrderByDescending(x => x.UpdatedDate ?? x.CreatedDate)
             .ThenByDescending(x => x.CreatedDate)
             .Skip((pageNumber - 1) * pageSize)
             .Take(pageSize)

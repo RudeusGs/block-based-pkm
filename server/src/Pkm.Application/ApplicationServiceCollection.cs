@@ -49,6 +49,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<IRecommendationCandidateDeduplicator, RecommendationCandidateDeduplicator>();
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
         services.AddScoped<IPageTrashCleanupService, PageTrashCleanupService>();
+        services.AddSingleton<IPagePublishTokenGenerator, PagePublishTokenGenerator>();
         services.AddScoped<IBestEffortCache, BestEffortCache>();
 
         services.AddScoped<IDocumentMutationCoordinator, DocumentMutationCoordinator>();

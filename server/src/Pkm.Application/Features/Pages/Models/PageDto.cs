@@ -9,8 +9,15 @@ public sealed record PageDto(
     string? CoverImage,
     bool IsArchived,
     DateTimeOffset? ArchivedAt,
+    bool IsPublished,
+    string? PublicToken,
+    DateTimeOffset? PublishedAt,
+    Guid? PublishedBy,
     long CurrentRevision,
     Guid CreatedBy,
     Guid? LastModifiedBy,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);
+
+
+

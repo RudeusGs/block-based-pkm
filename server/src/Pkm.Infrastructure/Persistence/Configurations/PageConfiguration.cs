@@ -26,12 +26,22 @@ internal sealed class PageConfiguration : IEntityTypeConfiguration<Page>
         builder.Property(x => x.CurrentRevision)
             .IsRequired();
 
+        builder.Property(x => x.IsPublished)
+            .IsRequired();
+
+        builder.Property(x => x.PublicToken)
+            .HasMaxLength(128);
+
         builder.HasIndex(x => new { x.WorkspaceId, x.ParentPageId, x.IsArchived })
             .HasFilter("\"IsDeleted\" = false");
 
         builder.HasIndex(x => new { x.WorkspaceId, x.CreatedDate })
             .IsDescending(false, true)
             .HasFilter("\"IsDeleted\" = false");
+
+        builder.HasIndex(x => x.PublicToken)
+            .IsUnique()
+            .HasFilter("\"IsDeleted\" = false AND \"IsPublished\" = true AND \"PublicToken\" IS NOT NULL");
 
         builder.HasOne<Workspace>()
             .WithMany()
@@ -44,3 +54,6 @@ internal sealed class PageConfiguration : IEntityTypeConfiguration<Page>
             .OnDelete(DeleteBehavior.Restrict);
     }
 }
+
+
+

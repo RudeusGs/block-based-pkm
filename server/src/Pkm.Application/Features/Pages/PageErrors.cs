@@ -34,9 +34,22 @@ public static class PageErrors
         "Từ khóa tìm kiếm không hợp lệ.",
         ResultStatus.Validation);
 
+    public static readonly Error PublishedPageNotFound = new(
+        "Page.PublishedPageNotFound",
+        "Public page link không tồn tại hoặc đã bị tắt publish.",
+        ResultStatus.NotFound);
+
+    public static readonly Error PublishTokenGenerationFailed = new(
+        "Page.PublishTokenGenerationFailed",
+        "Không thể tạo public link cho page. Vui lòng thử lại.",
+        ResultStatus.Conflict);
+
     public static Error InvalidPageId(Guid pageId)
         => new(
             "Page.InvalidPageId",
             $"PageId '{pageId}' không hợp lệ.",
             ResultStatus.Validation);
 }
+
+
+

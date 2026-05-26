@@ -54,6 +54,10 @@ public static class PageResponseMappings
             dto.CoverImage,
             dto.IsArchived,
             dto.ArchivedAt,
+            dto.IsPublished,
+            dto.PublicToken,
+            dto.PublishedAt,
+            dto.PublishedBy,
             dto.CurrentRevision,
             dto.CreatedBy,
             dto.LastModifiedBy,
@@ -63,6 +67,45 @@ public static class PageResponseMappings
     public static PagePagedResultResponse ToResponse(this AppPages.PagePagedResultDto dto)
         => new(
             dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
+
+    public static PagePublishResponse ToResponse(
+        this AppPages.PagePublishDto dto,
+        string? publicViewerPath,
+        string? publicApiPath)
+        => new(
+            dto.PageId,
+            dto.IsPublished,
+            dto.PublicToken,
+            publicViewerPath,
+            publicApiPath,
+            dto.PublishedAt,
+            dto.PublishedBy);
+
+    public static PublishedBlockResponse ToPublishedResponse(this AppDocuments.BlockDto dto)
+        => new(
+            dto.Id,
+            dto.ParentBlockId,
+            dto.Type,
+            dto.TextContent,
+            dto.PropsJson,
+            dto.SchemaVersion,
+            dto.OrderKey,
+            dto.CreatedDate,
+            dto.UpdatedDate);
+
+    public static PublishedPageDocumentResponse ToResponse(this AppPages.PublishedPageDocumentDto dto)
+        => new(
+            dto.PageId,
+            dto.Title,
+            dto.Icon,
+            dto.CoverImage,
+            dto.CurrentRevision,
+            dto.PublishedAt,
+            dto.Blocks.Select(x => x.ToPublishedResponse()).ToArray(),
             dto.PageNumber,
             dto.PageSize,
             dto.TotalCount,

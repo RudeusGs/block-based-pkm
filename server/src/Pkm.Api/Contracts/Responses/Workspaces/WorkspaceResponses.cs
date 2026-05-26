@@ -38,6 +38,67 @@ public sealed record WorkspaceTrashItemResponse(
     DateTimeOffset? TrashedAt,
     string CurrentUserRole);
 
+
+public sealed record WorkspaceDashboardResponse(
+    WorkspaceResponse Workspace,
+    WorkspaceDashboardStatsResponse Stats,
+    IReadOnlyList<WorkspaceDashboardPageResponse> RecentPages,
+    IReadOnlyList<WorkspaceDashboardTaskResponse> MyOpenTasks,
+    IReadOnlyList<WorkspaceDashboardActivityResponse> LatestActivities,
+    IReadOnlyList<WorkspaceMemberResponse> Members);
+
+public sealed record WorkspaceDashboardStatsResponse(
+    int PageCount,
+    int OpenTaskCount,
+    int MyOpenTaskCount,
+    int MemberCount);
+
+public sealed record WorkspaceDashboardPageResponse(
+    Guid Id,
+    Guid WorkspaceId,
+    Guid? ParentPageId,
+    string Title,
+    string? Icon,
+    string? CoverImage,
+    long CurrentRevision,
+    Guid CreatedBy,
+    Guid? LastModifiedBy,
+    DateTimeOffset CreatedDate,
+    DateTimeOffset? UpdatedDate);
+
+public sealed record WorkspaceDashboardTaskAssigneeResponse(
+    Guid UserId);
+
+public sealed record WorkspaceDashboardTaskResponse(
+    Guid Id,
+    Guid WorkspaceId,
+    Guid? PageId,
+    string Title,
+    string? Description,
+    string Status,
+    string Priority,
+    DateTimeOffset? DueDate,
+    Guid CreatedById,
+    Guid? LastModifiedById,
+    DateTimeOffset CreatedDate,
+    DateTimeOffset? UpdatedDate,
+    IReadOnlyList<WorkspaceDashboardTaskAssigneeResponse> Assignees);
+
+public sealed record WorkspaceDashboardActivityResponse(
+    Guid Id,
+    Guid WorkspaceId,
+    Guid UserId,
+    string? UserName,
+    string? UserFullName,
+    string? UserAvatarUrl,
+    string Action,
+    string EntityType,
+    Guid EntityId,
+    string? Description,
+    string? MetadataJson,
+    DateTimeOffset OccurredAt,
+    DateTimeOffset CreatedDate);
+
 public sealed record WorkspaceMemberResponse(
     Guid WorkspaceId,
     Guid UserId,

@@ -14,9 +14,16 @@ public static class PageMappings
             page.CoverImage,
             page.IsArchived,
             page.ArchivedAt,
+            page.IsPublished,
+            page.PublicToken,
+            page.PublishedAt,
+            page.PublishedBy,
             page.CurrentRevision,
             page.CreatedBy,
             page.LastModifiedBy,
             page.CreatedDate,
             page.UpdatedDate);
 }
+
+
+

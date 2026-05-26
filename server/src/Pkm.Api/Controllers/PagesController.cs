@@ -17,8 +17,11 @@ using Pkm.Application.Features.Pages.Commands.RestorePage;
 using Pkm.Application.Features.Pages.Commands.FavoritePage;
 using Pkm.Application.Features.Pages.Commands.DuplicatePage;
 using Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
+using Pkm.Application.Features.Pages.Commands.PublishPage;
+using Pkm.Application.Features.Pages.Commands.UnpublishPage;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Queries.GetPage;
+using Pkm.Application.Features.Pages.Queries.GetPublishedPageDocument;
 using Pkm.Application.Features.Pages.Queries.ListSubPages;
 using Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
 using Pkm.Application.Features.Pages.Queries.SearchPages;
@@ -110,6 +113,68 @@ public sealed class PagesController : BaseController
     {
         var result = await QueryAsync<GetPageQuery, PageDto>(
             new GetPageQuery(pageId),
+            cancellationToken);
+
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpPost("api/v1/pages/{pageId:guid}/publish")]
+    [ProducesResponseType(typeof(ApiResult<PagePublishResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 409)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<PagePublishResponse>>> Publish(
+        [FromRoute] Guid pageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await ExecuteAsync<PublishPageCommand, PagePublishDto>(
+            new PublishPageCommand(pageId),
+            cancellationToken);
+
+        return HandleResult(result, dto =>
+        {
+            var paths = BuildPublishedPagePaths(dto);
+            return dto.ToResponse(paths.PublicViewerPath, paths.PublicApiPath);
+        });
+    }
+
+    [HttpDelete("api/v1/pages/{pageId:guid}/publish")]
+    [ProducesResponseType(typeof(ApiResult<PagePublishResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<PagePublishResponse>>> Unpublish(
+        [FromRoute] Guid pageId,
+        CancellationToken cancellationToken)
+    {
+        var result = await ExecuteAsync<UnpublishPageCommand, PagePublishDto>(
+            new UnpublishPageCommand(pageId),
+            cancellationToken);
+
+        return HandleResult(result, dto =>
+        {
+            var paths = BuildPublishedPagePaths(dto);
+            return dto.ToResponse(paths.PublicViewerPath, paths.PublicApiPath);
+        });
+    }
+
+    [AllowAnonymous]
+    [HttpGet("api/v1/public/pages/{publicToken}")]
+    [ProducesResponseType(typeof(ApiResult<PublishedPageDocumentResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    public async Task<ActionResult<ApiResult<PublishedPageDocumentResponse>>> GetPublishedPage(
+        [FromRoute] string publicToken,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 200,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await QueryAsync<GetPublishedPageDocumentQuery, PublishedPageDocumentDto>(
+            new GetPublishedPageDocumentQuery(publicToken, pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());
@@ -303,4 +368,17 @@ public sealed class PagesController : BaseController
         return HandleResult(result, x => x.ToResponse());
     }
 
+    private static (string? PublicViewerPath, string? PublicApiPath) BuildPublishedPagePaths(PagePublishDto dto)
+    {
+        if (!dto.IsPublished || string.IsNullOrWhiteSpace(dto.PublicToken))
+            return (null, null);
+
+        return (
+            $"/public/pages/{dto.PublicToken}",
+            $"/api/v1/public/pages/{dto.PublicToken}");
+    }
+
 }
+
+
+

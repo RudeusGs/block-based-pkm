@@ -9,7 +9,21 @@ public interface IPageReadRepository
 
     Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default);
 
+    Task<bool> ExistsByPublicTokenAsync(
+        string publicToken,
+        CancellationToken cancellationToken = default);
+
+    Task<Page?> GetPublishedByTokenAsync(
+        string publicToken,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Page>> ListByWorkspaceAsync(
+        Guid workspaceId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<Page>> ListRecentlyUpdatedByWorkspaceAsync(
         Guid workspaceId,
         int pageNumber,
         int pageSize,

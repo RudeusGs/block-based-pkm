@@ -4,6 +4,68 @@ namespace Pkm.Api.Contracts.Responses.Workspaces;
 
 public static class WorkspaceResponseMappings
 {
+    public static WorkspaceDashboardResponse ToResponse(this WorkspaceDashboardDto dto)
+        => new(
+            dto.Workspace.ToResponse(),
+            dto.Stats.ToResponse(),
+            dto.RecentPages.Select(x => x.ToDashboardResponse()).ToArray(),
+            dto.MyOpenTasks.Select(x => x.ToDashboardResponse()).ToArray(),
+            dto.LatestActivities.Select(x => x.ToDashboardResponse()).ToArray(),
+            dto.Members.Select(x => x.ToResponse()).ToArray());
+
+    private static WorkspaceDashboardStatsResponse ToResponse(this WorkspaceDashboardStatsDto dto)
+        => new(
+            dto.PageCount,
+            dto.OpenTaskCount,
+            dto.MyOpenTaskCount,
+            dto.MemberCount);
+
+    private static WorkspaceDashboardPageResponse ToDashboardResponse(this Pkm.Application.Features.Pages.Models.PageDto dto)
+        => new(
+            dto.Id,
+            dto.WorkspaceId,
+            dto.ParentPageId,
+            dto.Title,
+            dto.Icon,
+            dto.CoverImage,
+            dto.CurrentRevision,
+            dto.CreatedBy,
+            dto.LastModifiedBy,
+            dto.CreatedDate,
+            dto.UpdatedDate);
+
+    private static WorkspaceDashboardTaskResponse ToDashboardResponse(this Pkm.Application.Features.Tasks.Models.WorkTaskDto dto)
+        => new(
+            dto.Id,
+            dto.WorkspaceId,
+            dto.PageId,
+            dto.Title,
+            dto.Description,
+            dto.Status.ToString(),
+            dto.Priority.ToString(),
+            dto.DueDate,
+            dto.CreatedById,
+            dto.LastModifiedById,
+            dto.CreatedDate,
+            dto.UpdatedDate,
+            dto.Assignees.Select(x => new WorkspaceDashboardTaskAssigneeResponse(x.UserId)).ToArray());
+
+    private static WorkspaceDashboardActivityResponse ToDashboardResponse(this Pkm.Application.Features.Activity.Models.ActivityLogDto dto)
+        => new(
+            dto.Id,
+            dto.WorkspaceId,
+            dto.UserId,
+            dto.UserName,
+            dto.UserFullName,
+            dto.UserAvatarUrl,
+            dto.Action.ToString(),
+            dto.EntityType.ToString(),
+            dto.EntityId,
+            dto.Description,
+            dto.MetadataJson,
+            dto.OccurredAt,
+            dto.CreatedDate);
+
     public static WorkspaceResponse ToResponse(this WorkspaceDto dto)
         => new(
             dto.Id,
