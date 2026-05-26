@@ -2,16 +2,17 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Pages.Queries.GetPage;
 
-public sealed class GetPageHandler
+public sealed class GetPageHandler : IQueryHandler<GetPageQuery, PageDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IPageUserStateRepository _pageUserStateRepository;
     private readonly IUnitOfWork _unitOfWork;
@@ -19,7 +20,7 @@ public sealed class GetPageHandler
 
     public GetPageHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
+        IPageReadRepository pageRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IPageUserStateRepository pageUserStateRepository,
         IUnitOfWork unitOfWork,

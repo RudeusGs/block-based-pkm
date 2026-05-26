@@ -2,7 +2,7 @@
 
 public enum WorkspaceRole
 {
-    // Các vai trò trong workspace, được sắp xếp theo thứ tự quyền hạn giảm dần
+    // Roles are ordered from highest to lowest authority.
     Owner = 1,
     Manager = 2,
     Member = 3,

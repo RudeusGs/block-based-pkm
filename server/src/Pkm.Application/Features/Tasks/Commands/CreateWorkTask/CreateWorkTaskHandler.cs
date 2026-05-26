@@ -19,10 +19,11 @@ namespace Pkm.Application.Features.Tasks.Commands.CreateWorkTask;
 public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskCommand, WorkTaskDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageReadRepository;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
+    private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
@@ -32,10 +33,11 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
     private readonly IActivityLogService _activityLogService;
     public CreateWorkTaskHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
+        IPageReadRepository pageReadRepository,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IWorkspaceMemberRepository workspaceMemberRepository,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
+        IWorkTaskReadRepository workTaskReadRepository,
         ITaskAssigneeRepository taskAssigneeRepository,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
@@ -45,10 +47,11 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _pageRepository = pageRepository;
+        _pageReadRepository = pageReadRepository;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _workspaceMemberRepository = workspaceMemberRepository;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
+        _workTaskReadRepository = workTaskReadRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
@@ -73,7 +76,7 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
             return Result.Failure<WorkTaskDto>(TaskErrors.MissingUserContext);
         }
 
-        var page = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
+        var page = await _pageReadRepository.GetByIdAsync(request.PageId, cancellationToken);
         if (page is null)
         {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageNotFound);
@@ -141,7 +144,7 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
                 request.Description,
                 request.DueDate);
 
-            _workTaskRepository.Add(task);
+            _workTaskWriteRepository.Add(task);
 
             foreach (var assigneeUserId in assigneeIds)
             {
@@ -151,7 +154,7 @@ public sealed class CreateWorkTaskHandler : ICommandHandler<CreateWorkTaskComman
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var detail = await _workTaskRepository.GetDetailAsync(task.Id, cancellationToken);
+            var detail = await _workTaskReadRepository.GetDetailAsync(task.Id, cancellationToken);
             var dto = detail is null
                 ? task.ToDto()
                 : detail.ToDto();

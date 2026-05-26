@@ -3,6 +3,7 @@ using Pkm.Application.Common.Abstractions.Caching;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
+using Pkm.Application.Common.Caching;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
@@ -28,16 +29,18 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IWorkspaceRepository _workspaceRepository;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskReadRepository _workTaskReadRepository;
+    private readonly IWorkTaskRecommendationReadRepository _workTaskRecommendationReadRepository;
     private readonly ITaskRecommendationRepository _taskRecommendationRepository;
     private readonly IUserTaskPreferenceRepository _preferenceRepository;
     private readonly IUserTaskHistoryRepository _historyRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRecommendationScoringService _scoringService;
+    private readonly IRecommendationCandidateDeduplicator _candidateDeduplicator;
     private readonly IRecommendationRealtimePublisher _recommendationRealtimePublisher;
     private readonly INotificationService _notificationService;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IBestEffortCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly GenerateTaskRecommendationsCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
@@ -46,16 +49,18 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IWorkspaceRepository workspaceRepository,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskReadRepository workTaskReadRepository,
+        IWorkTaskRecommendationReadRepository workTaskRecommendationReadRepository,
         ITaskRecommendationRepository taskRecommendationRepository,
         IUserTaskPreferenceRepository preferenceRepository,
         IUserTaskHistoryRepository historyRepository,
         IUnitOfWork unitOfWork,
         IRecommendationScoringService scoringService,
+        IRecommendationCandidateDeduplicator candidateDeduplicator,
         IRecommendationRealtimePublisher recommendationRealtimePublisher,
         INotificationService notificationService,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IBestEffortCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         GenerateTaskRecommendationsCommandValidator validator,
         IActivityLogService activityLogService)
@@ -63,16 +68,18 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _workspaceRepository = workspaceRepository;
-        _workTaskRepository = workTaskRepository;
+        _workTaskReadRepository = workTaskReadRepository;
+        _workTaskRecommendationReadRepository = workTaskRecommendationReadRepository;
         _taskRecommendationRepository = taskRecommendationRepository;
         _preferenceRepository = preferenceRepository;
         _historyRepository = historyRepository;
         _unitOfWork = unitOfWork;
         _scoringService = scoringService;
+        _candidateDeduplicator = candidateDeduplicator;
         _recommendationRealtimePublisher = recommendationRealtimePublisher;
         _notificationService = notificationService;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _validator = validator;
         _activityLogService = activityLogService;
@@ -141,11 +148,11 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         if (!request.Force)
         {
             var throttleKey = RecommendationCacheKeys.UserThrottle(
-                _redisKeyFactory,
+                _cacheKeyFactory,
                 request.WorkspaceId,
                 currentUserId);
 
-            var isThrottled = await CacheExistsBestEffortAsync(
+            var isThrottled = await _cache.ExistsAsync(
                 throttleKey,
                 cancellationToken);
 
@@ -157,7 +164,7 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
 
             if (isPersonalWorkspace)
             {
-                var hasActiveAssignedTask = await _workTaskRepository.HasActiveAssignedTaskAsync(
+                var hasActiveAssignedTask = await _workTaskReadRepository.HasActiveAssignedTaskAsync(
                     currentUserId,
                     request.WorkspaceId,
                     cancellationToken);
@@ -170,7 +177,7 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
             }
         }
 
-        var candidates = await _workTaskRepository.ListRecommendationCandidatesAsync(
+        var candidates = await _workTaskRecommendationReadRepository.ListRecommendationCandidatesAsync(
             currentUserId,
             request.WorkspaceId,
             request.PageId,
@@ -183,7 +190,7 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
                 request.WorkspaceId,
                 cancellationToken);
 
-        candidates = await RemovePreviouslyRecommendedSemanticDuplicatesAsync(
+        candidates = await _candidateDeduplicator.RemovePreviouslyRecommendedSemanticDuplicatesAsync(
             candidates,
             previouslyRecommendedTaskIds,
             currentUserId,
@@ -287,50 +294,6 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         }
     }
 
-    private async Task<IReadOnlyList<RecommendationCandidateReadModel>> RemovePreviouslyRecommendedSemanticDuplicatesAsync(
-        IReadOnlyList<RecommendationCandidateReadModel> candidates,
-        IReadOnlySet<Guid> previouslyRecommendedTaskIds,
-        Guid currentUserId,
-        CancellationToken cancellationToken)
-    {
-        if (candidates.Count == 0 || previouslyRecommendedTaskIds.Count == 0)
-            return candidates;
-
-        var previouslyRecommendedTaskDetails =
-            await _workTaskRepository.ListRecommendationTaskDetailsByIdsAsync(
-                currentUserId,
-                previouslyRecommendedTaskIds,
-                cancellationToken);
-
-        var previouslyRecommendedKeys = previouslyRecommendedTaskDetails.Values
-            .Select(TaskSemanticKeyBuilder.BuildTitleKey)
-            .Where(x => !string.IsNullOrWhiteSpace(x))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-
-        if (previouslyRecommendedKeys.Count == 0)
-        {
-            return candidates
-                .Where(x => !previouslyRecommendedTaskIds.Contains(x.TaskId))
-                .ToArray();
-        }
-
-        return candidates
-            .Where(candidate =>
-            {
-                if (previouslyRecommendedTaskIds.Contains(candidate.TaskId))
-                    return false;
-
-                var candidateKey = TaskSemanticKeyBuilder.BuildTitleKey(candidate);
-
-                if (string.IsNullOrWhiteSpace(candidateKey))
-                    return true;
-
-                return !previouslyRecommendedKeys.Any(previousKey =>
-                    TaskSemanticKeyBuilder.IsSimilar(previousKey, candidateKey));
-            })
-            .ToArray();
-    }
-
     private async Task<bool> IsPersonalWorkspaceAsync(
         Guid workspaceId,
         Guid currentUserId,
@@ -354,11 +317,11 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         CancellationToken cancellationToken)
     {
         var cacheKey = RecommendationCacheKeys.Preference(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             workspaceId,
             userId);
 
-        var cached = await CacheGetBestEffortAsync<UserTaskPreferenceDto>(
+        var cached = await _cache.GetAsync<UserTaskPreferenceDto>(
             cacheKey,
             cancellationToken);
 
@@ -379,7 +342,7 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         _preferenceRepository.Add(preference);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await CacheSetBestEffortAsync(
+        await _cache.SetAsync(
             cacheKey,
             preference.ToDto(),
             TimeSpan.FromMinutes(15),
@@ -394,11 +357,11 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         CancellationToken cancellationToken)
     {
         var cacheKey = RecommendationCacheKeys.HistoryStats(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             workspaceId,
             userId);
 
-        var cached = await CacheGetBestEffortAsync<UserTaskHistoryStatsDto>(
+        var cached = await _cache.GetAsync<UserTaskHistoryStatsDto>(
             cacheKey,
             cancellationToken);
 
@@ -410,7 +373,7 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
             workspaceId,
             cancellationToken);
 
-        await CacheSetBestEffortAsync(
+        await _cache.SetAsync(
             cacheKey,
             stats,
             TimeSpan.FromMinutes(10),
@@ -426,11 +389,11 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         CancellationToken cancellationToken)
     {
         var throttleKey = RecommendationCacheKeys.UserThrottle(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             workspaceId,
             userId);
 
-        await CacheSetBestEffortAsync(
+        await _cache.SetAsync(
             throttleKey,
             "1",
             TimeSpan.FromMinutes(preference.RecommendationIntervalMinutes),
@@ -442,69 +405,14 @@ public sealed class GenerateTaskRecommendationsHandler : ICommandHandler<Generat
         CancellationToken cancellationToken)
     {
         var versionKey = RecommendationCacheKeys.UserPendingVersion(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             userId);
 
-        await CacheSetBestEffortAsync(
+        await _cache.SetAsync(
             versionKey,
             Guid.NewGuid().ToString("N"),
             TimeSpan.FromDays(7),
             cancellationToken);
-    }
-
-    private async Task<T?> CacheGetBestEffortAsync<T>(
-        string key,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _redisCache.GetAsync<T>(key, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return default;
-        }
-    }
-
-    private async Task<bool> CacheExistsBestEffortAsync(
-        string key,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            return await _redisCache.ExistsAsync(key, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-            return false;
-        }
-    }
-
-    private async Task CacheSetBestEffortAsync<T>(
-        string key,
-        T value,
-        TimeSpan ttl,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            await _redisCache.SetAsync(key, value, ttl, cancellationToken);
-        }
-        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
-        {
-            throw;
-        }
-        catch
-        {
-        }
     }
 
     private async Task PublishGeneratedBestEffortAsync(

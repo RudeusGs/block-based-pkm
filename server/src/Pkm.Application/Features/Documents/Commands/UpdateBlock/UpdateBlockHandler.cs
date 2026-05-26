@@ -4,6 +4,7 @@ using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
@@ -15,11 +16,11 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.UpdateBlock;
 
-public sealed class UpdateBlockHandler
+public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, BlockMutationDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IBlockRepository _blockRepository;
-    private readonly IPageRepository _pageRepository;
+    private readonly IBlockWriteRepository _blockWriteRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
     private readonly IPageRevisionRepository _pageRevisionRepository;
@@ -32,8 +33,8 @@ public sealed class UpdateBlockHandler
 
     public UpdateBlockHandler(
         ICurrentUser currentUser,
-        IBlockRepository blockRepository,
-        IPageRepository pageRepository,
+        IBlockWriteRepository blockWriteRepository,
+        IPageWriteRepository pageWriteRepository,
         IDocumentAccessEvaluator documentAccessEvaluator,
         IBlockEditLeaseService blockEditLeaseService,
         IPageRevisionRepository pageRevisionRepository,
@@ -45,8 +46,8 @@ public sealed class UpdateBlockHandler
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _blockRepository = blockRepository;
-        _pageRepository = pageRepository;
+        _blockWriteRepository = blockWriteRepository;
+        _pageWriteRepository = pageWriteRepository;
         _documentAccessEvaluator = documentAccessEvaluator;
         _blockEditLeaseService = blockEditLeaseService;
         _pageRevisionRepository = pageRevisionRepository;
@@ -88,11 +89,11 @@ public sealed class UpdateBlockHandler
         if (leaseError is not null)
             return Result.Failure<BlockMutationDto>(leaseError);
 
-        var block = await _blockRepository.GetByIdForUpdateAsync(request.BlockId, cancellationToken);
+        var block = await _blockWriteRepository.GetByIdForUpdateAsync(request.BlockId, cancellationToken);
         if (block is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.BlockNotFound);
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(block.PageId, cancellationToken);
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(block.PageId, cancellationToken);
         if (page is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.PageNotFound);
 

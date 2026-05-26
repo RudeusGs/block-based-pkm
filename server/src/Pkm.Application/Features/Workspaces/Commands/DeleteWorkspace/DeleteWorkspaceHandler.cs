@@ -16,8 +16,8 @@ public sealed class DeleteWorkspaceHandler : ICommandHandler<DeleteWorkspaceComm
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IActivityLogService _activityLogService;
 
     public DeleteWorkspaceHandler(
@@ -26,8 +26,8 @@ public sealed class DeleteWorkspaceHandler : ICommandHandler<DeleteWorkspaceComm
         IWorkspaceMemberRepository workspaceMemberRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
@@ -35,8 +35,8 @@ public sealed class DeleteWorkspaceHandler : ICommandHandler<DeleteWorkspaceComm
         _workspaceMemberRepository = workspaceMemberRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _activityLogService = activityLogService;
     }
 
@@ -92,22 +92,22 @@ public sealed class DeleteWorkspaceHandler : ICommandHandler<DeleteWorkspaceComm
                 $"{_currentUser.UserName ?? "Có người"} đã xóa workspace '{workspace.Name}'."),
             cancellationToken);
 
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Detail(_redisKeyFactory, request.WorkspaceId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Detail(_cacheKeyFactory, request.WorkspaceId),
             cancellationToken);
 
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Members(_redisKeyFactory, request.WorkspaceId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Members(_cacheKeyFactory, request.WorkspaceId),
             cancellationToken);
 
         foreach (var userId in affectedMembers.Select(x => x.UserId).Distinct())
         {
-            await _redisCache.RemoveAsync(
-                WorkspaceCacheKeys.Access(_redisKeyFactory, request.WorkspaceId, userId),
+            await _cache.RemoveAsync(
+                WorkspaceCacheKeys.Access(_cacheKeyFactory, request.WorkspaceId, userId),
                 cancellationToken);
 
-            var versionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, userId);
-            await _redisCache.SetAsync(
+            var versionKey = WorkspaceCacheKeys.UserListVersion(_cacheKeyFactory, userId);
+            await _cache.SetAsync(
                 versionKey,
                 Guid.NewGuid().ToString("N"),
                 cancellationToken: cancellationToken);

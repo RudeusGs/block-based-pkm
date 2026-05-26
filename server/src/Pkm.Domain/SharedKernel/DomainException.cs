@@ -1,7 +1,7 @@
 namespace Pkm.Domain.SharedKernel;
 
 /// <summary>
-/// DomainException: Ngoại lệ tùy chỉnh cho các lỗi liên quan đến logic nghiệp vụ trong domain.
+/// Exception raised when a domain invariant or business rule is violated.
 /// </summary>
 public class DomainException : Exception
 {

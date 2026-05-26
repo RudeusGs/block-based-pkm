@@ -4,8 +4,8 @@ using Pkm.Domain.Tasks;
 namespace Pkm.Domain.Recommendations;
 
 /// <summary>
-/// UserTaskPreference: cấu hình cá nhân hóa cho recommendation engine.
-/// Domain chỉ giữ config + guard conditions, không biết chi tiết lưu trữ.
+/// Personalized recommendation settings for a user in a workspace.
+/// The domain owns configuration invariants and does not know persistence details.
 /// </summary>
 public sealed class UserTaskPreference : EntityBase
 {
@@ -20,7 +20,7 @@ public sealed class UserTaskPreference : EntityBase
     public int WorkDayEndHour { get; private set; }
 
     /// <summary>
-    /// Danh sách ngày làm việc ưu tiên (0 = Sunday -> 6 = Saturday)
+    /// Preferred work days (0 = Sunday -> 6 = Saturday).
     /// </summary>
     public IReadOnlyCollection<int> PreferredDaysOfWeek => _preferredDaysOfWeek.AsReadOnly();
 
@@ -49,10 +49,10 @@ public sealed class UserTaskPreference : EntityBase
         ThrowIfDeleted();
 
         if (startHour < 0 || startHour > 23 || endHour < 0 || endHour > 23)
-            throw new DomainException("Giờ phải trong khoảng 0-23.");
+            throw new DomainException("Preferred hours must be between 0 and 23.");
 
         if (startHour >= endHour)
-            throw new DomainException("Giờ bắt đầu phải nhỏ hơn giờ kết thúc.");
+            throw new DomainException("Preferred start hour must be earlier than preferred end hour.");
 
         WorkDayStartHour = startHour;
         WorkDayEndHour = endHour;
@@ -65,7 +65,7 @@ public sealed class UserTaskPreference : EntityBase
         ThrowIfDeleted();
 
         if (sensitivity < 0 || sensitivity > 100)
-            throw new DomainException("Độ nhạy phải từ 0-100.");
+            throw new DomainException("Recommendation sensitivity must be between 0 and 100.");
 
         RecommendationSensitivity = sensitivity;
         Touch(now);
@@ -96,7 +96,7 @@ public sealed class UserTaskPreference : EntityBase
         ThrowIfDeleted();
 
         if (intervalMinutes <= 0)
-            throw new DomainException("RecommendationIntervalMinutes phải lớn hơn 0.");
+            throw new DomainException("Recommendation interval must be greater than zero.");
 
         RecommendationIntervalMinutes = intervalMinutes;
         Touch(now);
@@ -107,7 +107,7 @@ public sealed class UserTaskPreference : EntityBase
         ThrowIfDeleted();
 
         if (maxCount <= 0)
-            throw new DomainException("MaxRecommendationsPerSession phải lớn hơn 0.");
+            throw new DomainException("Maximum recommendations per session must be greater than zero.");
 
         MaxRecommendationsPerSession = maxCount;
         Touch(now);
@@ -161,7 +161,7 @@ public sealed class UserTaskPreference : EntityBase
     private static IReadOnlyCollection<int> NormalizePreferredDays(IEnumerable<int> days)
     {
         if (days is null)
-            throw new DomainException("Danh sách ngày không được null.");
+            throw new DomainException("Preferred days must not be null.");
 
         var normalized = days
             .Distinct()
@@ -169,10 +169,10 @@ public sealed class UserTaskPreference : EntityBase
             .ToArray();
 
         if (normalized.Length == 0)
-            throw new DomainException("Danh sách ngày không được rỗng.");
+            throw new DomainException("Preferred days must not be empty.");
 
         if (normalized.Any(d => d < 0 || d > 6))
-            throw new DomainException("Ngày phải trong khoảng 0-6.");
+            throw new DomainException("Preferred day values must be between 0 and 6.");
 
         return normalized;
     }

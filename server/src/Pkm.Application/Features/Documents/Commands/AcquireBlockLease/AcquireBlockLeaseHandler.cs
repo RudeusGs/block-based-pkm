@@ -2,12 +2,13 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 
 namespace Pkm.Application.Features.Documents.Commands.AcquireBlockLease;
 
-public sealed class AcquireBlockLeaseHandler
+public sealed class AcquireBlockLeaseHandler : ICommandHandler<AcquireBlockLeaseCommand, BlockLeaseDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;

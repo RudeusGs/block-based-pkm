@@ -9,7 +9,7 @@ using Pkm.Domain.Users;
 
 namespace Pkm.Infrastructure.Authentication;
 
-internal sealed class JwtTokenGenerator : IJwtTokenGenerator
+internal sealed class JwtTokenGenerator : IAccessTokenService
 {
     private readonly JwtSettings _jwtSettings;
     private readonly IClock _clock;

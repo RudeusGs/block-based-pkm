@@ -17,8 +17,8 @@ public sealed class GetUserTaskPreferenceHandler : IQueryHandler<GetUserTaskPref
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IUserTaskPreferenceRepository _preferenceRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
 
     public GetUserTaskPreferenceHandler(
@@ -26,16 +26,16 @@ public sealed class GetUserTaskPreferenceHandler : IQueryHandler<GetUserTaskPref
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IUserTaskPreferenceRepository preferenceRepository,
         IUnitOfWork unitOfWork,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _preferenceRepository = preferenceRepository;
         _unitOfWork = unitOfWork;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
     }
 
@@ -67,11 +67,11 @@ public sealed class GetUserTaskPreferenceHandler : IQueryHandler<GetUserTaskPref
             return Result.Failure<UserTaskPreferenceDto>(WorkspaceErrors.WorkspaceForbidden);
 
         var cacheKey = RecommendationCacheKeys.Preference(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             request.WorkspaceId,
             currentUserId);
 
-        var cached = await _redisCache.GetAsync<UserTaskPreferenceDto>(
+        var cached = await _cache.GetAsync<UserTaskPreferenceDto>(
             cacheKey,
             cancellationToken);
 
@@ -97,7 +97,7 @@ public sealed class GetUserTaskPreferenceHandler : IQueryHandler<GetUserTaskPref
 
         var dto = preference.ToDto();
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             cacheKey,
             dto,
             TimeSpan.FromMinutes(15),

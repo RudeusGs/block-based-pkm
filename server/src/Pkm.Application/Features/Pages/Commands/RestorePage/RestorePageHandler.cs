@@ -2,6 +2,7 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
@@ -10,11 +11,11 @@ using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Application.Features.Pages.Commands.RestorePage;
 
-public sealed class RestorePageHandler
+public sealed class RestorePageHandler : ICommandHandler<RestorePageCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IActivityLogService _activityLogService;
@@ -22,14 +23,14 @@ public sealed class RestorePageHandler
     public RestorePageHandler(
         ICurrentUser currentUser,
         IPageAccessEvaluator pageAccessEvaluator,
-        IPageRepository pageRepository,
+        IPageWriteRepository pageWriteRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _pageAccessEvaluator = pageAccessEvaluator;
-        _pageRepository = pageRepository;
+        _pageWriteRepository = pageWriteRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _activityLogService = activityLogService;
@@ -50,7 +51,7 @@ public sealed class RestorePageHandler
         if (!access.CanManagePage)
             return Result.Failure<PageDto>(PageErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdIncludingArchivedForUpdateAsync(request.PageId, cancellationToken);
+        var page = await _pageWriteRepository.GetByIdIncludingArchivedForUpdateAsync(request.PageId, cancellationToken);
         if (page is null)
             return Result.Failure<PageDto>(PageErrors.PageNotFound);
 

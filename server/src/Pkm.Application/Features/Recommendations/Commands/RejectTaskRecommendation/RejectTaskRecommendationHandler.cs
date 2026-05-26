@@ -20,8 +20,8 @@ public sealed class RejectTaskRecommendationHandler : ICommandHandler<RejectTask
     private readonly IUserTaskHistoryRepository _historyRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRecommendationRealtimePublisher _realtimePublisher;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly IActivityLogService _activityLogService;
 
@@ -31,8 +31,8 @@ public sealed class RejectTaskRecommendationHandler : ICommandHandler<RejectTask
         IUserTaskHistoryRepository historyRepository,
         IUnitOfWork unitOfWork,
         IRecommendationRealtimePublisher realtimePublisher,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         IActivityLogService activityLogService)
     {
@@ -41,8 +41,8 @@ public sealed class RejectTaskRecommendationHandler : ICommandHandler<RejectTask
         _historyRepository = historyRepository;
         _unitOfWork = unitOfWork;
         _realtimePublisher = realtimePublisher;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _activityLogService = activityLogService;
     }
@@ -133,8 +133,8 @@ public sealed class RejectTaskRecommendationHandler : ICommandHandler<RejectTask
         Guid userId,
         CancellationToken cancellationToken)
     {
-        await _redisCache.SetAsync(
-            RecommendationCacheKeys.UserPendingVersion(_redisKeyFactory, userId),
+        await _cache.SetAsync(
+            RecommendationCacheKeys.UserPendingVersion(_cacheKeyFactory, userId),
             Guid.NewGuid().ToString("N"),
             TimeSpan.FromDays(7),
             cancellationToken);

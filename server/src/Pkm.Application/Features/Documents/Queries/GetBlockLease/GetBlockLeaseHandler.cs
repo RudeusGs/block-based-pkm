@@ -1,12 +1,13 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 
 namespace Pkm.Application.Features.Documents.Queries.GetBlockLease;
 
-public sealed class GetBlockLeaseHandler
+public sealed class GetBlockLeaseHandler : IQueryHandler<GetBlockLeaseQuery, BlockLeaseDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;

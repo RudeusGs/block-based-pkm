@@ -17,7 +17,8 @@ namespace Pkm.Application.Features.Tasks.Commands.AssignTask;
 public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkTaskDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
+    private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
@@ -28,7 +29,8 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
     private readonly IActivityLogService _activityLogService;
     public AssignTaskHandler(
         ICurrentUser currentUser,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
+        IWorkTaskReadRepository workTaskReadRepository,
         ITaskAssigneeRepository taskAssigneeRepository,
         IWorkspaceMemberRepository workspaceMemberRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
@@ -39,7 +41,8 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
+        _workTaskReadRepository = workTaskReadRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
         _workspaceMemberRepository = workspaceMemberRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
@@ -78,7 +81,7 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
         if (!access.CanAssignTask)
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskForbidden);
 
-        var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
+        var task = await _workTaskWriteRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
 
@@ -101,13 +104,13 @@ public sealed class AssignTaskHandler : ICommandHandler<AssignTaskCommand, WorkT
         var now = _clock.UtcNow;
 
         task.RecordAssignmentChange(currentUserId, now);
-        _workTaskRepository.Update(task);
+        _workTaskWriteRepository.Update(task);
 
         _taskAssigneeRepository.Add(TaskAssignee.Create(task.Id, request.AssigneeUserId, now));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        var detail = await _workTaskRepository.GetDetailAsync(task.Id, cancellationToken);
+        var detail = await _workTaskReadRepository.GetDetailAsync(task.Id, cancellationToken);
         var dto = detail is null ? task.ToDto() : detail.ToDto();
 
         await _activityLogService.RecordAsync(

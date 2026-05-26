@@ -3,8 +3,8 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Workspaces;
 
 /// <summary>
-/// WorkspaceInvitation: lời mời tham gia workspace qua email.
-/// Member chỉ được tạo sau khi người nhận bấm link xác nhận trong email.
+/// Email invitation to join a workspace.
+/// Membership is created only after the recipient accepts the invitation link.
 /// </summary>
 public sealed class WorkspaceInvitation : EntityBase
 {
@@ -42,19 +42,19 @@ public sealed class WorkspaceInvitation : EntityBase
         TextRules.ValidateEmail(email);
 
         if (!Enum.IsDefined(typeof(WorkspaceRole), role))
-            throw new DomainException("Vai trò không hợp lệ.");
+            throw new DomainException("Workspace invitation role is invalid.");
 
         if (role == WorkspaceRole.Owner)
-            throw new DomainException("Không thể mời người khác với vai trò Owner.");
+            throw new DomainException("Workspace invitations cannot grant the Owner role.");
 
         if (string.IsNullOrWhiteSpace(tokenHash))
-            throw new DomainException("TokenHash không được để trống.");
+            throw new DomainException("Token hash is required.");
 
         if (tokenHash.Trim().Length > MaxTokenHashLength)
-            throw new DomainException($"TokenHash không được vượt quá {MaxTokenHashLength} ký tự.");
+            throw new DomainException($"Token hash must not exceed {MaxTokenHashLength} characters.");
 
         if (expiresAtUtc <= now)
-            throw new DomainException("Thời hạn lời mời không hợp lệ.");
+            throw new DomainException("Workspace invitation expiry is invalid.");
 
         WorkspaceId = workspaceId;
         Email = email.Trim();
@@ -97,10 +97,10 @@ public sealed class WorkspaceInvitation : EntityBase
         DomainGuard.AgainstEmpty(acceptedByUserId, nameof(acceptedByUserId));
 
         if (IsAccepted)
-            throw new DomainException("Lời mời đã được xác nhận.");
+            throw new DomainException("Workspace invitation has already been accepted.");
 
         if (IsExpired(now))
-            throw new DomainException("Lời mời đã hết hạn.");
+            throw new DomainException("Workspace invitation has expired.");
 
         AcceptedByUserId = acceptedByUserId;
         AcceptedAtUtc = now;

@@ -1,11 +1,12 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Policies;
 
 namespace Pkm.Application.Features.Pages.Commands.UnfavoritePage;
 
-public sealed class UnfavoritePageHandler
+public sealed class UnfavoritePageHandler : ICommandHandler<UnfavoritePageCommand>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;

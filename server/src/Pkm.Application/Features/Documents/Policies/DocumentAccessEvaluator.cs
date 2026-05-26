@@ -6,9 +6,9 @@ namespace Pkm.Application.Features.Documents.Policies;
 
 public sealed class DocumentAccessEvaluator : IDocumentAccessEvaluator
 {
-    private readonly IBlockRepository _blockRepository;
+    private readonly IBlockReadRepository _blockRepository;
 
-    public DocumentAccessEvaluator(IBlockRepository blockRepository)
+    public DocumentAccessEvaluator(IBlockReadRepository blockRepository)
     {
         _blockRepository = blockRepository;
     }

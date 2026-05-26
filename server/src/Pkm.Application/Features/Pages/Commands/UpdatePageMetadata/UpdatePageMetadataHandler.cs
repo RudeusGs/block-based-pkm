@@ -3,6 +3,7 @@ using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
@@ -15,10 +16,10 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
 
-public sealed class UpdatePageMetadataHandler
+public sealed class UpdatePageMetadataHandler : ICommandHandler<UpdatePageMetadataCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IPageRevisionRepository _pageRevisionRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
@@ -29,7 +30,7 @@ public sealed class UpdatePageMetadataHandler
 
     public UpdatePageMetadataHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
+        IPageWriteRepository pageWriteRepository,
         IPageRevisionRepository pageRevisionRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IUnitOfWork unitOfWork,
@@ -39,7 +40,7 @@ public sealed class UpdatePageMetadataHandler
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _pageRepository = pageRepository;
+        _pageWriteRepository = pageWriteRepository;
         _pageRevisionRepository = pageRevisionRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
         _unitOfWork = unitOfWork;
@@ -70,7 +71,7 @@ public sealed class UpdatePageMetadataHandler
         if (!access.CanEditPageMetadata)
             return Result.Failure<PageDto>(PageErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(
             request.PageId,
             cancellationToken);
 

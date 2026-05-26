@@ -1,6 +1,7 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Caching;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Pagination;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Workspaces.Models;
@@ -10,24 +11,22 @@ namespace Pkm.Application.Features.Workspaces.Queries.ListMyWorkspaces;
 public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuery, WorkspacePagedResultDto>
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
-    private const int DefaultPageNumber = 1;
-    private const int DefaultPageSize = 20;
 
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceRepository _workspaceRepository;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
 
     public ListMyWorkspacesHandler(
         ICurrentUser currentUser,
         IWorkspaceRepository workspaceRepository,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory)
     {
         _currentUser = currentUser;
         _workspaceRepository = workspaceRepository;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
     }
 
     public async Task<Result<WorkspacePagedResultDto>> HandleAsync(
@@ -39,20 +38,19 @@ public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuer
             return Result.Failure<WorkspacePagedResultDto>(WorkspaceErrors.MissingUserContext);
         }
 
-        var pageNumber = NormalizePageNumber(request.PageNumber);
-        var pageSize = NormalizePageSize(request.PageSize);
+        var page = PageRequest.Normalize(request.PageNumber, request.PageSize);
 
-        var versionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, currentUserId);
-        var version = await _redisCache.GetAsync<string>(versionKey, cancellationToken) ?? "1";
+        var versionKey = WorkspaceCacheKeys.UserListVersion(_cacheKeyFactory, currentUserId);
+        var version = await _cache.GetAsync<string>(versionKey, cancellationToken) ?? "1";
 
         var cacheKey = WorkspaceCacheKeys.List(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId,
-            pageNumber,
-            pageSize,
+            page.PageNumber,
+            page.PageSize,
             version);
 
-        var cached = await _redisCache.GetAsync<WorkspacePagedResultDto>(cacheKey, cancellationToken);
+        var cached = await _cache.GetAsync<WorkspacePagedResultDto>(cacheKey, cancellationToken);
         if (cached is not null)
         {
             return Result.Success(cached);
@@ -60,24 +58,24 @@ public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuer
 
         var items = await _workspaceRepository.ListByUserAsync(
             currentUserId,
-            pageNumber,
-            pageSize,
+            page.PageNumber,
+            page.PageSize,
             cancellationToken);
 
         var totalCount = await ResolveTotalCountAsync(
             currentUserId,
-            pageNumber,
-            pageSize,
+            page.PageNumber,
+            page.PageSize,
             items,
             cancellationToken);
 
         var dto = new WorkspacePagedResultDto(
-            pageNumber,
-            pageSize,
+            page.PageNumber,
+            page.PageSize,
             totalCount,
             MapItems(items));
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             cacheKey,
             dto,
             CacheTtl,
@@ -86,12 +84,6 @@ public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuer
         return Result.Success(dto);
     }
 
-    private static int NormalizePageNumber(int pageNumber)
-        => pageNumber > 0 ? pageNumber : DefaultPageNumber;
-
-    private static int NormalizePageSize(int pageSize)
-        => pageSize > 0 ? pageSize : DefaultPageSize;
-
     private async Task<int> ResolveTotalCountAsync(
         Guid currentUserId,
         int pageNumber,
@@ -99,7 +91,7 @@ public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuer
         IReadOnlyList<WorkspaceListItemReadModel> items,
         CancellationToken cancellationToken)
     {
-        if (pageNumber == DefaultPageNumber && items.Count < pageSize)
+        if (pageNumber == PageRequest.DefaultPageNumber && items.Count < pageSize)
         {
             return items.Count;
         }

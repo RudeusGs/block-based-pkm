@@ -1,22 +1,23 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Pages.Policies;
 
 namespace Pkm.Application.Features.Documents.Queries.ListPageBlocks;
 
-public sealed class ListPageBlocksHandler
+public sealed class ListPageBlocksHandler : IQueryHandler<ListPageBlocksQuery, PageDocumentDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
-    private readonly IBlockRepository _blockRepository;
+    private readonly IPageReadRepository _pageRepository;
+    private readonly IBlockReadRepository _blockRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
 
     public ListPageBlocksHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
-        IBlockRepository blockRepository,
+        IPageReadRepository pageRepository,
+        IBlockReadRepository blockRepository,
         IPageAccessEvaluator pageAccessEvaluator)
     {
         _currentUser = currentUser;

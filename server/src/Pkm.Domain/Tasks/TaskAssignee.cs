@@ -3,7 +3,7 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Tasks;
 
 /// <summary>
-/// TaskAssignee: thể hiện một người được giao vào một task.
+/// Assignment of one user to a task.
 /// </summary>
 public sealed class TaskAssignee : CreationAuditedEntity
 {

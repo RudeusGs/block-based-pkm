@@ -20,13 +20,15 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
     private readonly ICurrentUser _currentUser;
     private readonly ITaskRecommendationRepository _recommendationRepository;
     private readonly ITaskAssigneeRepository _taskAssigneeRepository;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
+    private readonly IWorkTaskReadRepository _workTaskReadRepository;
+    private readonly IWorkTaskRecommendationReadRepository _workTaskRecommendationReadRepository;
     private readonly IUserTaskHistoryRepository _historyRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRecommendationRealtimePublisher _realtimePublisher;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly IActivityLogService _activityLogService;
 
@@ -34,26 +36,30 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
         ICurrentUser currentUser,
         ITaskRecommendationRepository recommendationRepository,
         ITaskAssigneeRepository taskAssigneeRepository,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
+        IWorkTaskReadRepository workTaskReadRepository,
+        IWorkTaskRecommendationReadRepository workTaskRecommendationReadRepository,
         IUserTaskHistoryRepository historyRepository,
         IUnitOfWork unitOfWork,
         IRecommendationRealtimePublisher realtimePublisher,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _recommendationRepository = recommendationRepository;
         _taskAssigneeRepository = taskAssigneeRepository;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
+        _workTaskReadRepository = workTaskReadRepository;
+        _workTaskRecommendationReadRepository = workTaskRecommendationReadRepository;
         _historyRepository = historyRepository;
         _unitOfWork = unitOfWork;
         _realtimePublisher = realtimePublisher;
         _taskRealtimePublisher = taskRealtimePublisher;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _activityLogService = activityLogService;
     }
@@ -90,7 +96,7 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
                 RecommendationErrors.RecommendationForbidden);
         }
 
-        var task = await _workTaskRepository.GetByIdForUpdateAsync(
+        var task = await _workTaskWriteRepository.GetByIdForUpdateAsync(
             recommendation.TaskId,
             cancellationToken);
 
@@ -121,7 +127,7 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
                         now));
 
                 task.RecordAssignmentChange(currentUserId, now);
-                _workTaskRepository.Update(task);
+                _workTaskWriteRepository.Update(task);
             }
 
             _historyRepository.Add(
@@ -137,7 +143,7 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
                 currentUserId,
                 cancellationToken);
 
-            var taskDetail = await _workTaskRepository.GetDetailAsync(
+            var taskDetail = await _workTaskReadRepository.GetDetailAsync(
                 task.Id,
                 cancellationToken);
 
@@ -146,7 +152,7 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
                 : taskDetail.ToDto();
 
             var recommendationTaskMap =
-                await _workTaskRepository.ListRecommendationTaskDetailsByIdsAsync(
+                await _workTaskRecommendationReadRepository.ListRecommendationTaskDetailsByIdsAsync(
                     currentUserId,
                     new[] { recommendation.TaskId },
                     cancellationToken);
@@ -238,8 +244,8 @@ public sealed class AcceptTaskRecommendationHandler : ICommandHandler<AcceptTask
         Guid userId,
         CancellationToken cancellationToken)
     {
-        await _redisCache.SetAsync(
-            RecommendationCacheKeys.UserPendingVersion(_redisKeyFactory, userId),
+        await _cache.SetAsync(
+            RecommendationCacheKeys.UserPendingVersion(_cacheKeyFactory, userId),
             Guid.NewGuid().ToString("N"),
             TimeSpan.FromDays(7),
             cancellationToken);

@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using Npgsql;
 using Pkm.Api.Contracts.Common;
 using Pkm.Application.Common.Results;
-using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Api.Common.Errors;
 
@@ -54,7 +53,7 @@ public static class ApiErrorResponseFactory
                 when TryFindPostgresException(invalidOperationException, out var wrappedPostgres)
                 => MapPostgresException(wrappedPostgres!),
 
-            DomainException => new ErrorDescriptor(
+            Exception domainException when IsDomainException(domainException) => new ErrorDescriptor(
                 StatusCodes.Status422UnprocessableEntity,
                 "domain_error",
                 "Domain.RuleViolation",
@@ -100,6 +99,9 @@ public static class ApiErrorResponseFactory
         postgresException = null;
         return false;
     }
+
+    private static bool IsDomainException(Exception exception)
+        => exception.GetType().Name == "DomainException";
 
     private static bool IsPostgresUniqueViolation(DbUpdateException exception)
         => exception.InnerException is PostgresException

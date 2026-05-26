@@ -6,6 +6,7 @@ using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Blocks;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Commands.AcquireBlockLease;
 using Pkm.Application.Features.Documents.Commands.CreateBlock;
 using Pkm.Application.Features.Documents.Commands.DeleteBlock;
@@ -13,6 +14,7 @@ using Pkm.Application.Features.Documents.Commands.MoveBlock;
 using Pkm.Application.Features.Documents.Commands.ReleaseBlockLease;
 using Pkm.Application.Features.Documents.Commands.RenewBlockLease;
 using Pkm.Application.Features.Documents.Commands.UpdateBlock;
+using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Queries.GetBlock;
 using Pkm.Application.Features.Documents.Queries.GetBlockLease;
 using Pkm.Application.Features.Documents.Queries.ListPageBlocks;
@@ -23,41 +25,14 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class BlocksController : BaseController
 {
-    private readonly GetBlockHandler _getBlockHandler;
-    private readonly GetBlockLeaseHandler _getBlockLeaseHandler;
-    private readonly ListPageBlocksHandler _listPageBlocksHandler;
-    private readonly CreateBlockHandler _createBlockHandler;
-    private readonly UpdateBlockHandler _updateBlockHandler;
-    private readonly MoveBlockHandler _moveBlockHandler;
-    private readonly DeleteBlockHandler _deleteBlockHandler;
-    private readonly AcquireBlockLeaseHandler _acquireBlockLeaseHandler;
-    private readonly RenewBlockLeaseHandler _renewBlockLeaseHandler;
-    private readonly ReleaseBlockLeaseHandler _releaseBlockLeaseHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public BlocksController(
         ICurrentUser currentUser,
-        GetBlockHandler getBlockHandler,
-        GetBlockLeaseHandler getBlockLeaseHandler,
-        ListPageBlocksHandler listPageBlocksHandler,
-        CreateBlockHandler createBlockHandler,
-        UpdateBlockHandler updateBlockHandler,
-        MoveBlockHandler moveBlockHandler,
-        DeleteBlockHandler deleteBlockHandler,
-        AcquireBlockLeaseHandler acquireBlockLeaseHandler,
-        RenewBlockLeaseHandler renewBlockLeaseHandler,
-        ReleaseBlockLeaseHandler releaseBlockLeaseHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _getBlockHandler = getBlockHandler;
-        _getBlockLeaseHandler = getBlockLeaseHandler;
-        _listPageBlocksHandler = listPageBlocksHandler;
-        _createBlockHandler = createBlockHandler;
-        _updateBlockHandler = updateBlockHandler;
-        _moveBlockHandler = moveBlockHandler;
-        _deleteBlockHandler = deleteBlockHandler;
-        _acquireBlockLeaseHandler = acquireBlockLeaseHandler;
-        _renewBlockLeaseHandler = renewBlockLeaseHandler;
-        _releaseBlockLeaseHandler = releaseBlockLeaseHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpGet("api/v1/blocks/{blockId:guid}")]
@@ -70,7 +45,7 @@ public sealed class BlocksController : BaseController
         [FromRoute] Guid blockId,
         CancellationToken cancellationToken)
     {
-        var result = await _getBlockHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetBlockQuery, BlockDto>(
             new GetBlockQuery(blockId),
             cancellationToken);
 
@@ -87,7 +62,7 @@ public sealed class BlocksController : BaseController
         [FromRoute] Guid blockId,
         CancellationToken cancellationToken)
     {
-        var result = await _getBlockLeaseHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetBlockLeaseQuery, BlockLeaseDto>(
             new GetBlockLeaseQuery(blockId),
             cancellationToken);
 
@@ -106,7 +81,7 @@ public sealed class BlocksController : BaseController
         [FromBody] AcquireBlockLeaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _acquireBlockLeaseHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<AcquireBlockLeaseCommand, BlockLeaseDto>(
             new AcquireBlockLeaseCommand(
                 blockId,
                 request.EditorSessionId,
@@ -128,7 +103,7 @@ public sealed class BlocksController : BaseController
         [FromBody] RenewBlockLeaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _renewBlockLeaseHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<RenewBlockLeaseCommand, BlockLeaseDto>(
             new RenewBlockLeaseCommand(
                 blockId,
                 request.EditorSessionId),
@@ -149,7 +124,7 @@ public sealed class BlocksController : BaseController
         [FromBody] ReleaseBlockLeaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _releaseBlockLeaseHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<ReleaseBlockLeaseCommand, BlockLeaseDto>(
             new ReleaseBlockLeaseCommand(
                 blockId,
                 request.EditorSessionId),
@@ -168,7 +143,7 @@ public sealed class BlocksController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _listPageBlocksHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListPageBlocksQuery, PageDocumentDto>(
             new ListPageBlocksQuery(pageId),
             cancellationToken);
 
@@ -199,7 +174,7 @@ public sealed class BlocksController : BaseController
             request.NextBlockId,
             request.SchemaVersion);
 
-        var result = await _createBlockHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<CreateBlockCommand, BlockMutationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -224,7 +199,7 @@ public sealed class BlocksController : BaseController
             request.PropsJson,
             request.Type);
 
-        var result = await _updateBlockHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<UpdateBlockCommand, BlockMutationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -249,7 +224,7 @@ public sealed class BlocksController : BaseController
             request.PreviousBlockId,
             request.NextBlockId);
 
-        var result = await _moveBlockHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<MoveBlockCommand, BlockMutationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -268,7 +243,7 @@ public sealed class BlocksController : BaseController
         [FromHeader(Name = "X-Editor-Session-Id")] string? editorSessionId,
         CancellationToken cancellationToken)
     {
-        var result = await _deleteBlockHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<DeleteBlockCommand, BlockMutationDto>(
             new DeleteBlockCommand(
                 blockId,
                 expectedRevision,

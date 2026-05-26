@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Documents.Queries.GetBlockLease;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
 
-public sealed record GetBlockLeaseQuery(Guid BlockId);
+namespace Pkm.Application.Features.Documents.Queries.GetBlockLease;
+
+public sealed record GetBlockLeaseQuery(Guid BlockId) : IQuery<BlockLeaseDto>;

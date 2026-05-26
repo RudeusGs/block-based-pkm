@@ -5,7 +5,7 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;
 
-internal sealed class PageRepository : IPageRepository
+internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
 {
     private readonly DataContext _dataContext;
 

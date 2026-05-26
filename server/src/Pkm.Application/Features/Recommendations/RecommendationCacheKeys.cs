@@ -5,7 +5,7 @@ namespace Pkm.Application.Features.Recommendations;
 public static class RecommendationCacheKeys
 {
     public static string UserThrottle(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid workspaceId,
         Guid userId)
         => keyFactory.Build(
@@ -15,7 +15,7 @@ public static class RecommendationCacheKeys
             userId.ToString("D"));
 
     public static string UserPendingVersion(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid userId)
         => keyFactory.Build(
             "recommendations",
@@ -23,7 +23,7 @@ public static class RecommendationCacheKeys
             userId.ToString("D"));
 
     public static string PendingList(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid userId,
         Guid? workspaceId,
         string status,
@@ -41,7 +41,7 @@ public static class RecommendationCacheKeys
             version);
 
     public static string Preference(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid workspaceId,
         Guid userId)
         => keyFactory.Build(
@@ -51,7 +51,7 @@ public static class RecommendationCacheKeys
             userId.ToString("D"));
 
     public static string HistoryStats(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid workspaceId,
         Guid userId)
         => keyFactory.Build(

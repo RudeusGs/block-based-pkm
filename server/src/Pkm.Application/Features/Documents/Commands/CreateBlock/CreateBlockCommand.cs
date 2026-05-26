@@ -1,4 +1,7 @@
-﻿namespace Pkm.Application.Features.Documents.Commands.CreateBlock;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
+
+namespace Pkm.Application.Features.Documents.Commands.CreateBlock;
 
 public sealed record CreateBlockCommand(
     Guid PageId,
@@ -9,4 +12,4 @@ public sealed record CreateBlockCommand(
     Guid? ParentBlockId,
     Guid? PreviousBlockId,
     Guid? NextBlockId,
-    int SchemaVersion = 1);
+    int SchemaVersion = 1) : ICommand<BlockMutationDto>;

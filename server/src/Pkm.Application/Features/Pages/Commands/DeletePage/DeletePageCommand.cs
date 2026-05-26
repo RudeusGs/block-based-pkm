@@ -1,3 +1,5 @@
-﻿namespace Pkm.Application.Features.Pages.Commands.DeletePage;
+using Pkm.Application.Common.UseCases;
 
-public sealed record DeletePageCommand(Guid PageId);
+namespace Pkm.Application.Features.Pages.Commands.DeletePage;
+
+public sealed record DeletePageCommand(Guid PageId) : ICommand;

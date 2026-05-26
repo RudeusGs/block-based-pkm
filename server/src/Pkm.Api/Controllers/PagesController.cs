@@ -5,6 +5,8 @@ using Pkm.Api.Contracts.Requests.Pages;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Pages;
 using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Queries.GetPagePresence;
 using Pkm.Application.Features.Pages.Commands.CreatePage;
 using Pkm.Application.Features.Pages.Commands.DeletePage;
@@ -16,6 +18,7 @@ using Pkm.Application.Features.Pages.Commands.RestorePage;
 using Pkm.Application.Features.Pages.Commands.FavoritePage;
 using Pkm.Application.Features.Pages.Commands.DuplicatePage;
 using Pkm.Application.Features.Pages.Commands.UpdatePageMetadata;
+using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Queries.GetPage;
 using Pkm.Application.Features.Pages.Queries.ListSubPages;
 using Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
@@ -26,56 +29,14 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class PagesController : BaseController
 {
-    private readonly CreatePageHandler _createPageHandler;
-    private readonly UpdatePageMetadataHandler _updatePageMetadataHandler;
-    private readonly DeletePageHandler _deletePageHandler;
-    private readonly GetPageHandler _getPageHandler;
-    private readonly GetPagePresenceHandler _getPagePresenceHandler;
-    private readonly ListWorkspacePagesHandler _listWorkspacePagesHandler;
-    private readonly ListSubPagesHandler _listSubPagesHandler;
-    private readonly SearchPagesHandler _searchPagesHandler;
-    private readonly FavoritePageHandler _favoritePageHandler;
-    private readonly UnfavoritePageHandler _unfavoritePageHandler;
-    private readonly DuplicatePageHandler _duplicatePageHandler;
-    private readonly RestorePageHandler _restorePageHandler;
-    private readonly ListFavoritePagesHandler _listFavoritePagesHandler;
-    private readonly ListRecentPagesHandler _listRecentPagesHandler;
-    private readonly ListArchivedPagesHandler _listArchivedPagesHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public PagesController(
         ICurrentUser currentUser,
-        CreatePageHandler createPageHandler,
-        UpdatePageMetadataHandler updatePageMetadataHandler,
-        DeletePageHandler deletePageHandler,
-        GetPageHandler getPageHandler,
-        GetPagePresenceHandler getPagePresenceHandler,
-        ListWorkspacePagesHandler listWorkspacePagesHandler,
-        ListSubPagesHandler listSubPagesHandler,
-        SearchPagesHandler searchPagesHandler,
-        FavoritePageHandler favoritePageHandler,
-        UnfavoritePageHandler unfavoritePageHandler,
-        DuplicatePageHandler duplicatePageHandler,
-        RestorePageHandler restorePageHandler,
-        ListFavoritePagesHandler listFavoritePagesHandler,
-        ListRecentPagesHandler listRecentPagesHandler,
-        ListArchivedPagesHandler listArchivedPagesHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _createPageHandler = createPageHandler;
-        _updatePageMetadataHandler = updatePageMetadataHandler;
-        _deletePageHandler = deletePageHandler;
-        _getPageHandler = getPageHandler;
-        _getPagePresenceHandler = getPagePresenceHandler;
-        _listWorkspacePagesHandler = listWorkspacePagesHandler;
-        _listSubPagesHandler = listSubPagesHandler;
-        _searchPagesHandler = searchPagesHandler;
-        _favoritePageHandler = favoritePageHandler;
-        _unfavoritePageHandler = unfavoritePageHandler;
-        _duplicatePageHandler = duplicatePageHandler;
-        _restorePageHandler = restorePageHandler;
-        _listFavoritePagesHandler = listFavoritePagesHandler;
-        _listRecentPagesHandler = listRecentPagesHandler;
-        _listArchivedPagesHandler = listArchivedPagesHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/workspaces/{workspaceId:guid}/pages")]
@@ -97,7 +58,7 @@ public sealed class PagesController : BaseController
             request.Icon,
             request.CoverImage);
 
-        var result = await _createPageHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<CreatePageCommand, PageDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -120,7 +81,7 @@ public sealed class PagesController : BaseController
                 request.Icon,
                 request.CoverImage);
 
-        var result = await _updatePageMetadataHandler.HandleAsync(command, cancellationToken);
+        var result = await _dispatcher.ExecuteAsync<UpdatePageMetadataCommand, PageDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -134,7 +95,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _deletePageHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new DeletePageCommand(pageId),
             cancellationToken);
 
@@ -151,7 +112,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _getPageHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetPageQuery, PageDto>(
             new GetPageQuery(pageId),
             cancellationToken);
 
@@ -168,7 +129,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _getPagePresenceHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<GetPagePresenceQuery, PagePresenceDto>(
             new GetPagePresenceQuery(pageId),
             cancellationToken);
 
@@ -187,7 +148,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listWorkspacePagesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListWorkspacePagesQuery, PagePagedResultDto>(
             new ListWorkspacePagesQuery(workspaceId, pageNumber, pageSize),
             cancellationToken);
 
@@ -204,7 +165,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _listSubPagesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListSubPagesQuery, IReadOnlyList<PageDto>>(
             new ListSubPagesQuery(pageId),
             cancellationToken);
 
@@ -224,7 +185,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _searchPagesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<SearchPagesQuery, PagePagedResultDto>(
             new SearchPagesQuery(workspaceId, keyword, pageNumber, pageSize),
             cancellationToken);
 
@@ -238,7 +199,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listFavoritePagesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListFavoritePagesQuery, PageQuickAccessPagedResultDto>(
             new ListFavoritePagesQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -253,7 +214,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listRecentPagesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListRecentPagesQuery, PageQuickAccessPagedResultDto>(
             new ListRecentPagesQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -271,7 +232,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listArchivedPagesHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListArchivedPagesQuery, PagePagedResultDto>(
             new ListArchivedPagesQuery(workspaceId, pageNumber, pageSize),
             cancellationToken);
 
@@ -287,7 +248,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _favoritePageHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<FavoritePageCommand, PageDto>(
             new FavoritePageCommand(pageId),
             cancellationToken);
 
@@ -303,7 +264,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _unfavoritePageHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync(
             new UnfavoritePageCommand(pageId),
             cancellationToken);
 
@@ -320,7 +281,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _duplicatePageHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<DuplicatePageCommand, PageDto>(
             new DuplicatePageCommand(pageId),
             cancellationToken);
 
@@ -337,7 +298,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _restorePageHandler.HandleAsync(
+        var result = await _dispatcher.ExecuteAsync<RestorePageCommand, PageDto>(
             new RestorePageCommand(pageId),
             cancellationToken);
 

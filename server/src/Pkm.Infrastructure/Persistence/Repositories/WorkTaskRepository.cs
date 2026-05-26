@@ -7,7 +7,10 @@ using Pkm.Domain.Workspaces;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;
 
-internal sealed class WorkTaskRepository : IWorkTaskRepository
+internal sealed class WorkTaskRepository :
+    IWorkTaskWriteRepository,
+    IWorkTaskReadRepository,
+    IWorkTaskRecommendationReadRepository
 {
     private readonly DataContext _context;
 

@@ -1,8 +1,8 @@
 ﻿namespace Pkm.Domain.Recommendations;
 
 /// <summary>
-/// Trạng thái của một session lịch sử tương tác task.
-/// Flow hiện tại: InProgress -> Completed / Abandoned / Skipped
+/// State of a task interaction history session.
+/// Valid flow: InProgress -> Completed / Abandoned / Skipped.
 /// </summary>
 public enum StatusUserTaskHistory
 {

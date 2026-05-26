@@ -21,7 +21,7 @@ public abstract class EntityBase
     protected EntityBase(Guid id, DateTimeOffset createdDate)
     {
         if (id == Guid.Empty)
-            throw new DomainException("Id không hợp lệ.");
+            throw new DomainException("Id is invalid.");
 
         Id = id;
         CreatedDate = createdDate;
@@ -55,7 +55,7 @@ public abstract class EntityBase
     protected void ThrowIfDeleted()
     {
         if (IsDeleted)
-            throw new DomainException("Entity đã bị xóa.");
+            throw new DomainException("Entity has already been deleted.");
     }
 
     protected void RaiseDomainEvent(IDomainEvent domainEvent)

@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Documents.Queries.GetPagePresence;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
 
-public sealed record GetPagePresenceQuery(Guid PageId);
+namespace Pkm.Application.Features.Documents.Queries.GetPagePresence;
+
+public sealed record GetPagePresenceQuery(Guid PageId) : IQuery<PagePresenceDto>;

@@ -1,15 +1,14 @@
 using System.Reflection;
 using Microsoft.Extensions.DependencyInjection;
+using Pkm.Application.Common.Caching;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Application.Features.Files.Services;
-using Pkm.Application.Features.Messaging.Services;
 using Pkm.Application.Features.Notifications.Services;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Application.Features.Recommendations.Services;
-using Pkm.Application.Features.Social.Services;
 using Pkm.Application.Features.Tasks.Policies;
 using Pkm.Application.Features.Workspaces.Policies;
 
@@ -45,17 +44,12 @@ public static class ApplicationServiceCollection
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IActivityLogService, ActivityLogService>();
         services.AddScoped<IRecommendationScoringService, RecommendationScoringService>();
+        services.AddScoped<IRecommendationCandidateDeduplicator, RecommendationCandidateDeduplicator>();
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
-        services.AddScoped<SocialApplicationService>();
-        services.AddScoped<ISocialApplicationService>(sp => sp.GetRequiredService<SocialApplicationService>());
-        services.AddScoped<ISocialCommandService>(sp => sp.GetRequiredService<SocialApplicationService>());
-        services.AddScoped<ISocialQueryService>(sp => sp.GetRequiredService<SocialApplicationService>());
+        services.AddScoped<IBestEffortCache, BestEffortCache>();
 
-        services.AddScoped<MessagingApplicationService>();
-        services.AddScoped<IMessagingApplicationService>(sp => sp.GetRequiredService<MessagingApplicationService>());
-        services.AddScoped<IMessagingCommandService>(sp => sp.GetRequiredService<MessagingApplicationService>());
-        services.AddScoped<IMessagingQueryService>(sp => sp.GetRequiredService<MessagingApplicationService>());
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
+        services.AddScoped<IBlockOrderPlanner, BlockOrderPlanner>();
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();
 
         return services;

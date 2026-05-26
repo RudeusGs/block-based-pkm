@@ -19,7 +19,7 @@ namespace Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
 public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCoverImageCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IPageRevisionRepository _pageRevisionRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IFileUploadApplicationService _fileUploadApplicationService;
@@ -30,7 +30,7 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
 
     public UploadPageCoverImageHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
+        IPageWriteRepository pageWriteRepository,
         IPageRevisionRepository pageRevisionRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IFileUploadApplicationService fileUploadApplicationService,
@@ -40,7 +40,7 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
         IDocumentRealtimePublisher realtimePublisher)
     {
         _currentUser = currentUser;
-        _pageRepository = pageRepository;
+        _pageWriteRepository = pageWriteRepository;
         _pageRevisionRepository = pageRevisionRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
         _fileUploadApplicationService = fileUploadApplicationService;
@@ -71,7 +71,7 @@ public sealed class UploadPageCoverImageHandler : ICommandHandler<UploadPageCove
         if (!access.CanEditPageMetadata)
             return Result.Failure<PageDto>(PageErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(
             request.PageId,
             cancellationToken);
 

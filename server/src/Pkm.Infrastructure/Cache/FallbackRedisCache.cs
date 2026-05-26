@@ -3,7 +3,7 @@ using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Infrastructure.Cache;
 
-internal sealed class FallbackRedisCache : IRedisCache
+internal sealed class FallbackRedisCache : IApplicationCache
 {
     private readonly RedisCache _primary;
     private readonly InMemoryCache _fallback;

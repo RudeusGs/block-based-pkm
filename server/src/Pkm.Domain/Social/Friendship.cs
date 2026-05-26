@@ -18,7 +18,7 @@ public sealed class Friendship : EntityBase
         DomainGuard.AgainstEmpty(secondUserId, nameof(secondUserId));
 
         if (firstUserId == secondUserId)
-            throw new DomainException("Một quan hệ bạn bè phải gồm 2 người khác nhau.");
+            throw new DomainException("A friendship must contain two different users.");
 
         FirstUserId = firstUserId;
         SecondUserId = secondUserId;

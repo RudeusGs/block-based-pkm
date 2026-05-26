@@ -1,7 +1,7 @@
 ﻿namespace Pkm.Domain.Audit;
 
 /// <summary>
-/// Loại thực thể bị tác động trong activity log.
+/// Entity type affected by an activity log entry.
 /// </summary>
 public enum ActivityEntityType
 {

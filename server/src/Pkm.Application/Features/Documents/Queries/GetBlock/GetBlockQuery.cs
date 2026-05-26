@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Documents.Queries.GetBlock;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
 
-public sealed record GetBlockQuery(Guid BlockId);
+namespace Pkm.Application.Features.Documents.Queries.GetBlock;
+
+public sealed record GetBlockQuery(Guid BlockId) : IQuery<BlockDto>;

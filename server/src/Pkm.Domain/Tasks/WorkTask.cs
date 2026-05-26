@@ -3,7 +3,7 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Tasks;
 
 /// <summary>
-/// WorkTask: đại diện cho một công việc trong workspace, gắn với một page.
+/// Task attached to a page inside a workspace.
 /// </summary>
 public sealed class WorkTask : EntityBase
 {

@@ -1,22 +1,24 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Pagination;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 
 namespace Pkm.Application.Features.Pages.Queries.ListArchivedPages;
 
-public sealed class ListArchivedPagesHandler
+public sealed class ListArchivedPagesHandler : IQueryHandler<ListArchivedPagesQuery, PagePagedResultDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageRepository;
 
     public ListArchivedPagesHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
-        IPageRepository pageRepository)
+        IPageReadRepository pageRepository)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
@@ -38,15 +40,15 @@ public sealed class ListArchivedPagesHandler
         if (!access.CanReadWorkspace)
             return Result.Failure<PagePagedResultDto>(WorkspaceErrors.WorkspaceForbidden);
 
-        var page = NormalizePage(request.PageNumber);
-        var size = NormalizeSize(request.PageSize);
-        var items = await _pageRepository.ListArchivedByWorkspaceAsync(request.WorkspaceId, page, size, cancellationToken);
+        var page = PageRequest.Normalize(request.PageNumber, request.PageSize);
+        var items = await _pageRepository.ListArchivedByWorkspaceAsync(request.WorkspaceId, page.PageNumber, page.PageSize, cancellationToken);
         var total = await _pageRepository.CountArchivedByWorkspaceAsync(request.WorkspaceId, cancellationToken);
 
-        return Result.Success(new PagePagedResultDto(items.Select(x => x.ToDto()).ToArray(), page, size, total, CalculateTotalPages(total, size)));
+        return Result.Success(new PagePagedResultDto(
+            items.Select(x => x.ToDto()).ToArray(),
+            page.PageNumber,
+            page.PageSize,
+            total,
+            PageRequest.CalculateTotalPages(total, page.PageSize)));
     }
-
-    private static int NormalizePage(int pageNumber) => pageNumber <= 0 ? 1 : pageNumber;
-    private static int NormalizeSize(int pageSize) => pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
-    private static int CalculateTotalPages(int total, int size) => total <= 0 ? 0 : (int)Math.Ceiling(total / (double)size);
 }

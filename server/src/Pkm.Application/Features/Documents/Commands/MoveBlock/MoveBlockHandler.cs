@@ -4,6 +4,7 @@ using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
@@ -15,11 +16,12 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.MoveBlock;
 
-public sealed class MoveBlockHandler
+public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMutationDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IBlockRepository _blockRepository;
-    private readonly IPageRepository _pageRepository;
+    private readonly IBlockReadRepository _blockReadRepository;
+    private readonly IBlockWriteRepository _blockWriteRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
     private readonly IPageRevisionRepository _pageRevisionRepository;
@@ -32,8 +34,9 @@ public sealed class MoveBlockHandler
 
     public MoveBlockHandler(
         ICurrentUser currentUser,
-        IBlockRepository blockRepository,
-        IPageRepository pageRepository,
+        IBlockReadRepository blockReadRepository,
+        IBlockWriteRepository blockWriteRepository,
+        IPageWriteRepository pageWriteRepository,
         IDocumentAccessEvaluator documentAccessEvaluator,
         IBlockEditLeaseService blockEditLeaseService,
         IPageRevisionRepository pageRevisionRepository,
@@ -45,8 +48,9 @@ public sealed class MoveBlockHandler
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _blockRepository = blockRepository;
-        _pageRepository = pageRepository;
+        _blockReadRepository = blockReadRepository;
+        _blockWriteRepository = blockWriteRepository;
+        _pageWriteRepository = pageWriteRepository;
         _documentAccessEvaluator = documentAccessEvaluator;
         _blockEditLeaseService = blockEditLeaseService;
         _pageRevisionRepository = pageRevisionRepository;
@@ -88,20 +92,20 @@ public sealed class MoveBlockHandler
         if (leaseError is not null)
             return Result.Failure<BlockMutationDto>(leaseError);
 
-        var block = await _blockRepository.GetByIdForUpdateAsync(request.BlockId, cancellationToken);
+        var block = await _blockWriteRepository.GetByIdForUpdateAsync(request.BlockId, cancellationToken);
         if (block is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.BlockNotFound);
 
         if (request.NewParentBlockId.HasValue)
         {
-            var parent = await _blockRepository.GetByIdAsync(request.NewParentBlockId.Value, cancellationToken);
+            var parent = await _blockReadRepository.GetByIdAsync(request.NewParentBlockId.Value, cancellationToken);
             if (parent is null)
                 return Result.Failure<BlockMutationDto>(DocumentErrors.ParentBlockNotFound);
 
             if (parent.PageId != block.PageId)
                 return Result.Failure<BlockMutationDto>(DocumentErrors.ParentBlockDifferentPage);
 
-            var cycle = await _blockRepository.IsDescendantOrSelfAsync(
+            var cycle = await _blockReadRepository.IsDescendantOrSelfAsync(
                 block.Id,
                 request.NewParentBlockId.Value,
                 cancellationToken);
@@ -110,7 +114,7 @@ public sealed class MoveBlockHandler
                 return Result.Failure<BlockMutationDto>(DocumentErrors.BlockCycleDetected);
         }
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(block.PageId, cancellationToken);
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(block.PageId, cancellationToken);
         if (page is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.PageNotFound);
 
@@ -119,11 +123,11 @@ public sealed class MoveBlockHandler
             return Result.Failure<BlockMutationDto>(revisionError);
 
         var previous = request.PreviousBlockId.HasValue
-            ? await _blockRepository.GetByIdAsync(request.PreviousBlockId.Value, cancellationToken)
+            ? await _blockReadRepository.GetByIdAsync(request.PreviousBlockId.Value, cancellationToken)
             : null;
 
         var next = request.NextBlockId.HasValue
-            ? await _blockRepository.GetByIdAsync(request.NextBlockId.Value, cancellationToken)
+            ? await _blockReadRepository.GetByIdAsync(request.NextBlockId.Value, cancellationToken)
             : null;
 
         if (previous is not null &&

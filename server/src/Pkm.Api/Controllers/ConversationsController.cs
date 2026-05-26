@@ -5,6 +5,7 @@ using Pkm.Api.Contracts.Requests.Messaging;
 using Pkm.Api.Contracts.Responses.Messaging;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Workspaces;
+using Pkm.Api.Mapping;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Messaging.Commands;
@@ -219,8 +220,8 @@ public sealed class ConversationsController : BaseController
         [FromForm] SendImageMessageFormRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasValidFile(request.File))
-            return BadRequest(CreateFileRequiredFailure<MessageResponse>());
+        if (!FileUploadRequestMapper.HasValidFile(request.File))
+            return BadRequest(FileUploadRequestMapper.CreateFileRequiredFailure<MessageResponse>());
 
         var file = request.File!;
 
@@ -231,7 +232,7 @@ public sealed class ConversationsController : BaseController
                 conversationId,
                 request.Caption,
                 file.FileName,
-                ResolveContentType(file),
+                FileUploadRequestMapper.ResolveContentType(file),
                 file.Length,
                 stream),
             cancellationToken);
@@ -254,20 +255,4 @@ public sealed class ConversationsController : BaseController
         return HandleResult(result);
     }
 
-    private static bool HasValidFile(IFormFile? file)
-        => file is not null && file.Length > 0;
-
-    private static ApiResult<TResponse> CreateFileRequiredFailure<TResponse>()
-        => ApiResult<TResponse>.Failure(
-            message: "Vui lòng chọn file ảnh để upload.",
-            error: new ApiError(
-                Code: "File.Required",
-                Type: "validation_error",
-                Details: new[] { "Trường file là bắt buộc." }),
-            statusCode: StatusCodes.Status400BadRequest);
-
-    private static string ResolveContentType(IFormFile file)
-        => string.IsNullOrWhiteSpace(file.ContentType)
-            ? "application/octet-stream"
-            : file.ContentType;
 }

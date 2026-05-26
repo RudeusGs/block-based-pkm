@@ -19,8 +19,8 @@ public sealed class RemoveWorkspaceMemberHandler : ICommandHandler<RemoveWorkspa
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly INotificationService _notificationService;
     private readonly IUserRepository _userRepository;
     private readonly IActivityLogService _activityLogService;
@@ -30,8 +30,8 @@ public sealed class RemoveWorkspaceMemberHandler : ICommandHandler<RemoveWorkspa
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         INotificationService notificationService,
         IUserRepository userRepository,
         IActivityLogService activityLogService)
@@ -41,8 +41,8 @@ public sealed class RemoveWorkspaceMemberHandler : ICommandHandler<RemoveWorkspa
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _notificationService = notificationService;
         _userRepository = userRepository;
         _activityLogService = activityLogService;
@@ -112,12 +112,12 @@ public sealed class RemoveWorkspaceMemberHandler : ICommandHandler<RemoveWorkspa
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Members(_redisKeyFactory, request.WorkspaceId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Members(_cacheKeyFactory, request.WorkspaceId),
             cancellationToken);
 
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Access(_redisKeyFactory, request.WorkspaceId, request.UserId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Access(_cacheKeyFactory, request.WorkspaceId, request.UserId),
             cancellationToken);
 
         await _notificationService.NotifyAsync(
@@ -144,8 +144,8 @@ public sealed class RemoveWorkspaceMemberHandler : ICommandHandler<RemoveWorkspa
                 })),
             cancellationToken);
 
-        var targetVersionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, request.UserId);
-        await _redisCache.SetAsync(
+        var targetVersionKey = WorkspaceCacheKeys.UserListVersion(_cacheKeyFactory, request.UserId);
+        await _cache.SetAsync(
             targetVersionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);

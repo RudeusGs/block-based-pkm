@@ -4,6 +4,7 @@ using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Services;
@@ -15,46 +16,47 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.CreateBlock;
 
-public sealed class CreateBlockHandler
+public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, BlockMutationDto>
 {
-    private const int RebalanceOrderKeyLengthThreshold = 90;
-
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
-    private readonly IBlockRepository _blockRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
+    private readonly IBlockReadRepository _blockReadRepository;
+    private readonly IBlockWriteRepository _blockWriteRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IPageRevisionRepository _pageRevisionRepository;
     private readonly IBlockOperationRepository _blockOperationRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IOrderKeyGenerator _orderKeyGenerator;
+    private readonly IBlockOrderPlanner _blockOrderPlanner;
     private readonly IDocumentRealtimePublisher _realtimePublisher;
     private readonly IBlockPayloadValidator _blockPayloadValidator;
     private readonly IActivityLogService _activityLogService;
 
     public CreateBlockHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
-        IBlockRepository blockRepository,
+        IPageWriteRepository pageWriteRepository,
+        IBlockReadRepository blockReadRepository,
+        IBlockWriteRepository blockWriteRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IPageRevisionRepository pageRevisionRepository,
         IBlockOperationRepository blockOperationRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IOrderKeyGenerator orderKeyGenerator,
+        IBlockOrderPlanner blockOrderPlanner,
         IDocumentRealtimePublisher realtimePublisher,
         IBlockPayloadValidator blockPayloadValidator,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _pageRepository = pageRepository;
-        _blockRepository = blockRepository;
+        _pageWriteRepository = pageWriteRepository;
+        _blockReadRepository = blockReadRepository;
+        _blockWriteRepository = blockWriteRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
         _pageRevisionRepository = pageRevisionRepository;
         _blockOperationRepository = blockOperationRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _orderKeyGenerator = orderKeyGenerator;
+        _blockOrderPlanner = blockOrderPlanner;
         _realtimePublisher = realtimePublisher;
         _blockPayloadValidator = blockPayloadValidator;
         _activityLogService = activityLogService;
@@ -81,7 +83,7 @@ public sealed class CreateBlockHandler
         if (!pageAccess.CanWrite)
             return Result.Failure<BlockMutationDto>(DocumentErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(request.PageId, cancellationToken);
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(request.PageId, cancellationToken);
         if (page is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.PageNotFound);
 
@@ -94,7 +96,7 @@ public sealed class CreateBlockHandler
 
         if (request.ParentBlockId.HasValue)
         {
-            var parentBlock = await _blockRepository.GetByIdAsync(request.ParentBlockId.Value, cancellationToken);
+            var parentBlock = await _blockReadRepository.GetByIdAsync(request.ParentBlockId.Value, cancellationToken);
 
             if (parentBlock is null)
                 return Result.Failure<BlockMutationDto>(DocumentErrors.ParentBlockNotFound);
@@ -103,18 +105,10 @@ public sealed class CreateBlockHandler
                 return Result.Failure<BlockMutationDto>(DocumentErrors.ParentBlockDifferentPage);
         }
 
-        var siblings = await _blockRepository.ListSiblingsForUpdateAsync(
+        var siblings = await _blockWriteRepository.ListSiblingsForUpdateAsync(
             request.PageId,
             request.ParentBlockId,
             cancellationToken);
-
-        var position = ResolveInsertionPosition(
-            siblings,
-            request.PreviousBlockId,
-            request.NextBlockId);
-
-        if (position.Error is not null)
-            return Result.Failure<BlockMutationDto>(position.Error);
 
         var propsError = _blockPayloadValidator.ValidatePropsJson(request.PropsJson);
         if (propsError is not null)
@@ -126,19 +120,23 @@ public sealed class CreateBlockHandler
             var baseRevision = page.CurrentRevision;
             var blockId = Guid.NewGuid();
 
-            var orderKey = CreateOrderKeyOrRebalance(
+            var orderKeyResult = _blockOrderPlanner.CreateOrderKeyOrRebalance(
                 siblings,
-                position,
+                request.PreviousBlockId,
+                request.NextBlockId,
                 request.ParentBlockId,
                 currentUserId,
                 now,
                 blockId);
 
+            if (orderKeyResult.IsFailure)
+                return Result.Failure<BlockMutationDto>(orderKeyResult.Error);
+
             var block = new Block(
                 blockId,
                 request.PageId,
                 BlockTypeCode.From(request.Type),
-                orderKey,
+                orderKeyResult.Value,
                 currentUserId,
                 now,
                 request.TextContent,
@@ -146,7 +144,7 @@ public sealed class CreateBlockHandler
                 request.ParentBlockId,
                 request.SchemaVersion);
 
-            _blockRepository.Add(block);
+            _blockWriteRepository.Add(block);
 
             var appliedRevision = page.IncreaseRevision(currentUserId, now);
 
@@ -228,167 +226,4 @@ public sealed class CreateBlockHandler
         }
     }
 
-    private string CreateOrderKeyOrRebalance(
-        IReadOnlyList<Block> siblings,
-        InsertionPosition position,
-        Guid? parentBlockId,
-        Guid actorId,
-        DateTimeOffset now,
-        Guid newBlockId)
-    {
-        try
-        {
-            var candidate = _orderKeyGenerator.CreateBetween(
-                position.Previous?.OrderKey,
-                position.Next?.OrderKey);
-
-            if (!NeedsRebalance(candidate, siblings))
-                return candidate;
-        }
-        catch (DomainException)
-        {
-
-        }
-
-        RebalanceSiblings(
-            siblings,
-            position.InsertIndex,
-            parentBlockId,
-            actorId,
-            now);
-
-        return CreateRebalancedOrderKey(position.InsertIndex, newBlockId);
-    }
-
-    private static bool NeedsRebalance(
-        string candidate,
-        IReadOnlyList<Block> siblings)
-    {
-        return string.IsNullOrWhiteSpace(candidate) ||
-               candidate.Length > RebalanceOrderKeyLengthThreshold ||
-               siblings.Any(x => string.Equals(x.OrderKey, candidate, StringComparison.Ordinal));
-    }
-
-    private static void RebalanceSiblings(
-        IReadOnlyList<Block> siblings,
-        int insertIndex,
-        Guid? parentBlockId,
-        Guid actorId,
-        DateTimeOffset now)
-    {
-        for (var index = 0; index < siblings.Count; index++)
-        {
-            var finalIndex = index < insertIndex
-                ? index
-                : index + 1;
-
-            var newOrderKey = CreateRebalancedOrderKey(finalIndex, siblings[index].Id);
-
-            if (string.Equals(siblings[index].OrderKey, newOrderKey, StringComparison.Ordinal))
-                continue;
-
-            siblings[index].MoveTo(parentBlockId, newOrderKey, actorId, now);
-        }
-    }
-
-    private static string CreateRebalancedOrderKey(int index, Guid stableId)
-        => $"M{index + 1:D12}{stableId:N}";
-
-    private static InsertionPosition ResolveInsertionPosition(
-        IReadOnlyList<Block> siblings,
-        Guid? previousBlockId,
-        Guid? nextBlockId)
-    {
-        var ordered = siblings
-            .OrderBy(x => x.OrderKey, StringComparer.Ordinal)
-            .ToArray();
-
-        if (previousBlockId.HasValue &&
-            nextBlockId.HasValue &&
-            previousBlockId.Value == nextBlockId.Value)
-        {
-            return InsertionPosition.Failure(DocumentErrors.InvalidBlockPosition);
-        }
-
-        var previousIndex = -1;
-        var nextIndex = -1;
-        Block? previous = null;
-        Block? next = null;
-
-        if (previousBlockId.HasValue)
-        {
-            previousIndex = Array.FindIndex(ordered, x => x.Id == previousBlockId.Value);
-
-            if (previousIndex < 0)
-                return InsertionPosition.Failure(DocumentErrors.BlockNotFound);
-
-            previous = ordered[previousIndex];
-        }
-
-        if (nextBlockId.HasValue)
-        {
-            nextIndex = Array.FindIndex(ordered, x => x.Id == nextBlockId.Value);
-
-            if (nextIndex < 0)
-                return InsertionPosition.Failure(DocumentErrors.BlockNotFound);
-
-            next = ordered[nextIndex];
-        }
-
-        if (previous is not null && next is not null)
-        {
-            if (previousIndex + 1 != nextIndex)
-                return InsertionPosition.Failure(DocumentErrors.InvalidBlockPosition);
-
-            return new InsertionPosition(
-                previous,
-                next,
-                nextIndex,
-                Error: null);
-        }
-
-        if (previous is not null)
-        {
-            var insertIndex = previousIndex + 1;
-            next = insertIndex < ordered.Length ? ordered[insertIndex] : null;
-
-            return new InsertionPosition(
-                previous,
-                next,
-                insertIndex,
-                Error: null);
-        }
-
-        if (next is not null)
-        {
-            var insertIndex = nextIndex;
-            previous = insertIndex > 0 ? ordered[insertIndex - 1] : null;
-
-            return new InsertionPosition(
-                previous,
-                next,
-                insertIndex,
-                Error: null);
-        }
-
-        return new InsertionPosition(
-            ordered.LastOrDefault(),
-            Next: null,
-            InsertIndex: ordered.Length,
-            Error: null);
-    }
-
-    private sealed record InsertionPosition(
-        Block? Previous,
-        Block? Next,
-        int InsertIndex,
-        Error? Error)
-    {
-        public static InsertionPosition Failure(Error error)
-            => new(
-                Previous: null,
-                Next: null,
-                InsertIndex: 0,
-                Error: error);
-    }
 }

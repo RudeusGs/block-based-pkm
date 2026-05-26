@@ -4,6 +4,7 @@ using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
@@ -14,11 +15,11 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.DeleteBlock;
 
-public sealed class DeleteBlockHandler
+public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, BlockMutationDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IBlockRepository _blockRepository;
-    private readonly IPageRepository _pageRepository;
+    private readonly IBlockWriteRepository _blockWriteRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
     private readonly IPageRevisionRepository _pageRevisionRepository;
@@ -30,8 +31,8 @@ public sealed class DeleteBlockHandler
 
     public DeleteBlockHandler(
         ICurrentUser currentUser,
-        IBlockRepository blockRepository,
-        IPageRepository pageRepository,
+        IBlockWriteRepository blockWriteRepository,
+        IPageWriteRepository pageWriteRepository,
         IDocumentAccessEvaluator documentAccessEvaluator,
         IBlockEditLeaseService blockEditLeaseService,
         IPageRevisionRepository pageRevisionRepository,
@@ -42,8 +43,8 @@ public sealed class DeleteBlockHandler
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _blockRepository = blockRepository;
-        _pageRepository = pageRepository;
+        _blockWriteRepository = blockWriteRepository;
+        _pageWriteRepository = pageWriteRepository;
         _documentAccessEvaluator = documentAccessEvaluator;
         _blockEditLeaseService = blockEditLeaseService;
         _pageRevisionRepository = pageRevisionRepository;
@@ -84,11 +85,11 @@ public sealed class DeleteBlockHandler
         if (leaseError is not null)
             return Result.Failure<BlockMutationDto>(leaseError);
 
-        var rootBlock = await _blockRepository.GetByIdForUpdateAsync(request.BlockId, cancellationToken);
+        var rootBlock = await _blockWriteRepository.GetByIdForUpdateAsync(request.BlockId, cancellationToken);
         if (rootBlock is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.BlockNotFound);
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(rootBlock.PageId, cancellationToken);
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(rootBlock.PageId, cancellationToken);
         if (page is null)
             return Result.Failure<BlockMutationDto>(DocumentErrors.PageNotFound);
 
@@ -96,7 +97,7 @@ public sealed class DeleteBlockHandler
         if (revisionError is not null)
             return Result.Failure<BlockMutationDto>(revisionError);
 
-        var allBlocks = await _blockRepository.ListByPageForUpdateAsync(rootBlock.PageId, cancellationToken);
+        var allBlocks = await _blockWriteRepository.ListByPageForUpdateAsync(rootBlock.PageId, cancellationToken);
         var subtree = CollectSubtree(rootBlock.Id, allBlocks);
 
         var now = _clock.UtcNow;

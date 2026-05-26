@@ -20,8 +20,8 @@ public sealed class UpdateUserTaskPreferenceHandler : ICommandHandler<UpdateUser
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IUserTaskPreferenceRepository _preferenceRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly UpdateUserTaskPreferenceCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
@@ -31,8 +31,8 @@ public sealed class UpdateUserTaskPreferenceHandler : ICommandHandler<UpdateUser
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IUserTaskPreferenceRepository preferenceRepository,
         IUnitOfWork unitOfWork,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         UpdateUserTaskPreferenceCommandValidator validator,
         IActivityLogService activityLogService)
@@ -41,8 +41,8 @@ public sealed class UpdateUserTaskPreferenceHandler : ICommandHandler<UpdateUser
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _preferenceRepository = preferenceRepository;
         _unitOfWork = unitOfWork;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _validator = validator;
         _activityLogService = activityLogService;
@@ -132,8 +132,8 @@ public sealed class UpdateUserTaskPreferenceHandler : ICommandHandler<UpdateUser
                     })),
                 cancellationToken);
 
-            await _redisCache.SetAsync(
-                RecommendationCacheKeys.Preference(_redisKeyFactory, request.WorkspaceId, currentUserId),
+            await _cache.SetAsync(
+                RecommendationCacheKeys.Preference(_cacheKeyFactory, request.WorkspaceId, currentUserId),
                 dto,
                 TimeSpan.FromMinutes(15),
                 cancellationToken);

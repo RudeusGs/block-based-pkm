@@ -1,5 +1,8 @@
-﻿namespace Pkm.Application.Features.Documents.Commands.ReleaseBlockLease;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
+
+namespace Pkm.Application.Features.Documents.Commands.ReleaseBlockLease;
 
 public sealed record ReleaseBlockLeaseCommand(
     Guid BlockId,
-    string EditorSessionId);
+    string EditorSessionId) : ICommand<BlockLeaseDto>;

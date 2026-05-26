@@ -3,7 +3,7 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Pages;
 
 /// <summary>
-/// Page: Đại diện cho một trang trong hệ thống, chứa thông tin về tiêu đề, biểu tượng, hình bìa, và trạng thái lưu trữ.
+/// Represents a workspace page, including metadata, hierarchy, revision state, and archive state.
 /// </summary>
 public sealed class Page : EntityBase
 {
@@ -79,10 +79,10 @@ public sealed class Page : EntityBase
         DomainGuard.AgainstEmpty(targetWorkspaceId, "TargetWorkspaceId");
 
         if (targetParentPageId.HasValue && targetParentPageId == Id)
-            throw new DomainException("Không thể chuyển page vào chính nó.");
+            throw new DomainException("A page cannot be moved into itself.");
 
         if (targetParentPageId.HasValue && targetWorkspaceId != WorkspaceId)
-            throw new DomainException("Không thể chuyển page sang workspace khác khi vẫn có parent.");
+            throw new DomainException("A nested page cannot be moved to another workspace while it still has a parent.");
 
         WorkspaceId = targetWorkspaceId;
         ParentPageId = targetParentPageId;
@@ -132,7 +132,7 @@ public sealed class Page : EntityBase
         ThrowIfDeleted();
 
         if (IsArchived)
-            throw new DomainException("Không thể chỉnh sửa page đã archive.");
+            throw new DomainException("Archived pages cannot be edited.");
     }
 
     private void RegisterModification(Guid actorId, DateTimeOffset now)

@@ -3,8 +3,8 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Audit;
 
 /// <summary>
-/// ActivityLog: bản ghi audit append-only cho một hành động trong hệ thống.
-/// Không hỗ trợ update / delete / restore.
+/// Append-only audit record for an action performed in the system.
+/// Activity logs are not updated, deleted, or restored.
 /// </summary>
 public sealed class ActivityLog : CreationAuditedEntity
 {

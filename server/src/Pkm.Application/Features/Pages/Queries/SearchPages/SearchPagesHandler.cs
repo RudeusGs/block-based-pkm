@@ -1,22 +1,23 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 
 namespace Pkm.Application.Features.Pages.Queries.SearchPages;
 
-public sealed class SearchPagesHandler
+public sealed class SearchPagesHandler : IQueryHandler<SearchPagesQuery, PagePagedResultDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageRepository;
 
     public SearchPagesHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
-        IPageRepository pageRepository)
+        IPageReadRepository pageRepository)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;

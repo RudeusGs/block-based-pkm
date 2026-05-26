@@ -16,38 +16,38 @@ namespace Pkm.Application.Features.Tasks.Commands.DeleteTaskComment;
 public sealed class DeleteTaskCommentHandler : ICommandHandler<DeleteTaskCommentCommand, TaskCommentDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
     private readonly ITaskCommentRepository _taskCommentRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly DeleteTaskCommentCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
 
     public DeleteTaskCommentHandler(
         ICurrentUser currentUser,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
         ITaskCommentRepository taskCommentRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         DeleteTaskCommentCommandValidator validator,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
         _taskCommentRepository = taskCommentRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _validator = validator;
         _activityLogService = activityLogService;
@@ -82,7 +82,7 @@ public sealed class DeleteTaskCommentHandler : ICommandHandler<DeleteTaskComment
         if (!access.CanReadTask)
             return Result.Failure<TaskCommentDto>(TaskCommentErrors.CommentReadForbidden);
 
-        var task = await _workTaskRepository.GetByIdAsync(
+        var task = await _workTaskWriteRepository.GetByIdAsync(
             comment.TaskId,
             cancellationToken);
 
@@ -162,9 +162,9 @@ public sealed class DeleteTaskCommentHandler : ICommandHandler<DeleteTaskComment
         Guid taskId,
         CancellationToken cancellationToken)
     {
-        var versionKey = TaskCommentCacheKeys.ListVersion(_redisKeyFactory, taskId);
+        var versionKey = TaskCommentCacheKeys.ListVersion(_cacheKeyFactory, taskId);
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             versionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);

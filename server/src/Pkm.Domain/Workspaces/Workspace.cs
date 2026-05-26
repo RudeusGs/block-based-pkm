@@ -3,7 +3,7 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Workspaces;
 
 /// <summary>
-/// Workspace: đại diện cho một không gian làm việc trong hệ thống.
+/// Collaborative workspace owned by users.
 /// </summary>
 public sealed class Workspace : EntityBase
 {
@@ -31,7 +31,7 @@ public sealed class Workspace : EntityBase
         DomainGuard.AgainstEmpty(ownerId, nameof(ownerId));
 
         OwnerId = ownerId;
-        Name = TextRules.NormalizeRequired(name, MaxNameLength, "Tên Workspace");
+        Name = TextRules.NormalizeRequired(name, MaxNameLength, "Workspace name");
         Description = TextRules.NormalizeOptional(description, MaxDescriptionLength, nameof(Description));
         Visibility = visibility;
     }
@@ -46,7 +46,7 @@ public sealed class Workspace : EntityBase
         ThrowIfDeleted();
         DomainGuard.AgainstEmpty(actorId, "ActorId");
 
-        Name = TextRules.NormalizeRequired(newName, MaxNameLength, "Tên Workspace");
+        Name = TextRules.NormalizeRequired(newName, MaxNameLength, "Workspace name");
         Description = TextRules.NormalizeOptional(newDescription, MaxDescriptionLength, nameof(Description));
 
         if (visibility.HasValue)

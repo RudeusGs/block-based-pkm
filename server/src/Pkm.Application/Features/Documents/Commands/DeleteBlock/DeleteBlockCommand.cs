@@ -1,7 +1,10 @@
-﻿namespace Pkm.Application.Features.Documents.Commands.DeleteBlock;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
+
+namespace Pkm.Application.Features.Documents.Commands.DeleteBlock;
 
 public sealed record DeleteBlockCommand(
     Guid BlockId,
     long ExpectedRevision,
     string EditorSessionId,
-    string? Note = null);
+    string? Note = null) : ICommand<BlockMutationDto>;

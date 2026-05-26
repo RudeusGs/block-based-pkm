@@ -2,6 +2,7 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
@@ -14,13 +15,15 @@ using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Pages.Commands.DuplicatePage;
 
-public sealed class DuplicatePageHandler
+public sealed class DuplicatePageHandler : ICommandHandler<DuplicatePageCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
-    private readonly IBlockRepository _blockRepository;
+    private readonly IPageReadRepository _pageReadRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
+    private readonly IBlockReadRepository _blockReadRepository;
+    private readonly IBlockWriteRepository _blockWriteRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IActivityLogService _activityLogService;
@@ -29,8 +32,10 @@ public sealed class DuplicatePageHandler
         ICurrentUser currentUser,
         IPageAccessEvaluator pageAccessEvaluator,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
-        IPageRepository pageRepository,
-        IBlockRepository blockRepository,
+        IPageReadRepository pageReadRepository,
+        IPageWriteRepository pageWriteRepository,
+        IBlockReadRepository blockReadRepository,
+        IBlockWriteRepository blockWriteRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
         IActivityLogService activityLogService)
@@ -38,8 +43,10 @@ public sealed class DuplicatePageHandler
         _currentUser = currentUser;
         _pageAccessEvaluator = pageAccessEvaluator;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
-        _pageRepository = pageRepository;
-        _blockRepository = blockRepository;
+        _pageReadRepository = pageReadRepository;
+        _pageWriteRepository = pageWriteRepository;
+        _blockReadRepository = blockReadRepository;
+        _blockWriteRepository = blockWriteRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _activityLogService = activityLogService;
@@ -60,7 +67,7 @@ public sealed class DuplicatePageHandler
         if (!pageAccess.CanRead)
             return Result.Failure<PageDto>(PageErrors.PageForbidden);
 
-        var source = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
+        var source = await _pageReadRepository.GetByIdAsync(request.PageId, cancellationToken);
         if (source is null)
             return Result.Failure<PageDto>(PageErrors.PageNotFound);
 
@@ -85,9 +92,9 @@ public sealed class DuplicatePageHandler
                 source.Icon,
                 source.CoverImage);
 
-            _pageRepository.Add(copy);
+            _pageWriteRepository.Add(copy);
 
-            var blocks = await _blockRepository.ListByPageAsync(source.Id, cancellationToken);
+            var blocks = await _blockReadRepository.ListByPageAsync(source.Id, cancellationToken);
             DuplicateBlocks(blocks, copy.Id, currentUserId, now);
 
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -136,7 +143,7 @@ public sealed class DuplicatePageHandler
                 var newBlockId = Guid.NewGuid();
                 idMap[block.Id] = newBlockId;
 
-                _blockRepository.Add(new Block(
+                _blockWriteRepository.Add(new Block(
                     newBlockId,
                     newPageId,
                     BlockTypeCode.From(block.Type.Value),

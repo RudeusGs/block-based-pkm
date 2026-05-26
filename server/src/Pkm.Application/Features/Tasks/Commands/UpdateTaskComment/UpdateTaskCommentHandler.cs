@@ -16,38 +16,38 @@ namespace Pkm.Application.Features.Tasks.Commands.UpdateTaskComment;
 public sealed class UpdateTaskCommentHandler : ICommandHandler<UpdateTaskCommentCommand, TaskCommentDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
     private readonly ITaskCommentRepository _taskCommentRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly UpdateTaskCommentCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
 
     public UpdateTaskCommentHandler(
         ICurrentUser currentUser,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
         ITaskCommentRepository taskCommentRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         UpdateTaskCommentCommandValidator validator,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
         _taskCommentRepository = taskCommentRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _validator = validator;
         _activityLogService = activityLogService;
@@ -85,7 +85,7 @@ public sealed class UpdateTaskCommentHandler : ICommandHandler<UpdateTaskComment
         if (comment.UserId != currentUserId)
             return Result.Failure<TaskCommentDto>(TaskCommentErrors.CommentForbidden);
 
-        var task = await _workTaskRepository.GetByIdAsync(
+        var task = await _workTaskWriteRepository.GetByIdAsync(
             comment.TaskId,
             cancellationToken);
 
@@ -151,9 +151,9 @@ public sealed class UpdateTaskCommentHandler : ICommandHandler<UpdateTaskComment
         Guid taskId,
         CancellationToken cancellationToken)
     {
-        var versionKey = TaskCommentCacheKeys.ListVersion(_redisKeyFactory, taskId);
+        var versionKey = TaskCommentCacheKeys.ListVersion(_cacheKeyFactory, taskId);
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             versionKey,
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);

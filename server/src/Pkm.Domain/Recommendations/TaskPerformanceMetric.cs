@@ -3,7 +3,7 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Recommendations;
 
 /// <summary>
-/// TaskPerformanceMetric: source of truth cho dữ liệu tracking cơ bản của Task theo từng User.
+/// Source of truth for basic per-user task performance tracking.
 /// </summary>
 public sealed class TaskPerformanceMetric : EntityBase
 {
@@ -39,7 +39,7 @@ public sealed class TaskPerformanceMetric : EntityBase
         ThrowIfDeleted();
 
         if (completedAt > now)
-            throw new DomainException("Completion time không hợp lệ.");
+            throw new DomainException("Completion time is invalid.");
 
         CompletionCount++;
         LastCompletedAt = completedAt;

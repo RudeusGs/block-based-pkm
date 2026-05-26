@@ -3,8 +3,8 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Pages;
 
 /// <summary>
-/// PageRevision dùng để version hóa document (Page + Block tree)
-/// Mỗi lần thay đổi nội dung thì RevisionNumber sẽ tăng lên 1, và lưu lại ai là người thay đổi, khi nào thay đổi, và lý do (nếu có).
+/// Version record for a document, including the page metadata and block tree.
+/// Each content change increments RevisionNumber and captures actor, timestamp, and optional reason.
 /// </summary>
 public sealed class PageRevision : CreationAuditedEntity
 {

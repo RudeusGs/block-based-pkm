@@ -3,7 +3,7 @@ using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Infrastructure.Cache;
 
-internal sealed class InMemoryCache : IRedisCache
+internal sealed class InMemoryCache : IApplicationCache
 {
     private sealed record CacheEntry(object? Value, DateTimeOffset? ExpiresAtUtc);
 

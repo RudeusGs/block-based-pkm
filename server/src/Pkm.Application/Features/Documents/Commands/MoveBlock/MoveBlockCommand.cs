@@ -1,4 +1,7 @@
-﻿namespace Pkm.Application.Features.Documents.Commands.MoveBlock;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
+
+namespace Pkm.Application.Features.Documents.Commands.MoveBlock;
 
 public sealed record MoveBlockCommand(
     Guid BlockId,
@@ -6,4 +9,4 @@ public sealed record MoveBlockCommand(
     string EditorSessionId,
     Guid? NewParentBlockId,
     Guid? PreviousBlockId,
-    Guid? NextBlockId);
+    Guid? NextBlockId) : ICommand<BlockMutationDto>;

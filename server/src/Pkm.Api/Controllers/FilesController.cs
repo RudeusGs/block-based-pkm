@@ -6,6 +6,7 @@ using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Account;
 using Pkm.Api.Contracts.Responses.Files;
 using Pkm.Api.Contracts.Responses.Pages;
+using Pkm.Api.Mapping;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Account.Models;
@@ -44,8 +45,8 @@ public sealed class FilesController : BaseController
         [FromForm] UploadImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasValidFile(request.File))
-            return BadRequest(CreateFileRequiredFailure<StoredFileResponse>());
+        if (!FileUploadRequestMapper.HasValidFile(request.File))
+            return BadRequest(FileUploadRequestMapper.CreateFileRequiredFailure<StoredFileResponse>());
 
         var file = request.File!;
 
@@ -53,7 +54,7 @@ public sealed class FilesController : BaseController
 
         var command = new UploadImageCommand(
             file.FileName,
-            ResolveContentType(file),
+            FileUploadRequestMapper.ResolveContentType(file),
             file.Length,
             stream,
             request.Purpose);
@@ -74,8 +75,8 @@ public sealed class FilesController : BaseController
         [FromForm] UploadAvatarImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasValidFile(request.File))
-            return BadRequest(CreateFileRequiredFailure<UserProfileResponse>());
+        if (!FileUploadRequestMapper.HasValidFile(request.File))
+            return BadRequest(FileUploadRequestMapper.CreateFileRequiredFailure<UserProfileResponse>());
 
         var file = request.File!;
 
@@ -83,7 +84,7 @@ public sealed class FilesController : BaseController
 
         var command = new UploadMyAvatarImageCommand(
             file.FileName,
-            ResolveContentType(file),
+            FileUploadRequestMapper.ResolveContentType(file),
             file.Length,
             stream);
 
@@ -106,8 +107,8 @@ public sealed class FilesController : BaseController
         [FromForm] UploadPageCoverImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasValidFile(request.File))
-            return BadRequest(CreateFileRequiredFailure<PageResponse>());
+        if (!FileUploadRequestMapper.HasValidFile(request.File))
+            return BadRequest(FileUploadRequestMapper.CreateFileRequiredFailure<PageResponse>());
 
         var file = request.File!;
 
@@ -117,7 +118,7 @@ public sealed class FilesController : BaseController
             pageId,
             request.ExpectedRevision,
             file.FileName,
-            ResolveContentType(file),
+            FileUploadRequestMapper.ResolveContentType(file),
             file.Length,
             stream);
 
@@ -125,20 +126,4 @@ public sealed class FilesController : BaseController
         return HandleResult(result, x => x.ToResponse());
     }
 
-    private static bool HasValidFile(IFormFile? file)
-        => file is not null && file.Length > 0;
-
-    private static ApiResult<TResponse> CreateFileRequiredFailure<TResponse>()
-        => ApiResult<TResponse>.Failure(
-            message: "Vui lòng chọn file ảnh để upload.",
-            error: new ApiError(
-                Code: "File.Required",
-                Type: "validation_error",
-                Details: new[] { "Trường file là bắt buộc." }),
-            statusCode: StatusCodes.Status400BadRequest);
-
-    private static string ResolveContentType(IFormFile file)
-        => string.IsNullOrWhiteSpace(file.ContentType)
-            ? "application/octet-stream"
-            : file.ContentType;
 }

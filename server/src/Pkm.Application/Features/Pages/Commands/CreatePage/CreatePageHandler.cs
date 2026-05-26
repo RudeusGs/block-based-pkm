@@ -2,6 +2,7 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Application.Features.Workspaces;
@@ -14,12 +15,13 @@ using Pkm.Application.Features.Notifications.Services;
 using Pkm.Domain.Audit;
 namespace Pkm.Application.Features.Pages.Commands.CreatePage;
 
-public sealed class CreatePageHandler
+public sealed class CreatePageHandler : ICommandHandler<CreatePageCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageReadRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly INotificationService _notificationService;
@@ -28,7 +30,8 @@ public sealed class CreatePageHandler
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IPageAccessEvaluator pageAccessEvaluator,
-        IPageRepository pageRepository,
+        IPageReadRepository pageReadRepository,
+        IPageWriteRepository pageWriteRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
         INotificationService notificationService,
@@ -37,7 +40,8 @@ public sealed class CreatePageHandler
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _pageAccessEvaluator = pageAccessEvaluator;
-        _pageRepository = pageRepository;
+        _pageReadRepository = pageReadRepository;
+        _pageWriteRepository = pageWriteRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _notificationService = notificationService;
@@ -64,7 +68,7 @@ public sealed class CreatePageHandler
 
         if (request.ParentPageId.HasValue)
         {
-            var parentPage = await _pageRepository.GetByIdAsync(
+            var parentPage = await _pageReadRepository.GetByIdAsync(
                 request.ParentPageId.Value,
                 cancellationToken);
 
@@ -105,7 +109,7 @@ public sealed class CreatePageHandler
                 request.Icon,
                 request.CoverImage);
 
-            _pageRepository.Add(page);
+            _pageWriteRepository.Add(page);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
             await _activityLogService.RecordAsync(

@@ -15,23 +15,23 @@ public sealed class ListTaskCommentsHandler : IQueryHandler<ListTaskCommentsQuer
     private readonly ICurrentUser _currentUser;
     private readonly ITaskCommentRepository _taskCommentRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly ListTaskCommentsQueryValidator _validator;
 
     public ListTaskCommentsHandler(
         ICurrentUser currentUser,
         ITaskCommentRepository taskCommentRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         ListTaskCommentsQueryValidator validator)
     {
         _currentUser = currentUser;
         _taskCommentRepository = taskCommentRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _validator = validator;
     }
 
@@ -58,18 +58,18 @@ public sealed class ListTaskCommentsHandler : IQueryHandler<ListTaskCommentsQuer
         if (!access.CanReadTask)
             return Result.Failure<TaskCommentPagedResultDto>(TaskCommentErrors.CommentReadForbidden);
 
-        var versionKey = TaskCommentCacheKeys.ListVersion(_redisKeyFactory, request.TaskId);
-        var version = await _redisCache.GetAsync<string>(versionKey, cancellationToken) ?? "1";
+        var versionKey = TaskCommentCacheKeys.ListVersion(_cacheKeyFactory, request.TaskId);
+        var version = await _cache.GetAsync<string>(versionKey, cancellationToken) ?? "1";
 
         var cacheKey = TaskCommentCacheKeys.List(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             request.TaskId,
             request.PageNumber,
             request.PageSize,
             request.IncludeDeleted,
             version);
 
-        var cached = await _redisCache.GetAsync<TaskCommentPagedResultDto>(
+        var cached = await _cache.GetAsync<TaskCommentPagedResultDto>(
             cacheKey,
             cancellationToken);
 
@@ -95,7 +95,7 @@ public sealed class ListTaskCommentsHandler : IQueryHandler<ListTaskCommentsQuer
             totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize));
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             cacheKey,
             dto,
             CacheTtl,

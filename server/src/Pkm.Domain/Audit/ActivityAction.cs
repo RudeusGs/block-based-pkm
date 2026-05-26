@@ -1,7 +1,7 @@
 ﻿namespace Pkm.Domain.Audit;
 
 /// <summary>
-/// Loại hành động được ghi nhận trong activity log.
+/// Action type recorded in the activity log.
 /// </summary>
 public enum ActivityAction
 {

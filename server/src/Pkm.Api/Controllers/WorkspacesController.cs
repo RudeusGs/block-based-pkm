@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Pkm.Api.Mapping;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Workspaces;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Workspaces;
 using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Parsing;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Workspaces;
@@ -22,7 +22,6 @@ using Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Queries.GetWorkspaceById;
 using Pkm.Application.Features.Workspaces.Queries.ListWorkspaceMembers;
-using Pkm.Domain.Workspaces;
 
 namespace Pkm.Api.Controllers;
 
@@ -62,7 +61,7 @@ public sealed class WorkspacesController : BaseController
         var command = new CreateWorkspaceCommand(
             request.Name,
             request.Description,
-            visibility ?? WorkspaceVisibility.Private);
+            EnumRequestParsers.WorkspaceVisibilityOrDefault(visibility));
 
         var result = await _dispatcher.ExecuteAsync<CreateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());

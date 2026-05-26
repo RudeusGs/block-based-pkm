@@ -1,22 +1,23 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
 
 namespace Pkm.Application.Features.Pages.Queries.ListWorkspacePages;
 
-public sealed class ListWorkspacePagesHandler
+public sealed class ListWorkspacePagesHandler : IQueryHandler<ListWorkspacePagesQuery, PagePagedResultDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageRepository;
 
     public ListWorkspacePagesHandler(
         ICurrentUser currentUser,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
-        IPageRepository pageRepository)
+        IPageReadRepository pageRepository)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;

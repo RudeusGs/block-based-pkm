@@ -2,17 +2,18 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Pages.Commands.FavoritePage;
 
-public sealed class FavoritePageHandler
+public sealed class FavoritePageHandler : ICommandHandler<FavoritePageCommand, PageDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageReadRepository;
     private readonly IPageUserStateRepository _pageUserStateRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
@@ -20,14 +21,14 @@ public sealed class FavoritePageHandler
     public FavoritePageHandler(
         ICurrentUser currentUser,
         IPageAccessEvaluator pageAccessEvaluator,
-        IPageRepository pageRepository,
+        IPageReadRepository pageReadRepository,
         IPageUserStateRepository pageUserStateRepository,
         IUnitOfWork unitOfWork,
         IClock clock)
     {
         _currentUser = currentUser;
         _pageAccessEvaluator = pageAccessEvaluator;
-        _pageRepository = pageRepository;
+        _pageReadRepository = pageReadRepository;
         _pageUserStateRepository = pageUserStateRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
@@ -48,7 +49,7 @@ public sealed class FavoritePageHandler
         if (!access.CanRead)
             return Result.Failure<PageDto>(PageErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
+        var page = await _pageReadRepository.GetByIdAsync(request.PageId, cancellationToken);
         if (page is null)
             return Result.Failure<PageDto>(PageErrors.PageNotFound);
 

@@ -3,7 +3,7 @@ using Pkm.Application.Common.Abstractions.Caching;
 
 namespace Pkm.Infrastructure.Cache;
 
-internal sealed class RedisKeyFactory : IRedisKeyFactory
+internal sealed class RedisKeyFactory : ICacheKeyFactory
 {
     private readonly RedisOptions _options;
 

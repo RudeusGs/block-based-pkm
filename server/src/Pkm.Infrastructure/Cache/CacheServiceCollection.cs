@@ -14,7 +14,7 @@ public static class CacheServiceCollection
         services.Configure<RedisOptions>(configuration.GetSection(RedisOptions.SectionName));
 
         services.AddSingleton<IRedisSerializer, SystemTextJsonRedisSerializer>();
-        services.AddSingleton<IRedisKeyFactory, RedisKeyFactory>();
+        services.AddSingleton<ICacheKeyFactory, RedisKeyFactory>();
         services.AddSingleton<InMemoryCache>();
 
         var redisOptions = configuration
@@ -24,7 +24,7 @@ public static class CacheServiceCollection
 
         if (string.IsNullOrWhiteSpace(redisOptions.Connection))
         {
-            services.AddScoped<IRedisCache>(sp => sp.GetRequiredService<InMemoryCache>());
+            services.AddScoped<IApplicationCache>(sp => sp.GetRequiredService<InMemoryCache>());
             return services;
         }
 
@@ -34,13 +34,13 @@ public static class CacheServiceCollection
 
             services.AddSingleton<IConnectionMultiplexer>(multiplexer);
             services.AddScoped<RedisCache>();
-            services.AddScoped<IRedisCache, FallbackRedisCache>();
+            services.AddScoped<IApplicationCache, FallbackRedisCache>();
 
             return services;
         }
         catch
         {
-            services.AddScoped<IRedisCache>(sp => sp.GetRequiredService<InMemoryCache>());
+            services.AddScoped<IApplicationCache>(sp => sp.GetRequiredService<InMemoryCache>());
             return services;
         }
     }

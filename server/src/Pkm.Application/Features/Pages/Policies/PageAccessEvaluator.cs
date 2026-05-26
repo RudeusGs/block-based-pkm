@@ -6,9 +6,9 @@ namespace Pkm.Application.Features.Pages.Policies;
 
 public sealed class PageAccessEvaluator : IPageAccessEvaluator
 {
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageRepository;
 
-    public PageAccessEvaluator(IPageRepository pageRepository)
+    public PageAccessEvaluator(IPageReadRepository pageRepository)
     {
         _pageRepository = pageRepository;
     }

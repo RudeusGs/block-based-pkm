@@ -3,6 +3,8 @@ using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Responses.ActivityLogs;
 using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Activity.Models;
 using Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
 
 namespace Pkm.Api.Controllers;
@@ -11,14 +13,14 @@ namespace Pkm.Api.Controllers;
 [Route("api/v1/workspaces/{workspaceId:guid}/activity-logs")]
 public sealed class ActivityLogsController : BaseController
 {
-    private readonly ListWorkspaceActivityLogsHandler _listWorkspaceActivityLogsHandler;
+    private readonly IUseCaseDispatcher _dispatcher;
 
     public ActivityLogsController(
         ICurrentUser currentUser,
-        ListWorkspaceActivityLogsHandler listWorkspaceActivityLogsHandler)
+        IUseCaseDispatcher dispatcher)
         : base(currentUser)
     {
-        _listWorkspaceActivityLogsHandler = listWorkspaceActivityLogsHandler;
+        _dispatcher = dispatcher;
     }
 
     [HttpGet]
@@ -39,7 +41,7 @@ public sealed class ActivityLogsController : BaseController
         [FromQuery] int pageSize = 30,
         CancellationToken cancellationToken = default)
     {
-        var result = await _listWorkspaceActivityLogsHandler.HandleAsync(
+        var result = await _dispatcher.QueryAsync<ListWorkspaceActivityLogsQuery, ActivityLogPagedResultDto>(
             new ListWorkspaceActivityLogsQuery(
                 workspaceId,
                 action,

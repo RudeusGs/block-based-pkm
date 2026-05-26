@@ -15,7 +15,8 @@ namespace Pkm.Application.Features.Tasks.Commands.DeleteWorkTask;
 public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskCommand>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
+    private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
@@ -26,7 +27,8 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
 
     public DeleteWorkTaskHandler(
         ICurrentUser currentUser,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
+        IWorkTaskReadRepository workTaskReadRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
@@ -36,7 +38,8 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
+        _workTaskReadRepository = workTaskReadRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
@@ -76,14 +79,14 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
             return Result.Failure(TaskErrors.TaskManageForbidden);
         }
 
-        var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
+        var task = await _workTaskWriteRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
         {
             return Result.Failure(TaskErrors.TaskNotFound);
         }
 
         var now = _clock.UtcNow;
-        var detailBeforeDelete = await _workTaskRepository.GetDetailAsync(
+        var detailBeforeDelete = await _workTaskReadRepository.GetDetailAsync(
             task.Id,
             cancellationToken);
 
@@ -92,7 +95,7 @@ public sealed class DeleteWorkTaskHandler : ICommandHandler<DeleteWorkTaskComman
             .ToArray() ?? Array.Empty<Guid>();
 
         task.Delete(currentUserId, now);
-        _workTaskRepository.Update(task);
+        _workTaskWriteRepository.Update(task);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

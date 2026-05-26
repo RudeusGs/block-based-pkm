@@ -17,9 +17,10 @@ namespace Pkm.Application.Features.Tasks.Commands.UpdateWorkTask;
 public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskCommand, WorkTaskDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
+    private readonly IWorkTaskReadRepository _workTaskReadRepository;
     private readonly ITaskAccessEvaluator _taskAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageReadRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
     private readonly IClock _clock;
@@ -28,9 +29,10 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
     private readonly IActivityLogService _activityLogService;
     public UpdateWorkTaskHandler(
         ICurrentUser currentUser,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
+        IWorkTaskReadRepository workTaskReadRepository,
         ITaskAccessEvaluator taskAccessEvaluator,
-        IPageRepository pageRepository,
+        IPageReadRepository pageReadRepository,
         IUnitOfWork unitOfWork,
         ITaskRealtimePublisher taskRealtimePublisher,
         IClock clock,
@@ -39,9 +41,10 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
+        _workTaskReadRepository = workTaskReadRepository;
         _taskAccessEvaluator = taskAccessEvaluator;
-        _pageRepository = pageRepository;
+        _pageReadRepository = pageReadRepository;
         _notificationService = notificationService;
         _unitOfWork = unitOfWork;
         _taskRealtimePublisher = taskRealtimePublisher;
@@ -80,13 +83,13 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskManageForbidden);
         }
 
-        var task = await _workTaskRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
+        var task = await _workTaskWriteRepository.GetByIdForUpdateAsync(request.TaskId, cancellationToken);
         if (task is null)
         {
             return Result.Failure<WorkTaskDto>(TaskErrors.TaskNotFound);
         }
 
-        var page = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
+        var page = await _pageReadRepository.GetByIdAsync(request.PageId, cancellationToken);
         if (page is null)
         {
             return Result.Failure<WorkTaskDto>(TaskErrors.PageNotFound);
@@ -129,10 +132,10 @@ public sealed class UpdateWorkTaskHandler : ICommandHandler<UpdateWorkTaskComman
                     now);
             }
 
-            _workTaskRepository.Update(task);
+            _workTaskWriteRepository.Update(task);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
 
-            var detail = await _workTaskRepository.GetDetailAsync(task.Id, cancellationToken);
+            var detail = await _workTaskReadRepository.GetDetailAsync(task.Id, cancellationToken);
             var dto = detail is null ? task.ToDto() : detail.ToDto();
 
             await _activityLogService.RecordAsync(

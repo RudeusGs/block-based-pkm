@@ -3,8 +3,8 @@ using Pkm.Domain.SharedKernel;
 namespace Pkm.Domain.Recommendations;
 
 /// <summary>
-/// UserTaskHistory: ghi nhận một session tương tác của User với Task.
-/// Flow hợp lệ: InProgress -> Completed / Abandoned / Skipped.
+/// Records one user interaction session with a task.
+/// Valid flow: InProgress -> Completed / Abandoned / Skipped.
 /// </summary>
 public sealed class UserTaskHistory : EntityBase
 {
@@ -75,7 +75,7 @@ public sealed class UserTaskHistory : EntityBase
         var diff = CompletedAt.Value - CreatedDate;
 
         if (diff.TotalMinutes < 0)
-            throw new DomainException("Thời gian không hợp lệ.");
+            throw new DomainException("Task history timestamp is invalid.");
 
         DurationMinutes = diff.TotalMinutes < 1
             ? 1
@@ -87,6 +87,6 @@ public sealed class UserTaskHistory : EntityBase
         ThrowIfDeleted();
 
         if (Status != StatusUserTaskHistory.InProgress)
-            throw new DomainException("Chỉ có thể thao tác khi đang InProgress.");
+            throw new DomainException("Task history can only be changed while it is in progress.");
     }
 }

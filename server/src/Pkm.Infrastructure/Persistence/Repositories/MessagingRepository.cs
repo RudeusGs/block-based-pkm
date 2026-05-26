@@ -7,7 +7,7 @@ using Pkm.Domain.Social;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;
 
-internal sealed class MessagingRepository : IMessagingRepository
+internal sealed class MessagingRepository : IMessagingReadRepository, IMessagingWriteRepository
 {
     private readonly DataContext _context;
 

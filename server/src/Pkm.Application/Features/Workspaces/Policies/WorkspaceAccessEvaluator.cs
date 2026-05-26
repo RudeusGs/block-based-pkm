@@ -10,17 +10,17 @@ public sealed class WorkspaceAccessEvaluator : IWorkspaceAccessEvaluator
     private static readonly TimeSpan AccessCacheTtl = TimeSpan.FromSeconds(30);
 
     private readonly IWorkspaceRepository _workspaceRepository;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
 
     public WorkspaceAccessEvaluator(
         IWorkspaceRepository workspaceRepository,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory)
     {
         _workspaceRepository = workspaceRepository;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
     }
 
     public async Task<WorkspaceAccessResult> EvaluateAsync(
@@ -45,8 +45,8 @@ public sealed class WorkspaceAccessEvaluator : IWorkspaceAccessEvaluator
                 CanManageAuditRetention: false);
         }
 
-        var cacheKey = WorkspaceCacheKeys.Access(_redisKeyFactory, workspaceId, userId);
-        var cached = await _redisCache.GetAsync<WorkspaceAccessResult>(cacheKey, cancellationToken);
+        var cacheKey = WorkspaceCacheKeys.Access(_cacheKeyFactory, workspaceId, userId);
+        var cached = await _cache.GetAsync<WorkspaceAccessResult>(cacheKey, cancellationToken);
         if (cached is not null)
         {
             return cached;
@@ -96,7 +96,7 @@ public sealed class WorkspaceAccessEvaluator : IWorkspaceAccessEvaluator
                 CanManageAuditRetention: capabilities.CanManageAuditRetention);
         }
 
-        await _redisCache.SetAsync(cacheKey, result, AccessCacheTtl, cancellationToken);
+        await _cache.SetAsync(cacheKey, result, AccessCacheTtl, cancellationToken);
         return result;
     }
 }

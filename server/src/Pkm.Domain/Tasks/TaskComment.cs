@@ -5,7 +5,7 @@ namespace Pkm.Domain.Tasks;
 public sealed class TaskComment : EntityBase
 {
     private const int MaxContentLength = 2000;
-    private const string DeletedMessage = "Bình luận này đã bị gỡ bỏ.";
+    private const string DeletedMessage = "This comment has been removed.";
 
     public Guid TaskId { get; private set; }
     public Guid UserId { get; private set; }
@@ -120,11 +120,11 @@ public sealed class TaskComment : EntityBase
         DomainGuard.AgainstEmpty(actorId, "ActorId");
 
         if (UserId != actorId)
-            throw new DomainException("Không có quyền thao tác.");
+            throw new DomainException("The user is not allowed to perform this action.");
     }
 
     private static string NormalizeContent(string content)
     {
-        return TextRules.NormalizeRequired(content, MaxContentLength, "Nội dung");
+        return TextRules.NormalizeRequired(content, MaxContentLength, "Content");
     }
 }

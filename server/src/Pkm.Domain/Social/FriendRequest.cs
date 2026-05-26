@@ -20,7 +20,7 @@ public sealed class FriendRequest : EntityBase
         DomainGuard.AgainstEmpty(addresseeId, nameof(addresseeId));
 
         if (requesterId == addresseeId)
-            throw new DomainException("Không thể gửi lời mời kết bạn cho chính mình.");
+            throw new DomainException("A user cannot send a friend request to themselves.");
 
         RequesterId = requesterId;
         AddresseeId = addresseeId;
@@ -62,6 +62,6 @@ public sealed class FriendRequest : EntityBase
     private void EnsurePending()
     {
         if (Status != FriendRequestStatus.Pending)
-            throw new DomainException("Lời mời kết bạn không còn ở trạng thái chờ xử lý.");
+            throw new DomainException("The friend request is no longer pending.");
     }
 }

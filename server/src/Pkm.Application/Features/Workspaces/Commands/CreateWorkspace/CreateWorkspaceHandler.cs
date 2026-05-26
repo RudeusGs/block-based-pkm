@@ -19,8 +19,8 @@ public sealed class CreateWorkspaceHandler : ICommandHandler<CreateWorkspaceComm
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly CreateWorkspaceCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
 
@@ -30,8 +30,8 @@ public sealed class CreateWorkspaceHandler : ICommandHandler<CreateWorkspaceComm
         IWorkspaceMemberRepository workspaceMemberRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         CreateWorkspaceCommandValidator validator,
         IActivityLogService activityLogService)
     {
@@ -40,8 +40,8 @@ public sealed class CreateWorkspaceHandler : ICommandHandler<CreateWorkspaceComm
         _workspaceMemberRepository = workspaceMemberRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _validator = validator;
         _activityLogService = activityLogService;
     }
@@ -91,8 +91,8 @@ public sealed class CreateWorkspaceHandler : ICommandHandler<CreateWorkspaceComm
                 cancellationToken);
 
             // Invalidate user's workspace list cache
-            var versionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, currentUserId);
-            await _redisCache.SetAsync(versionKey, Guid.NewGuid().ToString(), cancellationToken: cancellationToken);
+            var versionKey = WorkspaceCacheKeys.UserListVersion(_cacheKeyFactory, currentUserId);
+            await _cache.SetAsync(versionKey, Guid.NewGuid().ToString(), cancellationToken: cancellationToken);
 
             var dto = new WorkspaceDto(
                 workspace.Id,

@@ -38,7 +38,7 @@ public sealed class Message : EntityBase
         DomainGuard.AgainstEmpty(recipientUserId, nameof(recipientUserId));
 
         if (senderUserId == recipientUserId)
-            throw new DomainException("Người gửi và người nhận phải khác nhau.");
+            throw new DomainException("Message sender and recipient must be different users.");
 
         ConversationId = conversationId;
         SenderUserId = senderUserId;
@@ -49,13 +49,13 @@ public sealed class Message : EntityBase
         AttachmentFileId = attachmentFileId;
 
         if (Type == MessageType.Text && string.IsNullOrWhiteSpace(Body))
-            throw new DomainException("Tin nhắn văn bản không được để trống.");
+            throw new DomainException("Text message body is required.");
 
         if (Type == MessageType.Image && string.IsNullOrWhiteSpace(ImageUrl))
-            throw new DomainException("Tin nhắn ảnh phải có đường dẫn ảnh.");
+            throw new DomainException("Image message URL is required.");
 
         if (Type == MessageType.WorkspaceShare && string.IsNullOrWhiteSpace(Body))
-            throw new DomainException("Tin nhắn chia sẻ workspace phải có dữ liệu workspace.");
+            throw new DomainException("Workspace share message payload is required.");
     }
 
     public static Message CreateText(
@@ -90,8 +90,8 @@ public sealed class Message : EntityBase
     public string BuildPreview()
         => Type switch
         {
-            MessageType.Image => string.IsNullOrWhiteSpace(Body) ? "Đã gửi một ảnh" : Body!,
-            MessageType.WorkspaceShare => "Đã chia sẻ một workspace",
+            MessageType.Image => string.IsNullOrWhiteSpace(Body) ? "Sent an image" : Body!,
+            MessageType.WorkspaceShare => "Shared a workspace",
             _ => Body ?? string.Empty
         };
 

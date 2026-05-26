@@ -1,7 +1,7 @@
 ﻿namespace Pkm.Domain.Recommendations;
 
 /// <summary>
-/// Trạng thái của một recommendation.
+/// State of a task recommendation.
 /// </summary>
 public enum StatusTaskRecommendation
 {

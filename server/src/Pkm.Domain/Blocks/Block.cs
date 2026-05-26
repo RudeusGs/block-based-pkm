@@ -34,7 +34,7 @@ public sealed class Block : EntityBase
     {
         DomainGuard.AgainstEmpty(pageId, nameof(pageId));
         if (type is null)
-            throw new DomainException("Type không hợp lệ.");
+            throw new DomainException("Block type is invalid.");
         DomainGuard.AgainstEmpty(createdBy, nameof(createdBy));
         DomainGuard.AgainstNonPositive(schemaVersion, nameof(schemaVersion));
 
@@ -66,7 +66,7 @@ public sealed class Block : EntityBase
         EnsureEditable(actorId);
 
         if (newParentBlockId.HasValue && newParentBlockId == Id)
-            throw new DomainException("Không thể chuyển block vào chính nó.");
+            throw new DomainException("A block cannot be moved into itself.");
 
         ParentBlockId = newParentBlockId;
         OrderKey = TextRules.NormalizeRequired(newOrderKey, MaxOrderKeyLength, nameof(OrderKey));
@@ -79,7 +79,7 @@ public sealed class Block : EntityBase
         EnsureEditable(actorId);
 
         if (newType is null)
-            throw new DomainException("Type không hợp lệ.");
+            throw new DomainException("Block type is invalid.");
 
         Type = newType;
         ValidateContentByType();
@@ -102,6 +102,6 @@ public sealed class Block : EntityBase
     private void ValidateContentByType()
     {
         if (Type.RequiresProps() && string.IsNullOrWhiteSpace(PropsJson))
-            throw new DomainException($"{Type} block yêu cầu PropsJson.");
+            throw new DomainException($"{Type} block requires PropsJson.");
     }
 }

@@ -37,7 +37,7 @@ public sealed class BlockOperation : CreationAuditedEntity
         DomainGuard.AgainstNonPositive(appliedRevision, nameof(appliedRevision));
 
         if (appliedRevision <= baseRevision)
-            throw new DomainException("AppliedRevision phải lớn hơn BaseRevision.");
+            throw new DomainException("Applied revision must be greater than base revision.");
 
         PageId = pageId;
         BlockId = blockId;

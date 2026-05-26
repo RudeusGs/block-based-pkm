@@ -17,8 +17,8 @@ public sealed class ListTaskRecommendationsHandler : IQueryHandler<ListTaskRecom
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly ITaskRecommendationRepository _taskRecommendationRepository;
     private readonly IWorkTaskRecommendationReadRepository _workTaskRepository;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly ListTaskRecommendationsQueryValidator _validator;
 
     public ListTaskRecommendationsHandler(
@@ -26,16 +26,16 @@ public sealed class ListTaskRecommendationsHandler : IQueryHandler<ListTaskRecom
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         ITaskRecommendationRepository taskRecommendationRepository,
         IWorkTaskRecommendationReadRepository workTaskRepository,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         ListTaskRecommendationsQueryValidator validator)
     {
         _currentUser = currentUser;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _taskRecommendationRepository = taskRecommendationRepository;
         _workTaskRepository = workTaskRepository;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _validator = validator;
     }
 
@@ -71,17 +71,17 @@ public sealed class ListTaskRecommendationsHandler : IQueryHandler<ListTaskRecom
         }
 
         var versionKey = RecommendationCacheKeys.UserPendingVersion(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId);
 
-        var version = await _redisCache.GetAsync<string>(
+        var version = await _cache.GetAsync<string>(
             versionKey,
             cancellationToken) ?? "1";
 
         var statusKey = request.Status?.ToString() ?? "all";
 
         var cacheKey = RecommendationCacheKeys.PendingList(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId,
             request.WorkspaceId,
             statusKey,
@@ -89,7 +89,7 @@ public sealed class ListTaskRecommendationsHandler : IQueryHandler<ListTaskRecom
             request.PageSize,
             version);
 
-        var cached = await _redisCache.GetAsync<TaskRecommendationPagedResultDto>(
+        var cached = await _cache.GetAsync<TaskRecommendationPagedResultDto>(
             cacheKey,
             cancellationToken);
 
@@ -131,7 +131,7 @@ public sealed class ListTaskRecommendationsHandler : IQueryHandler<ListTaskRecom
             totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize));
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             cacheKey,
             dto,
             CacheTtl,

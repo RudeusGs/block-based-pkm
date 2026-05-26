@@ -14,21 +14,21 @@ public sealed class GetWorkspaceByIdHandler : IQueryHandler<GetWorkspaceByIdQuer
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceRepository _workspaceRepository;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
 
     public GetWorkspaceByIdHandler(
         ICurrentUser currentUser,
         IWorkspaceRepository workspaceRepository,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory)
     {
         _currentUser = currentUser;
         _workspaceRepository = workspaceRepository;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
     }
 
     public async Task<Result<WorkspaceDto>> HandleAsync(
@@ -60,8 +60,8 @@ public sealed class GetWorkspaceByIdHandler : IQueryHandler<GetWorkspaceByIdQuer
             return Result.Failure<WorkspaceDto>(WorkspaceErrors.WorkspaceForbidden);
         }
 
-        var cacheKey = WorkspaceCacheKeys.Detail(_redisKeyFactory, request.WorkspaceId);
-        var cached = await _redisCache.GetAsync<WorkspaceDetailReadModel>(cacheKey, cancellationToken);
+        var cacheKey = WorkspaceCacheKeys.Detail(_cacheKeyFactory, request.WorkspaceId);
+        var cached = await _cache.GetAsync<WorkspaceDetailReadModel>(cacheKey, cancellationToken);
 
         WorkspaceDetailReadModel? detail = cached;
         if (detail is null)
@@ -72,7 +72,7 @@ public sealed class GetWorkspaceByIdHandler : IQueryHandler<GetWorkspaceByIdQuer
                 return Result.Failure<WorkspaceDto>(WorkspaceErrors.WorkspaceNotFound);
             }
 
-            await _redisCache.SetAsync(
+            await _cache.SetAsync(
                 cacheKey,
                 detail,
                 TimeSpan.FromMinutes(5),

@@ -16,8 +16,8 @@ public sealed class NotificationService : INotificationService
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly INotificationRealtimePublisher _notificationRealtimePublisher;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
 
     public NotificationService(
@@ -25,16 +25,16 @@ public sealed class NotificationService : INotificationService
         IWorkspaceMemberRepository workspaceMemberRepository,
         IUnitOfWork unitOfWork,
         INotificationRealtimePublisher notificationRealtimePublisher,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock)
     {
         _notificationRepository = notificationRepository;
         _workspaceMemberRepository = workspaceMemberRepository;
         _unitOfWork = unitOfWork;
         _notificationRealtimePublisher = notificationRealtimePublisher;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
     }
 
@@ -173,22 +173,22 @@ public sealed class NotificationService : INotificationService
             return;
 
         var listVersionKey = NotificationCacheKeys.ListVersion(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             userId);
 
         var unreadVersionKey = NotificationCacheKeys.UnreadCountVersion(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             userId);
 
         var newVersion = Guid.NewGuid().ToString("N");
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             listVersionKey,
             newVersion,
             VersionTtl,
             cancellationToken);
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             unreadVersionKey,
             newVersion,
             VersionTtl,

@@ -1,10 +1,10 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Pkm.Api.Mapping;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Recommendations;
 using Pkm.Api.Contracts.Responses.Recommendations;
 using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Parsing;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Recommendations;

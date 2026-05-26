@@ -1,4 +1,7 @@
-﻿namespace Pkm.Application.Features.Documents.Commands.UpdateBlock;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
+
+namespace Pkm.Application.Features.Documents.Commands.UpdateBlock;
 
 public sealed record UpdateBlockCommand(
     Guid BlockId,
@@ -6,4 +9,4 @@ public sealed record UpdateBlockCommand(
     string EditorSessionId,
     string? TextContent,
     string? PropsJson,
-    string? Type = null);
+    string? Type = null) : ICommand<BlockMutationDto>;

@@ -18,38 +18,38 @@ public sealed class CompleteTaskRecommendationHandler : ICommandHandler<Complete
 {
     private readonly ICurrentUser _currentUser;
     private readonly ITaskRecommendationRepository _recommendationRepository;
-    private readonly IWorkTaskRepository _workTaskRepository;
+    private readonly IWorkTaskWriteRepository _workTaskWriteRepository;
     private readonly IUserTaskHistoryRepository _historyRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IRecommendationRealtimePublisher _realtimePublisher;
     private readonly ITaskRealtimePublisher _taskRealtimePublisher;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IClock _clock;
     private readonly IActivityLogService _activityLogService;
 
     public CompleteTaskRecommendationHandler(
         ICurrentUser currentUser,
         ITaskRecommendationRepository recommendationRepository,
-        IWorkTaskRepository workTaskRepository,
+        IWorkTaskWriteRepository workTaskWriteRepository,
         IUserTaskHistoryRepository historyRepository,
         IUnitOfWork unitOfWork,
         IRecommendationRealtimePublisher realtimePublisher,
         ITaskRealtimePublisher taskRealtimePublisher,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IClock clock,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _recommendationRepository = recommendationRepository;
-        _workTaskRepository = workTaskRepository;
+        _workTaskWriteRepository = workTaskWriteRepository;
         _historyRepository = historyRepository;
         _unitOfWork = unitOfWork;
         _realtimePublisher = realtimePublisher;
         _taskRealtimePublisher = taskRealtimePublisher;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _clock = clock;
         _activityLogService = activityLogService;
     }
@@ -80,7 +80,7 @@ public sealed class CompleteTaskRecommendationHandler : ICommandHandler<Complete
         if (recommendation.UserId != currentUserId)
             return Result.Failure<TaskRecommendationDto>(RecommendationErrors.RecommendationForbidden);
 
-        var task = await _workTaskRepository.GetByIdForUpdateAsync(
+        var task = await _workTaskWriteRepository.GetByIdForUpdateAsync(
             recommendation.TaskId,
             cancellationToken);
 
@@ -100,7 +100,7 @@ public sealed class CompleteTaskRecommendationHandler : ICommandHandler<Complete
             _recommendationRepository.Update(recommendation);
 
             task.Complete(currentUserId, now);
-            _workTaskRepository.Update(task);
+            _workTaskWriteRepository.Update(task);
 
             var history = new UserTaskHistory(
                 Guid.NewGuid(),
@@ -173,14 +173,14 @@ public sealed class CompleteTaskRecommendationHandler : ICommandHandler<Complete
         Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        await _redisCache.SetAsync(
-            RecommendationCacheKeys.UserPendingVersion(_redisKeyFactory, userId),
+        await _cache.SetAsync(
+            RecommendationCacheKeys.UserPendingVersion(_cacheKeyFactory, userId),
             Guid.NewGuid().ToString("N"),
             TimeSpan.FromDays(7),
             cancellationToken);
 
-        await _redisCache.RemoveAsync(
-            RecommendationCacheKeys.HistoryStats(_redisKeyFactory, workspaceId, userId),
+        await _cache.RemoveAsync(
+            RecommendationCacheKeys.HistoryStats(_cacheKeyFactory, workspaceId, userId),
             cancellationToken);
     }
 }

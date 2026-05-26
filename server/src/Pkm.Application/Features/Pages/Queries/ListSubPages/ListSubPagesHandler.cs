@@ -1,21 +1,22 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Pages.Models;
 using Pkm.Application.Features.Pages.Policies;
 
 namespace Pkm.Application.Features.Pages.Queries.ListSubPages;
 
-public sealed class ListSubPagesHandler
+public sealed class ListSubPagesHandler : IQueryHandler<ListSubPagesQuery, IReadOnlyList<PageDto>>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageReadRepository _pageRepository;
 
     public ListSubPagesHandler(
         ICurrentUser currentUser,
         IPageAccessEvaluator pageAccessEvaluator,
-        IPageRepository pageRepository)
+        IPageReadRepository pageRepository)
     {
         _currentUser = currentUser;
         _pageAccessEvaluator = pageAccessEvaluator;

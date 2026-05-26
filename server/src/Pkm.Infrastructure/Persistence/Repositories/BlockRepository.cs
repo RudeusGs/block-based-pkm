@@ -5,7 +5,7 @@ using Pkm.Domain.Blocks;
 
 namespace Pkm.Infrastructure.Persistence.Repositories;
 
-internal sealed class BlockRepository : IBlockRepository
+internal sealed class BlockRepository : IBlockReadRepository, IBlockWriteRepository
 {
     private readonly DataContext _dataContext;
 

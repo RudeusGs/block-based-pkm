@@ -45,7 +45,7 @@ public sealed class StoredFile : EntityBase
         DomainGuard.AgainstEmpty(uploadedByUserId, nameof(uploadedByUserId));
 
         if (sizeBytes <= 0)
-            throw new DomainException("Kích thước file không hợp lệ.");
+            throw new DomainException("File size is invalid.");
 
         UploadedByUserId = uploadedByUserId;
         StorageProvider = TextRules.NormalizeRequired(storageProvider, MaxProviderLength, nameof(StorageProvider));

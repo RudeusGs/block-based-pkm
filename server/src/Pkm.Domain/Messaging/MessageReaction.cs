@@ -39,7 +39,7 @@ public sealed class MessageReaction : EntityBase
     {
         var normalized = TextRules.NormalizeRequired(emoji, MaxEmojiLength, nameof(Emoji));
         if (normalized.Any(char.IsControl))
-            throw new DomainException("Reaction không hợp lệ.");
+            throw new DomainException("Message reaction is invalid.");
 
         return normalized;
     }

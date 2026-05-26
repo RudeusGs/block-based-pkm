@@ -2,6 +2,7 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
 using Pkm.Application.Features.Notifications;
 using Pkm.Application.Features.Notifications.Services;
@@ -10,10 +11,10 @@ using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Pages.Commands.DeletePage;
 
-public sealed class DeletePageHandler
+public sealed class DeletePageHandler : ICommandHandler<DeletePageCommand>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IPageRepository _pageRepository;
+    private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
@@ -21,7 +22,7 @@ public sealed class DeletePageHandler
     private readonly IActivityLogService _activityLogService;
     public DeletePageHandler(
         ICurrentUser currentUser,
-        IPageRepository pageRepository,
+        IPageWriteRepository pageWriteRepository,
         IPageAccessEvaluator pageAccessEvaluator,
         IUnitOfWork unitOfWork,
         IClock clock,
@@ -29,7 +30,7 @@ public sealed class DeletePageHandler
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
-        _pageRepository = pageRepository;
+        _pageWriteRepository = pageWriteRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
         _unitOfWork = unitOfWork;
         _notificationService = notificationService;
@@ -58,7 +59,7 @@ public sealed class DeletePageHandler
         if (!access.CanArchivePage)
             return Result.Failure(PageErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdForUpdateAsync(request.PageId, cancellationToken);
+        var page = await _pageWriteRepository.GetByIdForUpdateAsync(request.PageId, cancellationToken);
         if (page is null)
             return Result.Failure(PageErrors.PageNotFound);
 

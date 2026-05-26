@@ -43,10 +43,10 @@ public sealed class RefreshToken : EntityBase
         DomainGuard.AgainstEmpty(userId, nameof(userId));
 
         if (string.IsNullOrWhiteSpace(tokenHash))
-            throw new DomainException("Refresh token hash không được để trống.");
+            throw new DomainException("Refresh token hash is required.");
 
         if (expiresAtUtc <= now)
-            throw new DomainException("Refresh token expiry không hợp lệ.");
+            throw new DomainException("Refresh token expiry is invalid.");
 
         UserId = userId;
         TokenHash = TextRules.NormalizeRequired(

@@ -6,7 +6,7 @@ namespace Pkm.Application.Features.Notifications;
 public static class NotificationCacheKeys
 {
     public static string ListVersion(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid userId)
         => keyFactory.Build(
             "notifications",
@@ -16,7 +16,7 @@ public static class NotificationCacheKeys
             "version");
 
     public static string List(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid userId,
         Guid? workspaceId,
         bool unreadOnly,
@@ -35,7 +35,7 @@ public static class NotificationCacheKeys
             version);
 
     public static string UnreadCountVersion(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid userId)
         => keyFactory.Build(
             "notifications",
@@ -45,7 +45,7 @@ public static class NotificationCacheKeys
             "version");
 
     public static string UnreadCount(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid userId,
         Guid? workspaceId,
         string version)

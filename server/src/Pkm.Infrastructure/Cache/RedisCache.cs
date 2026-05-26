@@ -4,7 +4,7 @@ using StackExchange.Redis;
 
 namespace Pkm.Infrastructure.Cache;
 
-internal sealed class RedisCache : IRedisCache
+internal sealed class RedisCache : IApplicationCache
 {
     private readonly IConnectionMultiplexer _connectionMultiplexer;
     private readonly IRedisSerializer _serializer;

@@ -1,6 +1,7 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Models;
 using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Policies;
@@ -8,7 +9,7 @@ using Pkm.Domain.Audit;
 
 namespace Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
 
-public sealed class ListWorkspaceActivityLogsHandler
+public sealed class ListWorkspaceActivityLogsHandler : IQueryHandler<ListWorkspaceActivityLogsQuery, ActivityLogPagedResultDto>
 {
     private const int MaxPageSize = 100;
 

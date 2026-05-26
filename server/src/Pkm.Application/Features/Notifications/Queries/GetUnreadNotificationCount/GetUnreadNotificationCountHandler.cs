@@ -13,19 +13,19 @@ public sealed class GetUnreadNotificationCountHandler : IQueryHandler<GetUnreadN
 
     private readonly ICurrentUser _currentUser;
     private readonly INotificationRepository _notificationRepository;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
 
     public GetUnreadNotificationCountHandler(
         ICurrentUser currentUser,
         INotificationRepository notificationRepository,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory)
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory)
     {
         _currentUser = currentUser;
         _notificationRepository = notificationRepository;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
     }
 
     public async Task<Result<NotificationUnreadCountDto>> HandleAsync(
@@ -45,20 +45,20 @@ public sealed class GetUnreadNotificationCountHandler : IQueryHandler<GetUnreadN
         }
 
         var versionKey = NotificationCacheKeys.UnreadCountVersion(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId);
 
-        var version = await _redisCache.GetAsync<string>(
+        var version = await _cache.GetAsync<string>(
             versionKey,
             cancellationToken) ?? "1";
 
         var cacheKey = NotificationCacheKeys.UnreadCount(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId,
             request.WorkspaceId,
             version);
 
-        var cached = await _redisCache.GetAsync<NotificationUnreadCountDto>(
+        var cached = await _cache.GetAsync<NotificationUnreadCountDto>(
             cacheKey,
             cancellationToken);
 
@@ -75,7 +75,7 @@ public sealed class GetUnreadNotificationCountHandler : IQueryHandler<GetUnreadN
             request.WorkspaceId,
             count);
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             cacheKey,
             dto,
             CacheTtl,

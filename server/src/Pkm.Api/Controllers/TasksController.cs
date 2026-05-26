@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Pkm.Api.Mapping;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Tasks;
 using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Tasks;
 using Pkm.Application.Common.Abstractions.Authentication;
+using Pkm.Application.Common.Parsing;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Tasks;
@@ -19,7 +19,6 @@ using Pkm.Application.Features.Tasks.Models;
 using Pkm.Application.Features.Tasks.Queries.GetWorkTaskById;
 using Pkm.Application.Features.Tasks.Queries.ListPageTasks;
 using Pkm.Application.Features.Tasks.Queries.ListWorkspaceTasks;
-using Pkm.Domain.Tasks;
 
 namespace Pkm.Api.Controllers;
 

@@ -13,21 +13,21 @@ public sealed class ListNotificationsHandler : IQueryHandler<ListNotificationsQu
 
     private readonly ICurrentUser _currentUser;
     private readonly INotificationRepository _notificationRepository;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly ListNotificationsQueryValidator _validator;
 
     public ListNotificationsHandler(
         ICurrentUser currentUser,
         INotificationRepository notificationRepository,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         ListNotificationsQueryValidator validator)
     {
         _currentUser = currentUser;
         _notificationRepository = notificationRepository;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _validator = validator;
     }
 
@@ -49,15 +49,15 @@ public sealed class ListNotificationsHandler : IQueryHandler<ListNotificationsQu
         }
 
         var versionKey = NotificationCacheKeys.ListVersion(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId);
 
-        var version = await _redisCache.GetAsync<string>(
+        var version = await _cache.GetAsync<string>(
             versionKey,
             cancellationToken) ?? "1";
 
         var cacheKey = NotificationCacheKeys.List(
-            _redisKeyFactory,
+            _cacheKeyFactory,
             currentUserId,
             request.WorkspaceId,
             request.UnreadOnly,
@@ -65,7 +65,7 @@ public sealed class ListNotificationsHandler : IQueryHandler<ListNotificationsQu
             request.PageSize,
             version);
 
-        var cached = await _redisCache.GetAsync<NotificationPagedResultDto>(
+        var cached = await _cache.GetAsync<NotificationPagedResultDto>(
             cacheKey,
             cancellationToken);
 
@@ -93,7 +93,7 @@ public sealed class ListNotificationsHandler : IQueryHandler<ListNotificationsQu
             totalCount,
             totalCount == 0 ? 0 : (int)Math.Ceiling(totalCount / (double)request.PageSize));
 
-        await _redisCache.SetAsync(
+        await _cache.SetAsync(
             cacheKey,
             dto,
             CacheTtl,

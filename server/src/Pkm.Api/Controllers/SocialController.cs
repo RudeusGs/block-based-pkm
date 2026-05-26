@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Social;
 using Pkm.Api.Contracts.Responses.Social;
+using Pkm.Api.Mapping;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Social.Commands;
@@ -86,8 +87,8 @@ public sealed class SocialController : BaseController
         [FromForm] UploadProfileCoverImageFormRequest request,
         CancellationToken cancellationToken)
     {
-        if (!HasValidFile(request.File))
-            return BadRequest(CreateFileRequiredFailure<UserProfilePageResponse>());
+        if (!FileUploadRequestMapper.HasValidFile(request.File))
+            return BadRequest(FileUploadRequestMapper.CreateFileRequiredFailure<UserProfilePageResponse>());
 
         var file = request.File!;
 
@@ -96,7 +97,7 @@ public sealed class SocialController : BaseController
         var result = await _useCaseDispatcher.ExecuteAsync<UploadMyProfileCoverImageCommand, UserProfilePageDto>(
             new UploadMyProfileCoverImageCommand(
                 file.FileName,
-                ResolveContentType(file),
+                FileUploadRequestMapper.ResolveContentType(file),
                 file.Length,
                 stream),
             cancellationToken);
@@ -229,20 +230,4 @@ public sealed class SocialController : BaseController
         return HandleResult(result);
     }
 
-    private static bool HasValidFile(IFormFile? file)
-        => file is not null && file.Length > 0;
-
-    private static ApiResult<TResponse> CreateFileRequiredFailure<TResponse>()
-        => ApiResult<TResponse>.Failure(
-            message: "Vui lòng chọn file ảnh để upload.",
-            error: new ApiError(
-                Code: "File.Required",
-                Type: "validation_error",
-                Details: new[] { "Trường file là bắt buộc." }),
-            statusCode: StatusCodes.Status400BadRequest);
-
-    private static string ResolveContentType(IFormFile file)
-        => string.IsNullOrWhiteSpace(file.ContentType)
-            ? "application/octet-stream"
-            : file.ContentType;
 }

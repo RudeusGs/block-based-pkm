@@ -113,7 +113,7 @@ public static class WorkspaceErrors
 
     public static readonly Error WorkspaceInvitationEmailFailed = new(
         "Workspace.InvitationEmailFailed",
-        "Tạo lời mời thành công nhưng gửi email thất bại. Kiểm tra cấu hình SMTP.",
+        "Tạo lời mời thành công nhưng gửi email thất bại. Kiểm tra cấu hình email provider.",
         ResultStatus.Failure);
 
     public static Error TargetUserNotFoundByEmail(string email)

@@ -23,7 +23,7 @@ public sealed class Conversation : EntityBase
         DomainGuard.AgainstEmpty(secondUserId, nameof(secondUserId));
 
         if (firstUserId == secondUserId)
-            throw new DomainException("Cuộc trò chuyện riêng phải gồm 2 người khác nhau.");
+            throw new DomainException("A direct conversation must contain two different users.");
 
         FirstUserId = firstUserId;
         SecondUserId = secondUserId;
@@ -45,7 +45,7 @@ public sealed class Conversation : EntityBase
         if (SecondUserId == userId)
             return FirstUserId;
 
-        throw new DomainException("Người dùng không thuộc cuộc trò chuyện này.");
+        throw new DomainException("The user is not a participant in this conversation.");
     }
 
     public void RegisterMessage(string preview, DateTimeOffset sentAtUtc)

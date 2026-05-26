@@ -1,4 +1,7 @@
-﻿namespace Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Activity.Models;
+
+namespace Pkm.Application.Features.Activity.Queries.ListWorkspaceActivityLogs;
 
 public sealed record ListWorkspaceActivityLogsQuery(
     Guid WorkspaceId,
@@ -9,4 +12,4 @@ public sealed record ListWorkspaceActivityLogsQuery(
     DateTimeOffset? ToUtc,
     string? Search,
     int PageNumber,
-    int PageSize);
+    int PageSize) : IQuery<ActivityLogPagedResultDto>;

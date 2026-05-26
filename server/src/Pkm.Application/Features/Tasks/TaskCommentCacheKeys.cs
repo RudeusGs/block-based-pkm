@@ -5,7 +5,7 @@ namespace Pkm.Application.Features.Tasks;
 
 public static class TaskCommentCacheKeys
 {
-    public static string ListVersion(IRedisKeyFactory keyFactory, Guid taskId)
+    public static string ListVersion(ICacheKeyFactory keyFactory, Guid taskId)
         => keyFactory.Build(
             "tasks",
             taskId.ToString("D"),
@@ -13,7 +13,7 @@ public static class TaskCommentCacheKeys
             "version");
 
     public static string List(
-        IRedisKeyFactory keyFactory,
+        ICacheKeyFactory keyFactory,
         Guid taskId,
         int pageNumber,
         int pageSize,

@@ -20,8 +20,8 @@ public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<Transfer
     private readonly IUserRepository _userRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly IActivityLogService _activityLogService;
 
     public TransferWorkspaceOwnershipHandler(
@@ -31,8 +31,8 @@ public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<Transfer
         IUserRepository userRepository,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
@@ -41,8 +41,8 @@ public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<Transfer
         _userRepository = userRepository;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _activityLogService = activityLogService;
     }
 
@@ -119,8 +119,8 @@ public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<Transfer
 
         await InvalidateWorkspaceCachesAsync(request.WorkspaceId, currentUserId, cancellationToken);
         await InvalidateWorkspaceCachesAsync(request.WorkspaceId, request.NewOwnerUserId, cancellationToken);
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Detail(_redisKeyFactory, request.WorkspaceId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Detail(_cacheKeyFactory, request.WorkspaceId),
             cancellationToken);
 
         await _activityLogService.RecordAsync(
@@ -162,16 +162,16 @@ public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<Transfer
         Guid userId,
         CancellationToken cancellationToken)
     {
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Members(_redisKeyFactory, workspaceId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Members(_cacheKeyFactory, workspaceId),
             cancellationToken);
 
-        await _redisCache.RemoveAsync(
-            WorkspaceCacheKeys.Access(_redisKeyFactory, workspaceId, userId),
+        await _cache.RemoveAsync(
+            WorkspaceCacheKeys.Access(_cacheKeyFactory, workspaceId, userId),
             cancellationToken);
 
-        await _redisCache.SetAsync(
-            WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, userId),
+        await _cache.SetAsync(
+            WorkspaceCacheKeys.UserListVersion(_cacheKeyFactory, userId),
             Guid.NewGuid().ToString("N"),
             cancellationToken: cancellationToken);
     }

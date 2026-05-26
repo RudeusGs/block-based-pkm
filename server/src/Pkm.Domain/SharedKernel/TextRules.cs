@@ -5,12 +5,12 @@ public static class TextRules
     public static string NormalizeRequired(string value, int maxLength, string fieldName)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException($"{fieldName} không được để trống.");
+            throw new DomainException($"{fieldName} is required.");
 
         var trimmed = value.Trim();
 
         if (trimmed.Length > maxLength)
-            throw new DomainException($"{fieldName} không được vượt quá {maxLength} ký tự.");
+            throw new DomainException($"{fieldName} must not exceed {maxLength} characters.");
 
         return trimmed;
     }
@@ -22,7 +22,7 @@ public static class TextRules
             : value.Trim();
 
         if (normalized.Length > maxLength)
-            throw new DomainException($"{fieldName} không được vượt quá {maxLength} ký tự.");
+            throw new DomainException($"{fieldName} must not exceed {maxLength} characters.");
 
         return normalized;
     }
@@ -35,7 +35,7 @@ public static class TextRules
         var trimmed = value.Trim();
 
         if (trimmed.Length > maxLength)
-            throw new DomainException($"{fieldName} không được vượt quá {maxLength} ký tự.");
+            throw new DomainException($"{fieldName} must not exceed {maxLength} characters.");
 
         return trimmed;
     }
@@ -43,31 +43,31 @@ public static class TextRules
     public static void ValidateEmail(string email)
     {
         if (string.IsNullOrWhiteSpace(email))
-            throw new DomainException("Email không được để trống.");
+            throw new DomainException("Email is required.");
 
         var emailRegex = new System.Text.RegularExpressions.Regex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$");
         if (!emailRegex.IsMatch(email))
-            throw new DomainException("Email không đúng định dạng (yêu cầu chứa '@' và có dấu chấm).");
+            throw new DomainException("Email format is invalid.");
     }
 
     public static void ValidateStrongPassword(string plainPassword)
     {
         if (string.IsNullOrWhiteSpace(plainPassword))
-            throw new DomainException("Mật khẩu không được để trống.");
+            throw new DomainException("Password is required.");
 
         if (plainPassword.Length < 6)
-            throw new DomainException("Mật khẩu phải dài ít nhất 6 ký tự.");
+            throw new DomainException("Password must contain at least 6 characters.");
 
         if (!plainPassword.Any(char.IsUpper))
-            throw new DomainException("Mật khẩu phải chứa ít nhất 1 chữ hoa.");
+            throw new DomainException("Password must contain at least one uppercase letter.");
 
         if (!plainPassword.Any(char.IsLower))
-            throw new DomainException("Mật khẩu phải chứa ít nhất 1 chữ thường.");
+            throw new DomainException("Password must contain at least one lowercase letter.");
 
         if (!plainPassword.Any(char.IsDigit))
-            throw new DomainException("Mật khẩu phải chứa ít nhất 1 chữ số.");
+            throw new DomainException("Password must contain at least one digit.");
 
         if (!plainPassword.Any(ch => !char.IsLetterOrDigit(ch)))
-            throw new DomainException("Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.");
+            throw new DomainException("Password must contain at least one special character.");
     }
 }

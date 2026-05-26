@@ -1,3 +1,6 @@
-﻿namespace Pkm.Application.Features.Documents.Queries.ListPageBlocks;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
 
-public sealed record ListPageBlocksQuery(Guid PageId);
+namespace Pkm.Application.Features.Documents.Queries.ListPageBlocks;
+
+public sealed record ListPageBlocksQuery(Guid PageId) : IQuery<PageDocumentDto>;

@@ -1,5 +1,3 @@
-﻿using Pkm.Domain.Notifications;
-
 namespace Pkm.Api.Contracts.Responses.Notifications;
 
 public sealed record NotificationResponse(

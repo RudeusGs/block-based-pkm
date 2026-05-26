@@ -1,5 +1,8 @@
-﻿namespace Pkm.Application.Features.Documents.Commands.RenewBlockLease;
+using Pkm.Application.Common.UseCases;
+using Pkm.Application.Features.Documents.Models;
+
+namespace Pkm.Application.Features.Documents.Commands.RenewBlockLease;
 
 public sealed record RenewBlockLeaseCommand(
     Guid BlockId,
-    string EditorSessionId);
+    string EditorSessionId) : ICommand<BlockLeaseDto>;

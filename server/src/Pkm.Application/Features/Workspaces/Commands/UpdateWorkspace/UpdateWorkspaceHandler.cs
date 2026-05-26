@@ -21,8 +21,8 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
-    private readonly IRedisCache _redisCache;
-    private readonly IRedisKeyFactory _redisKeyFactory;
+    private readonly IApplicationCache _cache;
+    private readonly ICacheKeyFactory _cacheKeyFactory;
     private readonly UpdateWorkspaceCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
 
@@ -33,8 +33,8 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
         IUnitOfWork unitOfWork,
         IClock clock,
-        IRedisCache redisCache,
-        IRedisKeyFactory redisKeyFactory,
+        IApplicationCache cache,
+        ICacheKeyFactory cacheKeyFactory,
         UpdateWorkspaceCommandValidator validator,
         IActivityLogService activityLogService)
     {
@@ -44,8 +44,8 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
         _unitOfWork = unitOfWork;
         _clock = clock;
-        _redisCache = redisCache;
-        _redisKeyFactory = redisKeyFactory;
+        _cache = cache;
+        _cacheKeyFactory = cacheKeyFactory;
         _validator = validator;
         _activityLogService = activityLogService;
     }
@@ -108,8 +108,8 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
                     $"{_currentUser.UserName ?? "Có người"} đã cập nhật workspace '{workspace.Name}'."),
                 cancellationToken);
 
-            await _redisCache.RemoveAsync(
-                WorkspaceCacheKeys.Detail(_redisKeyFactory, workspace.Id),
+            await _cache.RemoveAsync(
+                WorkspaceCacheKeys.Detail(_cacheKeyFactory, workspace.Id),
                 cancellationToken);
 
             await InvalidateWorkspaceListVersionsAsync(workspace.Id, cancellationToken);
@@ -154,8 +154,8 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
 
         foreach (var userId in members.Select(x => x.UserId).Distinct())
         {
-            var versionKey = WorkspaceCacheKeys.UserListVersion(_redisKeyFactory, userId);
-            await _redisCache.SetAsync(
+            var versionKey = WorkspaceCacheKeys.UserListVersion(_cacheKeyFactory, userId);
+            await _cache.SetAsync(
                 versionKey,
                 Guid.NewGuid().ToString("N"),
                 cancellationToken: cancellationToken);

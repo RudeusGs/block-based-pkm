@@ -1,20 +1,21 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 
 namespace Pkm.Application.Features.Documents.Queries.GetBlock;
 
-public sealed class GetBlockHandler
+public sealed class GetBlockHandler : IQueryHandler<GetBlockQuery, BlockDto>
 {
     private readonly ICurrentUser _currentUser;
-    private readonly IBlockRepository _blockRepository;
+    private readonly IBlockReadRepository _blockRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
 
     public GetBlockHandler(
         ICurrentUser currentUser,
-        IBlockRepository blockRepository,
+        IBlockReadRepository blockRepository,
         IDocumentAccessEvaluator documentAccessEvaluator)
     {
         _currentUser = currentUser;

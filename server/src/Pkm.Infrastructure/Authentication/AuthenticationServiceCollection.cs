@@ -26,7 +26,7 @@ public static class AuthenticationServiceCollection
 
         services.AddHttpContextAccessor();
 
-        services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddSingleton<IAccessTokenService, JwtTokenGenerator>();
         services.AddSingleton<IRefreshTokenService, RefreshTokenService>();
 
         services.AddScoped<IUserRoleService, UserRoleService>();

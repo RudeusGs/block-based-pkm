@@ -2,8 +2,7 @@ using Pkm.Domain.SharedKernel;
 
 namespace Pkm.Domain.Blocks;
 /// <summary>
-/// BlockTypeCode: Đại diện cho loại block trong hệ thống, có thể là các loại đã biết như 
-/// paragraph, heading, todo, quote, code, image, toggle, divider, bulleted_list, numbered_list hoặc các loại tùy chỉnh khác.
+/// Value object for supported and custom block type codes.
 /// </summary>
 public sealed class BlockTypeCode : IEquatable<BlockTypeCode>
 {
@@ -12,7 +11,7 @@ public sealed class BlockTypeCode : IEquatable<BlockTypeCode>
     private BlockTypeCode(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException("BlockTypeCode không hợp lệ.");
+            throw new DomainException("Block type code is invalid.");
 
         Value = value.Trim().ToLowerInvariant();
     }
@@ -50,7 +49,7 @@ public sealed class BlockTypeCode : IEquatable<BlockTypeCode>
     public static BlockTypeCode From(string value)
     {
         if (string.IsNullOrWhiteSpace(value))
-            throw new DomainException("BlockTypeCode không hợp lệ.");
+            throw new DomainException("Block type code is invalid.");
 
         var normalized = value.Trim().ToLowerInvariant();
 

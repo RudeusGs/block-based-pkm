@@ -1,12 +1,13 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Pages.Policies;
 
 namespace Pkm.Application.Features.Documents.Queries.GetPagePresence;
 
-public sealed class GetPagePresenceHandler
+public sealed class GetPagePresenceHandler : IQueryHandler<GetPagePresenceQuery, PagePresenceDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;

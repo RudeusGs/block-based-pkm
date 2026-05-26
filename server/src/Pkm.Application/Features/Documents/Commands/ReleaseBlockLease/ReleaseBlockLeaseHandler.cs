@@ -2,13 +2,14 @@ using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Realtime;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
 using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
 
 namespace Pkm.Application.Features.Documents.Commands.ReleaseBlockLease;
 
-public sealed class ReleaseBlockLeaseHandler
+public sealed class ReleaseBlockLeaseHandler : ICommandHandler<ReleaseBlockLeaseCommand, BlockLeaseDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;

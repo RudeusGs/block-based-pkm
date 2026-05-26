@@ -15,7 +15,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthTokenDto>
     private readonly IRefreshTokenRepository _refreshTokenRepository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IUserRoleService _userRoleService;
-    private readonly IJwtTokenGenerator _jwtTokenGenerator;
+    private readonly IAccessTokenService _accessTokenService;
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
@@ -26,7 +26,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthTokenDto>
         IRefreshTokenRepository refreshTokenRepository,
         IPasswordHasher passwordHasher,
         IUserRoleService userRoleService,
-        IJwtTokenGenerator jwtTokenGenerator,
+        IAccessTokenService accessTokenService,
         IRefreshTokenService refreshTokenService,
         IUnitOfWork unitOfWork,
         IClock clock,
@@ -36,7 +36,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthTokenDto>
         _refreshTokenRepository = refreshTokenRepository;
         _passwordHasher = passwordHasher;
         _userRoleService = userRoleService;
-        _jwtTokenGenerator = jwtTokenGenerator;
+        _accessTokenService = accessTokenService;
         _refreshTokenService = refreshTokenService;
         _unitOfWork = unitOfWork;
         _clock = clock;
@@ -82,7 +82,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthTokenDto>
             user.Id,
             cancellationToken);
 
-        var accessToken = _jwtTokenGenerator.GenerateToken(user, roles);
+        var accessToken = _accessTokenService.GenerateToken(user, roles);
         var refreshToken = _refreshTokenService.Create(now);
 
         _refreshTokenRepository.Add(DomainRefreshToken.Create(
@@ -102,7 +102,7 @@ public sealed class LoginHandler : ICommandHandler<LoginCommand, AuthTokenDto>
             accessToken,
             refreshToken.RawToken,
             "Bearer",
-            _jwtTokenGenerator.GetAccessTokenExpirySeconds(),
+            _accessTokenService.GetAccessTokenExpirySeconds(),
             refreshToken.ExpiresAtUtc,
             user.ToAuthUserDto(isAuthenticated: true)));
     }
