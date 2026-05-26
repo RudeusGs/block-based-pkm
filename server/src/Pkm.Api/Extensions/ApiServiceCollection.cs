@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Mvc;
+using Pkm.Api.Common.Errors;
+
 namespace Pkm.Api.Extensions;
 
 public static class ApiServiceCollection
@@ -9,7 +12,22 @@ public static class ApiServiceCollection
     {
         services.AddCustomCors(configuration, environment);
         services.AddCustomSwagger();
-        services.AddControllers();
+        services.AddApiControllers();
+
+        return services;
+    }
+
+    private static IServiceCollection AddApiControllers(this IServiceCollection services)
+    {
+        services
+            .AddControllers(options =>
+            {
+                options.Filters.Add(new ProducesAttribute("application/json"));
+            })
+            .ConfigureApiBehaviorOptions(options =>
+            {
+                options.InvalidModelStateResponseFactory = ApiModelStateResponseFactory.Create;
+            });
 
         return services;
     }

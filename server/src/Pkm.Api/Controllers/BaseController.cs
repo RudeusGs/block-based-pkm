@@ -43,43 +43,29 @@ public abstract class BaseController : ControllerBase
     {
         if (result.IsSuccess)
         {
-            return StatusCode(
-                StatusCodes.Status200OK,
-                ApiResult.Success(
-                    statusCode: StatusCodes.Status200OK,
-                    traceId: HttpContext.TraceIdentifier));
+            var response = ApiResult.Success(
+                statusCode: StatusCodes.Status200OK,
+                traceId: TraceId);
+
+            return ToStatusCodeResult(response);
         }
 
-        var response = ApiErrorResponseFactory.FromApplicationError(
-            result.Error,
-            HttpContext.TraceIdentifier);
-
-        return StatusCode(response.StatusCode, response);
+        return ToStatusCodeResult(ApiErrorResponseFactory.FromApplicationError(result.Error, TraceId));
     }
 
     protected ActionResult<ApiResult<T>> HandleResult<T>(Result<T> result)
     {
         if (result.IsSuccess)
         {
-            return StatusCode(
-                StatusCodes.Status200OK,
-                ApiResult<T>.Success(
-                    result.Value,
-                    statusCode: StatusCodes.Status200OK,
-                    traceId: HttpContext.TraceIdentifier));
+            var response = ApiResult<T>.Success(
+                result.Value,
+                statusCode: StatusCodes.Status200OK,
+                traceId: TraceId);
+
+            return ToStatusCodeResult(response);
         }
 
-        var errorResponse = ApiErrorResponseFactory.FromApplicationError(
-            result.Error,
-            HttpContext.TraceIdentifier);
-
-        var response = ApiResult<T>.Failure(
-            message: errorResponse.Message,
-            error: errorResponse.Error!,
-            statusCode: errorResponse.StatusCode,
-            traceId: errorResponse.TraceId);
-
-        return StatusCode(response.StatusCode, response);
+        return ToTypedErrorResult<T>(result.Error);
     }
 
     protected ActionResult<ApiResult<TOut>> HandleResult<TIn, TOut>(
@@ -88,25 +74,15 @@ public abstract class BaseController : ControllerBase
     {
         if (result.IsSuccess)
         {
-            return StatusCode(
-                StatusCodes.Status200OK,
-                ApiResult<TOut>.Success(
-                    mapper(result.Value),
-                    statusCode: StatusCodes.Status200OK,
-                    traceId: HttpContext.TraceIdentifier));
+            var response = ApiResult<TOut>.Success(
+                mapper(result.Value),
+                statusCode: StatusCodes.Status200OK,
+                traceId: TraceId);
+
+            return ToStatusCodeResult(response);
         }
 
-        var errorResponse = ApiErrorResponseFactory.FromApplicationError(
-            result.Error,
-            HttpContext.TraceIdentifier);
-
-        var response = ApiResult<TOut>.Failure(
-            message: errorResponse.Message,
-            error: errorResponse.Error!,
-            statusCode: errorResponse.StatusCode,
-            traceId: errorResponse.TraceId);
-
-        return StatusCode(response.StatusCode, response);
+        return ToTypedErrorResult<TOut>(result.Error);
     }
 
     protected bool TryGetCurrentUserId(out Guid userId)
@@ -115,4 +91,25 @@ public abstract class BaseController : ControllerBase
     protected Guid? CurrentUserId => _currentUser.UserId;
 
     protected bool IsAuthenticated => _currentUser.IsAuthenticated;
+
+    private string TraceId => HttpContext.TraceIdentifier;
+
+    private ObjectResult ToStatusCodeResult(ApiResult response)
+        => StatusCode(response.StatusCode, response);
+
+    private ObjectResult ToStatusCodeResult<T>(ApiResult<T> response)
+        => StatusCode(response.StatusCode, response);
+
+    private ActionResult<ApiResult<T>> ToTypedErrorResult<T>(Error error)
+    {
+        var errorResponse = ApiErrorResponseFactory.FromApplicationError(error, TraceId);
+
+        var response = ApiResult<T>.Failure(
+            message: errorResponse.Message,
+            error: errorResponse.Error!,
+            statusCode: errorResponse.StatusCode,
+            traceId: errorResponse.TraceId);
+
+        return ToStatusCodeResult(response);
+    }
 }
