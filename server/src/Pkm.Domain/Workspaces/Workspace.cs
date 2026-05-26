@@ -9,9 +9,11 @@ public sealed class Workspace : EntityBase
 {
     private const int MaxNameLength = 50;
     private const int MaxDescriptionLength = 500;
+    private const int MaxAvatarUrlLength = 2048;
 
     public string Name { get; private set; } = string.Empty;
     public string? Description { get; private set; }
+    public string? AvatarUrl { get; private set; }
     public WorkspaceVisibility Visibility { get; private set; }
 
     public Guid OwnerId { get; private set; }
@@ -25,7 +27,8 @@ public sealed class Workspace : EntityBase
         Guid ownerId,
         DateTimeOffset now,
         string? description = null,
-        WorkspaceVisibility visibility = WorkspaceVisibility.Private)
+        WorkspaceVisibility visibility = WorkspaceVisibility.Private,
+        string? avatarUrl = null)
         : base(id, now)
     {
         DomainGuard.AgainstEmpty(ownerId, nameof(ownerId));
@@ -33,6 +36,7 @@ public sealed class Workspace : EntityBase
         OwnerId = ownerId;
         Name = TextRules.NormalizeRequired(name, MaxNameLength, "Workspace name");
         Description = TextRules.NormalizeOptional(description, MaxDescriptionLength, nameof(Description));
+        AvatarUrl = TextRules.NormalizeOptional(avatarUrl, MaxAvatarUrlLength, nameof(AvatarUrl));
         Visibility = visibility;
     }
 
@@ -52,6 +56,19 @@ public sealed class Workspace : EntityBase
         if (visibility.HasValue)
             Visibility = visibility.Value;
 
+        LastModifiedBy = actorId;
+        Touch(now);
+    }
+
+    public void UpdateAvatar(
+        string? avatarUrl,
+        Guid actorId,
+        DateTimeOffset now)
+    {
+        ThrowIfDeleted();
+        DomainGuard.AgainstEmpty(actorId, "ActorId");
+
+        AvatarUrl = TextRules.NormalizeOptional(avatarUrl, MaxAvatarUrlLength, nameof(AvatarUrl));
         LastModifiedBy = actorId;
         Touch(now);
     }

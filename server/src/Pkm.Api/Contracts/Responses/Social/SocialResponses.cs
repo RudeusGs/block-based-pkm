@@ -56,6 +56,7 @@ public sealed record ProfileWorkspaceResponse(
     Guid Id,
     string Name,
     string? Description,
+    string? AvatarUrl,
     string Visibility,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);

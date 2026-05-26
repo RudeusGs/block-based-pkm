@@ -6,6 +6,7 @@ public sealed record WorkspaceDto(
     Guid Id,
     string Name,
     string? Description,
+    string? AvatarUrl,
     WorkspaceVisibility Visibility,
     Guid OwnerId,
     Guid? LastModifiedBy,

@@ -67,6 +67,7 @@ public static class SocialResponseMappings
             dto.Id,
             dto.Name,
             dto.Description,
+            dto.AvatarUrl,
             dto.Visibility.ToString(),
             dto.CreatedDate,
             dto.UpdatedDate);

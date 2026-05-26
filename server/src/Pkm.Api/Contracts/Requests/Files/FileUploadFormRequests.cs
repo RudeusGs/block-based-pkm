@@ -18,3 +18,8 @@ public sealed class UploadPageCoverImageFormRequest
     public IFormFile? File { get; init; }
     public long? ExpectedRevision { get; init; }
 }
+
+public sealed class UploadWorkspaceAvatarImageFormRequest
+{
+    public IFormFile? File { get; init; }
+}

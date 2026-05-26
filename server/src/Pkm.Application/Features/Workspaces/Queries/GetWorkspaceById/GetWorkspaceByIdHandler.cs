@@ -85,6 +85,7 @@ public sealed class GetWorkspaceByIdHandler : IQueryHandler<GetWorkspaceByIdQuer
             detail.Id,
             detail.Name,
             detail.Description,
+            detail.AvatarUrl,
             detail.Visibility,
             detail.OwnerId,
             detail.LastModifiedBy,

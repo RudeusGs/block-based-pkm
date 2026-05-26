@@ -117,6 +117,7 @@ public sealed class JoinPublicWorkspaceAsViewerHandler : ICommandHandler<JoinPub
             workspace.Id,
             workspace.Name,
             workspace.Description,
+            workspace.AvatarUrl,
             workspace.Visibility,
             workspace.OwnerId,
             workspace.LastModifiedBy,

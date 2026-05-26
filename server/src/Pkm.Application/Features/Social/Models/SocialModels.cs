@@ -37,6 +37,7 @@ public sealed record ProfileWorkspaceDto(
     Guid Id,
     string Name,
     string? Description,
+    string? AvatarUrl,
     WorkspaceVisibility Visibility,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);

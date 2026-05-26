@@ -144,6 +144,7 @@ public sealed class TransferWorkspaceOwnershipHandler : ICommandHandler<Transfer
             workspace.Id,
             workspace.Name,
             workspace.Description,
+            workspace.AvatarUrl,
             workspace.Visibility,
             workspace.OwnerId,
             workspace.LastModifiedBy,

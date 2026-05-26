@@ -19,6 +19,9 @@ internal sealed class WorkspaceConfiguration : IEntityTypeConfiguration<Workspac
         builder.Property(x => x.Description)
             .HasMaxLength(500);
 
+        builder.Property(x => x.AvatarUrl)
+            .HasMaxLength(2048);
+
         builder.Property(x => x.Visibility)
             .IsRequired()
             .HasConversion<string>()

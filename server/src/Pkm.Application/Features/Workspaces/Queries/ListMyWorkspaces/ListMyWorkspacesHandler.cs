@@ -116,6 +116,7 @@ public sealed class ListMyWorkspacesHandler : IQueryHandler<ListMyWorkspacesQuer
                 item.Id,
                 item.Name,
                 item.Description,
+                item.AvatarUrl,
                 item.Visibility,
                 item.OwnerId,
                 item.CreatedDate,

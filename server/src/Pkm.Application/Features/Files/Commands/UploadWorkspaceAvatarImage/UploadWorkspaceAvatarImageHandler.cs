@@ -5,65 +5,62 @@ using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
-using Pkm.Domain.Audit;
+using Pkm.Application.Features.Files.Services;
+using Pkm.Application.Features.Workspaces;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Application.Features.Workspaces.Policies;
+using Pkm.Domain.Audit;
 using Pkm.Domain.SharedKernel;
 using Pkm.Domain.Workspaces;
 
-namespace Pkm.Application.Features.Workspaces.Commands.UpdateWorkspace;
+namespace Pkm.Application.Features.Files.Commands.UploadWorkspaceAvatarImage;
 
-public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceCommand, WorkspaceDto>
+public sealed class UploadWorkspaceAvatarImageHandler : ICommandHandler<UploadWorkspaceAvatarImageCommand, WorkspaceDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IWorkspaceRepository _workspaceRepository;
     private readonly IWorkspaceMemberRepository _workspaceMemberRepository;
     private readonly IWorkspaceAccessEvaluator _workspaceAccessEvaluator;
+    private readonly IFileUploadApplicationService _fileUploadApplicationService;
     private readonly IUnitOfWork _unitOfWork;
     private readonly IClock _clock;
     private readonly IApplicationCache _cache;
     private readonly ICacheKeyFactory _cacheKeyFactory;
-    private readonly UpdateWorkspaceCommandValidator _validator;
     private readonly IActivityLogService _activityLogService;
 
-    public UpdateWorkspaceHandler(
+    public UploadWorkspaceAvatarImageHandler(
         ICurrentUser currentUser,
         IWorkspaceRepository workspaceRepository,
         IWorkspaceMemberRepository workspaceMemberRepository,
         IWorkspaceAccessEvaluator workspaceAccessEvaluator,
+        IFileUploadApplicationService fileUploadApplicationService,
         IUnitOfWork unitOfWork,
         IClock clock,
         IApplicationCache cache,
         ICacheKeyFactory cacheKeyFactory,
-        UpdateWorkspaceCommandValidator validator,
         IActivityLogService activityLogService)
     {
         _currentUser = currentUser;
         _workspaceRepository = workspaceRepository;
         _workspaceMemberRepository = workspaceMemberRepository;
         _workspaceAccessEvaluator = workspaceAccessEvaluator;
+        _fileUploadApplicationService = fileUploadApplicationService;
         _unitOfWork = unitOfWork;
         _clock = clock;
         _cache = cache;
         _cacheKeyFactory = cacheKeyFactory;
-        _validator = validator;
         _activityLogService = activityLogService;
     }
 
     public async Task<Result<WorkspaceDto>> HandleAsync(
-        UpdateWorkspaceCommand request,
+        UploadWorkspaceAvatarImageCommand request,
         CancellationToken cancellationToken)
     {
-        var validationErrors = _validator.Validate(request);
-        if (validationErrors.Count > 0)
-        {
-            return Result.Failure<WorkspaceDto>(WorkspaceErrors.InvalidUpdateRequest(validationErrors));
-        }
+        if (request.WorkspaceId == Guid.Empty)
+            return Result.Failure<WorkspaceDto>(WorkspaceErrors.InvalidWorkspaceId(request.WorkspaceId));
 
         if (!_currentUser.TryGetUserId(out var currentUserId))
-        {
             return Result.Failure<WorkspaceDto>(WorkspaceErrors.MissingUserContext);
-        }
 
         var access = await _workspaceAccessEvaluator.EvaluateAsync(
             request.WorkspaceId,
@@ -71,29 +68,37 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
             cancellationToken);
 
         if (!access.Exists)
-        {
             return Result.Failure<WorkspaceDto>(WorkspaceErrors.WorkspaceNotFound);
-        }
 
         if (!access.CanUpdateWorkspace)
-        {
             return Result.Failure<WorkspaceDto>(WorkspaceErrors.WorkspaceForbidden);
-        }
 
-        var workspace = await _workspaceRepository.GetByIdAsync(request.WorkspaceId, cancellationToken);
+        var workspace = await _workspaceRepository.GetByIdAsync(
+            request.WorkspaceId,
+            cancellationToken);
+
         if (workspace is null)
-        {
             return Result.Failure<WorkspaceDto>(WorkspaceErrors.WorkspaceNotFound);
-        }
+
+        var uploadResult = await _fileUploadApplicationService.UploadImageAsync(
+            new UploadImageInput(
+                currentUserId,
+                request.FileName,
+                request.ContentType,
+                request.SizeBytes,
+                request.Content,
+                "workspace-avatar"),
+            cancellationToken);
+
+        if (uploadResult.IsFailure)
+            return Result.Failure<WorkspaceDto>(uploadResult.Error);
 
         try
         {
-            workspace.UpdateInformation(
-                request.Name,
-                request.Description,
+            workspace.UpdateAvatar(
+                uploadResult.Value.PublicUrl,
                 currentUserId,
-                _clock.UtcNow,
-                request.Visibility);
+                _clock.UtcNow);
 
             _workspaceRepository.Update(workspace);
             await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -105,7 +110,7 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
                     ActivityAction.Update,
                     ActivityEntityType.Workspace,
                     workspace.Id,
-                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật workspace '{workspace.Name}'."),
+                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật ảnh đại diện workspace '{workspace.Name}'."),
                 cancellationToken);
 
             await _cache.RemoveAsync(
@@ -114,12 +119,7 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
 
             await InvalidateWorkspaceListVersionsAsync(workspace.Id, cancellationToken);
 
-            var member = await _workspaceRepository.GetMemberAsync(
-                request.WorkspaceId,
-                currentUserId,
-                cancellationToken);
-
-            var dto = new WorkspaceDto(
+            return Result.Success(new WorkspaceDto(
                 workspace.Id,
                 workspace.Name,
                 workspace.Description,
@@ -129,17 +129,15 @@ public sealed class UpdateWorkspaceHandler : ICommandHandler<UpdateWorkspaceComm
                 workspace.LastModifiedBy,
                 workspace.CreatedDate,
                 workspace.UpdatedDate,
-                member?.Role ?? (workspace.OwnerId == currentUserId ? WorkspaceRole.Owner : null),
+                access.Role ?? (workspace.OwnerId == currentUserId ? WorkspaceRole.Owner : null),
                 access.CanRead,
                 access.CanWrite,
-                access.CanManageMembers);
-
-            return Result.Success(dto);
+                access.CanManageMembers));
         }
         catch (DomainException ex)
         {
             return Result.Failure<WorkspaceDto>(new Error(
-                "Workspace.UpdateFailed",
+                "Workspace.UpdateAvatarFailed",
                 ex.Message,
                 ResultStatus.Unprocessable));
         }

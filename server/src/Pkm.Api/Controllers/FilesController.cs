@@ -6,6 +6,7 @@ using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Account;
 using Pkm.Api.Contracts.Responses.Files;
 using Pkm.Api.Contracts.Responses.Pages;
+using Pkm.Api.Contracts.Responses.Workspaces;
 using Pkm.Api.Mapping;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.UseCases;
@@ -13,8 +14,10 @@ using Pkm.Application.Features.Account.Models;
 using Pkm.Application.Features.Files.Commands.UploadImage;
 using Pkm.Application.Features.Files.Commands.UploadMyAvatarImage;
 using Pkm.Application.Features.Files.Commands.UploadPageCoverImage;
+using Pkm.Application.Features.Files.Commands.UploadWorkspaceAvatarImage;
 using Pkm.Application.Features.Files.Models;
 using Pkm.Application.Features.Pages.Models;
+using Pkm.Application.Features.Workspaces.Models;
 
 namespace Pkm.Api.Controllers;
 
@@ -120,6 +123,39 @@ public sealed class FilesController : BaseController
             stream);
 
         var result = await ExecuteAsync<UploadPageCoverImageCommand, PageDto>(command, cancellationToken);
+        return HandleResult(result, x => x.ToResponse());
+    }
+
+    [HttpPost("api/v1/workspaces/{workspaceId:guid}/avatar-image")]
+    [Consumes("multipart/form-data")]
+    [RequestSizeLimit(MaxRequestBodySizeBytes)]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceResponse>), 200)]
+    [ProducesResponseType(typeof(ApiResult), 400)]
+    [ProducesResponseType(typeof(ApiResult), 401)]
+    [ProducesResponseType(typeof(ApiResult), 403)]
+    [ProducesResponseType(typeof(ApiResult), 404)]
+    [ProducesResponseType(typeof(ApiResult), 413)]
+    [ProducesResponseType(typeof(ApiResult), 422)]
+    public async Task<ActionResult<ApiResult<WorkspaceResponse>>> UploadWorkspaceAvatarImage(
+        [FromRoute] Guid workspaceId,
+        [FromForm] UploadWorkspaceAvatarImageFormRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (!FileUploadRequestMapper.HasValidFile(request.File))
+            return BadRequest(FileUploadRequestMapper.CreateFileRequiredFailure<WorkspaceResponse>());
+
+        var file = request.File!;
+
+        await using var stream = file.OpenReadStream();
+
+        var command = new UploadWorkspaceAvatarImageCommand(
+            workspaceId,
+            file.FileName,
+            FileUploadRequestMapper.ResolveContentType(file),
+            file.Length,
+            stream);
+
+        var result = await ExecuteAsync<UploadWorkspaceAvatarImageCommand, WorkspaceDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 

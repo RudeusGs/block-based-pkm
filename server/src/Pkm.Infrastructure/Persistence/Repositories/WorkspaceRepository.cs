@@ -96,6 +96,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 x.Id,
                 x.Name,
                 x.Description,
+                x.AvatarUrl,
                 x.Visibility,
                 x.OwnerId,
                 x.LastModifiedBy,
@@ -133,6 +134,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 x.Workspace.Id,
                 x.Workspace.Name,
                 x.Workspace.Description,
+                x.Workspace.AvatarUrl,
                 x.Workspace.Visibility,
                 x.Workspace.OwnerId,
                 x.Workspace.CreatedDate,
@@ -175,6 +177,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 x.Id,
                 x.Name,
                 x.Description,
+                x.AvatarUrl,
                 x.Visibility,
                 x.CreatedDate,
                 x.UpdatedDate))
