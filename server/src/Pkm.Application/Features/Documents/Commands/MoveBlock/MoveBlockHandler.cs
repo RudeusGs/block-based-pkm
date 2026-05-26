@@ -1,8 +1,6 @@
 using System.Text.Json;
-using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
-using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
@@ -12,54 +10,35 @@ using Pkm.Application.Features.Documents.Services;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.SharedKernel;
-using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.MoveBlock;
 
 public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMutationDto>
 {
-    private readonly ICurrentUser _currentUser;
+    private readonly IDocumentMutationCoordinator _mutationCoordinator;
     private readonly IBlockReadRepository _blockReadRepository;
     private readonly IBlockWriteRepository _blockWriteRepository;
     private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
-    private readonly IPageRevisionRepository _pageRevisionRepository;
-    private readonly IBlockOperationRepository _blockOperationRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IClock _clock;
     private readonly IBlockOrderPlanner _blockOrderPlanner;
-    private readonly IDocumentRealtimePublisher _realtimePublisher;
-    private readonly IActivityLogService _activityLogService;
 
     public MoveBlockHandler(
-        ICurrentUser currentUser,
+        IDocumentMutationCoordinator mutationCoordinator,
         IBlockReadRepository blockReadRepository,
         IBlockWriteRepository blockWriteRepository,
         IPageWriteRepository pageWriteRepository,
         IDocumentAccessEvaluator documentAccessEvaluator,
         IBlockEditLeaseService blockEditLeaseService,
-        IPageRevisionRepository pageRevisionRepository,
-        IBlockOperationRepository blockOperationRepository,
-        IUnitOfWork unitOfWork,
-        IClock clock,
-        IBlockOrderPlanner blockOrderPlanner,
-        IDocumentRealtimePublisher realtimePublisher,
-        IActivityLogService activityLogService)
+        IBlockOrderPlanner blockOrderPlanner)
     {
-        _currentUser = currentUser;
+        _mutationCoordinator = mutationCoordinator;
         _blockReadRepository = blockReadRepository;
         _blockWriteRepository = blockWriteRepository;
         _pageWriteRepository = pageWriteRepository;
         _documentAccessEvaluator = documentAccessEvaluator;
         _blockEditLeaseService = blockEditLeaseService;
-        _pageRevisionRepository = pageRevisionRepository;
-        _blockOperationRepository = blockOperationRepository;
-        _unitOfWork = unitOfWork;
-        _clock = clock;
         _blockOrderPlanner = blockOrderPlanner;
-        _realtimePublisher = realtimePublisher;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -69,7 +48,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
         if (request.BlockId == Guid.Empty)
             return Result.Failure<BlockMutationDto>(DocumentErrors.InvalidBlockId);
 
-        if (!_currentUser.TryGetUserId(out var currentUserId))
+        if (!_mutationCoordinator.TryGetCurrentUserId(out var currentUserId))
             return Result.Failure<BlockMutationDto>(DocumentErrors.MissingUserContext);
 
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
@@ -124,7 +103,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
 
         try
         {
-            var now = _clock.UtcNow;
+            var now = _mutationCoordinator.UtcNow;
             var baseRevision = page.CurrentRevision;
             var oldParentBlockId = block.ParentBlockId;
             var oldOrderKey = block.OrderKey;
@@ -149,12 +128,12 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
 
             var appliedRevision = page.IncreaseRevision(currentUserId, now);
 
-            _pageRevisionRepository.Add(PageRevision.Create(
+            _mutationCoordinator.AddRevision(
                 page.Id,
                 appliedRevision,
                 currentUserId,
                 now,
-                "Block moved"));
+                "Block moved");
 
             var payloadJson = JsonSerializer.Serialize(new
             {
@@ -164,7 +143,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
                 editorSessionId = request.EditorSessionId
             });
 
-            _blockOperationRepository.Add(BlockOperation.Create(
+            _mutationCoordinator.AddBlockOperation(
                 page.Id,
                 block.Id,
                 BlockOperationType.Move,
@@ -173,9 +152,9 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
                 appliedRevision,
                 now,
                 payloadJson,
-                "Move block"));
+                "Move block");
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _mutationCoordinator.SaveChangesAsync(cancellationToken);
 
             var dto = new BlockMutationDto(
                 page.Id,
@@ -183,14 +162,14 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
                 appliedRevision,
                 block.ToDto());
 
-            await _activityLogService.RecordAsync(
+            await _mutationCoordinator.RecordActivityAsync(
                 new ActivityLogRequest(
                     page.WorkspaceId,
                     currentUserId,
                     ActivityAction.Move,
                     ActivityEntityType.Block,
                     block.Id,
-                    $"{_currentUser.UserName ?? "Có người"} đã di chuyển block.",
+                    $"{_mutationCoordinator.ActorDisplayName} đã di chuyển block.",
                     ActivityLogMetadata.Serialize(new
                     {
                         pageId = page.Id,
@@ -203,7 +182,7 @@ public sealed class MoveBlockHandler : ICommandHandler<MoveBlockCommand, BlockMu
                     })),
                 cancellationToken);
 
-            await _realtimePublisher.PublishToPageAsync(
+            await _mutationCoordinator.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(
                     EventName: "BlockMoved",
                     WorkspaceId: access.WorkspaceId,

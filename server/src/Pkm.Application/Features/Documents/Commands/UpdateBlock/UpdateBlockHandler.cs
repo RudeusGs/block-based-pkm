@@ -1,8 +1,6 @@
 using System.Text.Json;
-using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
-using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
@@ -12,51 +10,32 @@ using Pkm.Application.Features.Documents.Services;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.SharedKernel;
-using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.UpdateBlock;
 
 public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, BlockMutationDto>
 {
-    private readonly ICurrentUser _currentUser;
+    private readonly IDocumentMutationCoordinator _mutationCoordinator;
     private readonly IBlockWriteRepository _blockWriteRepository;
     private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
-    private readonly IPageRevisionRepository _pageRevisionRepository;
-    private readonly IBlockOperationRepository _blockOperationRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IClock _clock;
-    private readonly IDocumentRealtimePublisher _realtimePublisher;
     private readonly IBlockPayloadValidator _blockPayloadValidator;
-    private readonly IActivityLogService _activityLogService;
 
     public UpdateBlockHandler(
-        ICurrentUser currentUser,
+        IDocumentMutationCoordinator mutationCoordinator,
         IBlockWriteRepository blockWriteRepository,
         IPageWriteRepository pageWriteRepository,
         IDocumentAccessEvaluator documentAccessEvaluator,
         IBlockEditLeaseService blockEditLeaseService,
-        IPageRevisionRepository pageRevisionRepository,
-        IBlockOperationRepository blockOperationRepository,
-        IUnitOfWork unitOfWork,
-        IClock clock,
-        IDocumentRealtimePublisher realtimePublisher,
-        IBlockPayloadValidator blockPayloadValidator,
-        IActivityLogService activityLogService)
+        IBlockPayloadValidator blockPayloadValidator)
     {
-        _currentUser = currentUser;
+        _mutationCoordinator = mutationCoordinator;
         _blockWriteRepository = blockWriteRepository;
         _pageWriteRepository = pageWriteRepository;
         _documentAccessEvaluator = documentAccessEvaluator;
         _blockEditLeaseService = blockEditLeaseService;
-        _pageRevisionRepository = pageRevisionRepository;
-        _blockOperationRepository = blockOperationRepository;
-        _unitOfWork = unitOfWork;
-        _clock = clock;
-        _realtimePublisher = realtimePublisher;
         _blockPayloadValidator = blockPayloadValidator;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -66,7 +45,7 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
         if (request.BlockId == Guid.Empty)
             return Result.Failure<BlockMutationDto>(DocumentErrors.InvalidBlockId);
 
-        if (!_currentUser.TryGetUserId(out var currentUserId))
+        if (!_mutationCoordinator.TryGetCurrentUserId(out var currentUserId))
             return Result.Failure<BlockMutationDto>(DocumentErrors.MissingUserContext);
 
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
@@ -111,7 +90,7 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
 
         try
         {
-            var now = _clock.UtcNow;
+            var now = _mutationCoordinator.UtcNow;
             var baseRevision = page.CurrentRevision;
 
             if (!string.IsNullOrWhiteSpace(request.Type) && request.Type != block.Type.Value)
@@ -144,12 +123,12 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
 
             var appliedRevision = page.IncreaseRevision(currentUserId, now);
 
-            _pageRevisionRepository.Add(PageRevision.Create(
+            _mutationCoordinator.AddRevision(
                 page.Id,
                 appliedRevision,
                 currentUserId,
                 now,
-                "Block updated"));
+                "Block updated");
 
             var payloadJson = JsonSerializer.Serialize(new
             {
@@ -163,7 +142,7 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
                 editorSessionId = request.EditorSessionId
             });
 
-            _blockOperationRepository.Add(BlockOperation.Create(
+            _mutationCoordinator.AddBlockOperation(
                 page.Id,
                 block.Id,
                 operationType,
@@ -172,9 +151,9 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
                 appliedRevision,
                 now,
                 payloadJson,
-                "Update block"));
+                "Update block");
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _mutationCoordinator.SaveChangesAsync(cancellationToken);
 
             var dto = new BlockMutationDto(
                 page.Id,
@@ -182,14 +161,14 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
                 appliedRevision,
                 block.ToDto());
 
-            await _activityLogService.RecordAsync(
+            await _mutationCoordinator.RecordActivityAsync(
                 new ActivityLogRequest(
                     page.WorkspaceId,
                     currentUserId,
                     ActivityAction.Update,
                     ActivityEntityType.Block,
                     block.Id,
-                    $"{_currentUser.UserName ?? "Có người"} đã cập nhật block {block.Type.Value}.",
+                    $"{_mutationCoordinator.ActorDisplayName} đã cập nhật block {block.Type.Value}.",
                     ActivityLogMetadata.Serialize(new
                     {
                         pageId = page.Id,
@@ -203,7 +182,7 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
                     })),
                 cancellationToken);
 
-            await _realtimePublisher.PublishToPageAsync(
+            await _mutationCoordinator.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(
                     EventName: "BlockUpdated",
                     WorkspaceId: access.WorkspaceId,
@@ -222,7 +201,7 @@ public sealed class UpdateBlockHandler : ICommandHandler<UpdateBlockCommand, Blo
             return Result.Failure<BlockMutationDto>(new Error(
                 "Document.UpdateBlockFailed",
                 ex.Message,
-            ResultStatus.Unprocessable));
+                ResultStatus.Unprocessable));
         }
     }
 

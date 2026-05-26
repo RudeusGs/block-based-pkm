@@ -1,8 +1,6 @@
 using System.Text.Json;
-using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
-using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
@@ -12,54 +10,35 @@ using Pkm.Application.Features.Pages.Policies;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
 using Pkm.Domain.SharedKernel;
-using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.CreateBlock;
 
 public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, BlockMutationDto>
 {
-    private readonly ICurrentUser _currentUser;
+    private readonly IDocumentMutationCoordinator _mutationCoordinator;
     private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IBlockReadRepository _blockReadRepository;
     private readonly IBlockWriteRepository _blockWriteRepository;
     private readonly IPageAccessEvaluator _pageAccessEvaluator;
-    private readonly IPageRevisionRepository _pageRevisionRepository;
-    private readonly IBlockOperationRepository _blockOperationRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IClock _clock;
     private readonly IBlockOrderPlanner _blockOrderPlanner;
-    private readonly IDocumentRealtimePublisher _realtimePublisher;
     private readonly IBlockPayloadValidator _blockPayloadValidator;
-    private readonly IActivityLogService _activityLogService;
 
     public CreateBlockHandler(
-        ICurrentUser currentUser,
+        IDocumentMutationCoordinator mutationCoordinator,
         IPageWriteRepository pageWriteRepository,
         IBlockReadRepository blockReadRepository,
         IBlockWriteRepository blockWriteRepository,
         IPageAccessEvaluator pageAccessEvaluator,
-        IPageRevisionRepository pageRevisionRepository,
-        IBlockOperationRepository blockOperationRepository,
-        IUnitOfWork unitOfWork,
-        IClock clock,
         IBlockOrderPlanner blockOrderPlanner,
-        IDocumentRealtimePublisher realtimePublisher,
-        IBlockPayloadValidator blockPayloadValidator,
-        IActivityLogService activityLogService)
+        IBlockPayloadValidator blockPayloadValidator)
     {
-        _currentUser = currentUser;
+        _mutationCoordinator = mutationCoordinator;
         _pageWriteRepository = pageWriteRepository;
         _blockReadRepository = blockReadRepository;
         _blockWriteRepository = blockWriteRepository;
         _pageAccessEvaluator = pageAccessEvaluator;
-        _pageRevisionRepository = pageRevisionRepository;
-        _blockOperationRepository = blockOperationRepository;
-        _unitOfWork = unitOfWork;
-        _clock = clock;
         _blockOrderPlanner = blockOrderPlanner;
-        _realtimePublisher = realtimePublisher;
         _blockPayloadValidator = blockPayloadValidator;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -69,7 +48,7 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
         if (request.PageId == Guid.Empty)
             return Result.Failure<BlockMutationDto>(DocumentErrors.InvalidPageId);
 
-        if (!_currentUser.TryGetUserId(out var currentUserId))
+        if (!_mutationCoordinator.TryGetCurrentUserId(out var currentUserId))
             return Result.Failure<BlockMutationDto>(DocumentErrors.MissingUserContext);
 
         var pageAccess = await _pageAccessEvaluator.EvaluateAsync(
@@ -116,7 +95,7 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
 
         try
         {
-            var now = _clock.UtcNow;
+            var now = _mutationCoordinator.UtcNow;
             var baseRevision = page.CurrentRevision;
             var blockId = Guid.NewGuid();
 
@@ -148,12 +127,12 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
 
             var appliedRevision = page.IncreaseRevision(currentUserId, now);
 
-            _pageRevisionRepository.Add(PageRevision.Create(
+            _mutationCoordinator.AddRevision(
                 page.Id,
                 appliedRevision,
                 currentUserId,
                 now,
-                "Block created"));
+                "Block created");
 
             var payloadJson = JsonSerializer.Serialize(new
             {
@@ -166,7 +145,7 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
                 orderKey = block.OrderKey
             });
 
-            _blockOperationRepository.Add(BlockOperation.Create(
+            _mutationCoordinator.AddBlockOperation(
                 page.Id,
                 block.Id,
                 BlockOperationType.Create,
@@ -175,9 +154,9 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
                 appliedRevision,
                 now,
                 payloadJson,
-                "Create block"));
+                "Create block");
 
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            await _mutationCoordinator.SaveChangesAsync(cancellationToken);
 
             var dto = new BlockMutationDto(
                 page.Id,
@@ -185,14 +164,14 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
                 appliedRevision,
                 block.ToDto());
 
-            await _activityLogService.RecordAsync(
+            await _mutationCoordinator.RecordActivityAsync(
                 new ActivityLogRequest(
                     page.WorkspaceId,
                     currentUserId,
                     ActivityAction.Create,
                     ActivityEntityType.Block,
                     block.Id,
-                    $"{_currentUser.UserName ?? "Có người"} đã tạo block {block.Type.Value}.",
+                    $"{_mutationCoordinator.ActorDisplayName} đã tạo block {block.Type.Value}.",
                     ActivityLogMetadata.Serialize(new
                     {
                         pageId = page.Id,
@@ -203,7 +182,7 @@ public sealed class CreateBlockHandler : ICommandHandler<CreateBlockCommand, Blo
                     })),
                 cancellationToken);
 
-            await _realtimePublisher.PublishToPageAsync(
+            await _mutationCoordinator.PublishToPageAsync(
                 new DocumentRealtimeEnvelope(
                     EventName: "BlockCreated",
                     WorkspaceId: pageAccess.WorkspaceId,

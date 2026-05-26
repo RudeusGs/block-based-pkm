@@ -1,8 +1,6 @@
 using System.Text.Json;
-using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
 using Pkm.Application.Common.Abstractions.Realtime;
-using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Activity.Services;
@@ -11,48 +9,29 @@ using Pkm.Application.Features.Documents.Policies;
 using Pkm.Application.Features.Documents.Services;
 using Pkm.Domain.Audit;
 using Pkm.Domain.Blocks;
-using Pkm.Domain.Pages;
 
 namespace Pkm.Application.Features.Documents.Commands.DeleteBlock;
 
 public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, BlockMutationDto>
 {
-    private readonly ICurrentUser _currentUser;
+    private readonly IDocumentMutationCoordinator _mutationCoordinator;
     private readonly IBlockWriteRepository _blockWriteRepository;
     private readonly IPageWriteRepository _pageWriteRepository;
     private readonly IDocumentAccessEvaluator _documentAccessEvaluator;
     private readonly IBlockEditLeaseService _blockEditLeaseService;
-    private readonly IPageRevisionRepository _pageRevisionRepository;
-    private readonly IBlockOperationRepository _blockOperationRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly IClock _clock;
-    private readonly IDocumentRealtimePublisher _realtimePublisher;
-    private readonly IActivityLogService _activityLogService;
 
     public DeleteBlockHandler(
-        ICurrentUser currentUser,
+        IDocumentMutationCoordinator mutationCoordinator,
         IBlockWriteRepository blockWriteRepository,
         IPageWriteRepository pageWriteRepository,
         IDocumentAccessEvaluator documentAccessEvaluator,
-        IBlockEditLeaseService blockEditLeaseService,
-        IPageRevisionRepository pageRevisionRepository,
-        IBlockOperationRepository blockOperationRepository,
-        IUnitOfWork unitOfWork,
-        IClock clock,
-        IDocumentRealtimePublisher realtimePublisher,
-        IActivityLogService activityLogService)
+        IBlockEditLeaseService blockEditLeaseService)
     {
-        _currentUser = currentUser;
+        _mutationCoordinator = mutationCoordinator;
         _blockWriteRepository = blockWriteRepository;
         _pageWriteRepository = pageWriteRepository;
         _documentAccessEvaluator = documentAccessEvaluator;
         _blockEditLeaseService = blockEditLeaseService;
-        _pageRevisionRepository = pageRevisionRepository;
-        _blockOperationRepository = blockOperationRepository;
-        _unitOfWork = unitOfWork;
-        _clock = clock;
-        _realtimePublisher = realtimePublisher;
-        _activityLogService = activityLogService;
     }
 
     public async Task<Result<BlockMutationDto>> HandleAsync(
@@ -62,7 +41,7 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
         if (request.BlockId == Guid.Empty)
             return Result.Failure<BlockMutationDto>(DocumentErrors.InvalidBlockId);
 
-        if (!_currentUser.TryGetUserId(out var currentUserId))
+        if (!_mutationCoordinator.TryGetCurrentUserId(out var currentUserId))
             return Result.Failure<BlockMutationDto>(DocumentErrors.MissingUserContext);
 
         var access = await _documentAccessEvaluator.EvaluateByBlockAsync(
@@ -100,7 +79,7 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
         var allBlocks = await _blockWriteRepository.ListByPageForUpdateAsync(rootBlock.PageId, cancellationToken);
         var subtree = CollectSubtree(rootBlock.Id, allBlocks);
 
-        var now = _clock.UtcNow;
+        var now = _mutationCoordinator.UtcNow;
         var baseRevision = page.CurrentRevision;
 
         foreach (var block in subtree)
@@ -110,12 +89,12 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
 
         var appliedRevision = page.IncreaseRevision(currentUserId, now);
 
-        _pageRevisionRepository.Add(PageRevision.Create(
+        _mutationCoordinator.AddRevision(
             page.Id,
             appliedRevision,
             currentUserId,
             now,
-            "Block subtree deleted"));
+            "Block subtree deleted");
 
         var deletedIds = subtree.Select(x => x.Id).ToArray();
 
@@ -127,7 +106,7 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
             editorSessionId = request.EditorSessionId
         });
 
-        _blockOperationRepository.Add(BlockOperation.Create(
+        _mutationCoordinator.AddBlockOperation(
             page.Id,
             rootBlock.Id,
             BlockOperationType.Delete,
@@ -136,9 +115,9 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
             appliedRevision,
             now,
             payloadJson,
-            request.Note ?? "Delete block subtree"));
+            request.Note ?? "Delete block subtree");
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        await _mutationCoordinator.SaveChangesAsync(cancellationToken);
 
         var dto = new BlockMutationDto(
             page.Id,
@@ -146,14 +125,14 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
             appliedRevision,
             null);
 
-        await _activityLogService.RecordAsync(
+        await _mutationCoordinator.RecordActivityAsync(
             new ActivityLogRequest(
                 page.WorkspaceId,
                 currentUserId,
                 ActivityAction.Delete,
                 ActivityEntityType.Block,
                 rootBlock.Id,
-                $"{_currentUser.UserName ?? "Có người"} đã xóa block.",
+                $"{_mutationCoordinator.ActorDisplayName} đã xóa block.",
                 ActivityLogMetadata.Serialize(new
                 {
                     pageId = page.Id,
@@ -165,7 +144,7 @@ public sealed class DeleteBlockHandler : ICommandHandler<DeleteBlockCommand, Blo
                 })),
             cancellationToken);
 
-        await _realtimePublisher.PublishToPageAsync(
+        await _mutationCoordinator.PublishToPageAsync(
             new DocumentRealtimeEnvelope(
                 EventName: "BlockDeleted",
                 WorkspaceId: access.WorkspaceId,

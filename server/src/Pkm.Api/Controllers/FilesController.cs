@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Files;
-using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Account;
 using Pkm.Api.Contracts.Responses.Files;
 using Pkm.Api.Contracts.Responses.Pages;

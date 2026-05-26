@@ -48,6 +48,7 @@ public static class ApplicationServiceCollection
         services.AddScoped<IFileUploadApplicationService, FileUploadApplicationService>();
         services.AddScoped<IBestEffortCache, BestEffortCache>();
 
+        services.AddScoped<IDocumentMutationCoordinator, DocumentMutationCoordinator>();
         services.AddScoped<IBlockPayloadValidator, BlockPayloadValidator>();
         services.AddScoped<IBlockOrderPlanner, BlockOrderPlanner>();
         services.AddSingleton<IOrderKeyGenerator, LexicographicOrderKeyGenerator>();

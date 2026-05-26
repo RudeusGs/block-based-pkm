@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Messaging;
 using Pkm.Api.Contracts.Responses.Messaging;
-using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Workspaces;
 using Pkm.Api.Mapping;
 using Pkm.Application.Common.Abstractions.Authentication;

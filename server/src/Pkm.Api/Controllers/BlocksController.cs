@@ -2,7 +2,6 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Pkm.Api.Contracts.Common;
 using Pkm.Api.Contracts.Requests.Blocks;
-using Pkm.Api.Contracts.Responses;
 using Pkm.Api.Contracts.Responses.Blocks;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
