@@ -20,6 +20,14 @@ public static class SocialResponseMappings
             dto.IsCurrentUser,
             dto.FriendshipStatus);
 
+    public static UserSearchResultPagedResultResponse ToResponse(this UserSearchResultPagedResultDto dto)
+        => new(
+            dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
+
     public static FriendRequestResponse ToResponse(this FriendRequestDto dto)
         => new(
             dto.Id,
@@ -30,6 +38,14 @@ public static class SocialResponseMappings
             dto.CreatedDate,
             dto.RespondedAtUtc);
 
+    public static FriendRequestPagedResultResponse ToResponse(this FriendRequestPagedResultDto dto)
+        => new(
+            dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
+
     public static FriendResponse ToResponse(this FriendDto dto)
         => new(
             dto.UserId,
@@ -37,6 +53,14 @@ public static class SocialResponseMappings
             dto.FullName,
             dto.AvatarUrl,
             dto.FriendsSinceUtc);
+
+    public static FriendPagedResultResponse ToResponse(this FriendPagedResultDto dto)
+        => new(
+            dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
 
     public static ProfileWorkspaceResponse ToResponse(this ProfileWorkspaceDto dto)
         => new(
@@ -58,6 +82,10 @@ public static class SocialResponseMappings
             dto.FriendshipStatus,
             dto.FriendCount,
             dto.Workspaces.Select(x => x.ToResponse()).ToArray(),
+            dto.WorkspacePageNumber,
+            dto.WorkspacePageSize,
+            dto.WorkspaceTotalCount,
+            dto.WorkspaceTotalPages,
             dto.CreatedDate,
             dto.UpdatedDate);
 }

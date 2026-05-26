@@ -138,10 +138,12 @@ public sealed class BlocksController : BaseController
     [ProducesResponseType(typeof(ApiResult), 404)]
     public async Task<ActionResult<ApiResult<PageDocumentResponse>>> GetByPage(
         [FromRoute] Guid pageId,
-        CancellationToken cancellationToken)
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 50,
+        CancellationToken cancellationToken = default)
     {
         var result = await QueryAsync<ListPageBlocksQuery, PageDocumentDto>(
-            new ListPageBlocksQuery(pageId),
+            new ListPageBlocksQuery(pageId, pageNumber, pageSize),
             cancellationToken);
 
         return HandleResult(result, x => x.ToResponse());

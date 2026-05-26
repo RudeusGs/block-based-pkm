@@ -126,18 +126,20 @@ public sealed class WorkspacesController : BaseController
     }
 
     [HttpGet("{workspaceId:guid}/members")]
-    [ProducesResponseType(typeof(ApiResult<IReadOnlyList<WorkspaceMemberResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<WorkspaceMemberPagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 403)]
     [ProducesResponseType(typeof(ApiResult), 404)]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<WorkspaceMemberResponse>>>> ListMembers(
+    public async Task<ActionResult<ApiResult<WorkspaceMemberPagedResultResponse>>> ListMembers(
         [FromRoute] Guid workspaceId,
-        CancellationToken cancellationToken)
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync<ListWorkspaceMembersQuery, IReadOnlyList<WorkspaceMemberDto>>(
-            new ListWorkspaceMembersQuery(workspaceId),
+        var result = await QueryAsync<ListWorkspaceMembersQuery, WorkspaceMemberPagedResultDto>(
+            new ListWorkspaceMembersQuery(workspaceId, pageNumber, pageSize),
             cancellationToken);
 
-        return HandleResult(result, x => (IReadOnlyList<WorkspaceMemberResponse>)x.Select(y => y.ToResponse()).ToArray());
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpPost("{workspaceId:guid}/members")]

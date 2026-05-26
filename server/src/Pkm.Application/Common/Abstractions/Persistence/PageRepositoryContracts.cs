@@ -23,6 +23,16 @@ public interface IPageReadRepository
         Guid parentPageId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Page>> ListSubPagesAsync(
+        Guid parentPageId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountSubPagesAsync(
+        Guid parentPageId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<Page>> ListArchivedByWorkspaceAsync(
         Guid workspaceId,
         int pageNumber,

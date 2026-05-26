@@ -27,12 +27,35 @@ internal sealed class BlockRepository : IBlockReadRepository, IBlockWriteReposit
         Guid pageId,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.Blocks
-            .AsNoTracking()
-            .Where(x => x.PageId == pageId && !x.IsDeleted)
+        return await ApplyPageFilter(pageId)
             .OrderBy(x => x.ParentBlockId)
             .ThenBy(x => x.OrderKey)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Block>> ListByPageAsync(
+        Guid pageId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        pageSize = pageSize <= 0 ? 50 : Math.Min(pageSize, 200);
+
+        return await ApplyPageFilter(pageId)
+            .OrderBy(x => x.ParentBlockId)
+            .ThenBy(x => x.OrderKey)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountByPageAsync(
+        Guid pageId,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplyPageFilter(pageId)
+            .CountAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<Block>> ListByPageForUpdateAsync(
@@ -116,5 +139,12 @@ internal sealed class BlockRepository : IBlockReadRepository, IBlockWriteReposit
             .OrderBy(x => x.OrderKey)
             .ToListAsync(cancellationToken);
     }
+    private IQueryable<Block> ApplyPageFilter(Guid pageId)
+    {
+        return _dataContext.Blocks
+            .AsNoTracking()
+            .Where(x => x.PageId == pageId && !x.IsDeleted);
+    }
+
     public void Add(Block block) => _dataContext.Blocks.Add(block);
 }

@@ -9,7 +9,7 @@ using Pkm.Application.Features.Social.Models;
 namespace Pkm.Application.Features.Social.Queries;
 
 public sealed class ListFriendsHandler
-    : IQueryHandler<ListFriendsQuery, IReadOnlyList<FriendDto>>
+    : IQueryHandler<ListFriendsQuery, FriendPagedResultDto>
 {
     private static readonly TimeSpan ListCacheTtl = TimeSpan.FromMinutes(2);
 
@@ -30,19 +30,20 @@ public sealed class ListFriendsHandler
         _cacheKeyFactory = cacheKeyFactory;
     }
 
-    public async Task<Result<IReadOnlyList<FriendDto>>> HandleAsync(
+    public async Task<Result<FriendPagedResultDto>> HandleAsync(
         ListFriendsQuery query,
         CancellationToken cancellationToken = default)
     {
         if (!_currentUser.TryGetUserId(out var currentUserId))
-            return Result.Failure<IReadOnlyList<FriendDto>>(SocialErrors.MissingUserContext);
+            return Result.Failure<FriendPagedResultDto>(SocialErrors.MissingUserContext);
 
         var page = PageRequest.Normalize(query.PageNumber, query.PageSize);
         var version = await _cache.GetAsync<string>(
             SocialCacheKeys.FriendListVersion(_cacheKeyFactory, currentUserId),
             cancellationToken) ?? "1";
+
         var cacheKey = SocialCacheKeys.FriendList(_cacheKeyFactory, currentUserId, page.PageNumber, page.PageSize, version);
-        var cached = await _cache.GetAsync<IReadOnlyList<FriendDto>>(cacheKey, cancellationToken);
+        var cached = await _cache.GetAsync<FriendPagedResultDto>(cacheKey, cancellationToken);
         if (cached is not null)
             return Result.Success(cached);
 
@@ -52,7 +53,18 @@ public sealed class ListFriendsHandler
             page.PageSize,
             cancellationToken);
 
-        await _cache.SetAsync(cacheKey, friends, ListCacheTtl, cancellationToken);
-        return Result.Success(friends);
+        var totalCount = await _friendshipRepository.CountFriendsAsync(
+            currentUserId,
+            cancellationToken);
+
+        var dto = new FriendPagedResultDto(
+            friends,
+            page.PageNumber,
+            page.PageSize,
+            totalCount,
+            PageRequest.CalculateTotalPages(totalCount, page.PageSize));
+
+        await _cache.SetAsync(cacheKey, dto, ListCacheTtl, cancellationToken);
+        return Result.Success(dto);
     }
 }

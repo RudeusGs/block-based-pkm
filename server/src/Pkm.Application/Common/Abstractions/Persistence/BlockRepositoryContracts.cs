@@ -11,6 +11,16 @@ public interface IBlockReadRepository
         Guid pageId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<Block>> ListByPageAsync(
+        Guid pageId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountByPageAsync(
+        Guid pageId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> IsDescendantOrSelfAsync(
         Guid blockId,
         Guid candidateParentBlockId,

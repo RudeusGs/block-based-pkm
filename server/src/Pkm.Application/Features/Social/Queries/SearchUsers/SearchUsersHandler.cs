@@ -9,7 +9,7 @@ using Pkm.Application.Features.Social.Models;
 namespace Pkm.Application.Features.Social.Queries;
 
 public sealed class SearchUsersHandler
-    : IQueryHandler<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>
+    : IQueryHandler<SearchUsersQuery, UserSearchResultPagedResultDto>
 {
     private static readonly TimeSpan SearchCacheTtl = TimeSpan.FromSeconds(20);
 
@@ -30,16 +30,16 @@ public sealed class SearchUsersHandler
         _cacheKeyFactory = cacheKeyFactory;
     }
 
-    public async Task<Result<IReadOnlyList<UserSearchResultDto>>> HandleAsync(
+    public async Task<Result<UserSearchResultPagedResultDto>> HandleAsync(
         SearchUsersQuery query,
         CancellationToken cancellationToken = default)
     {
         if (!_currentUser.TryGetUserId(out var currentUserId))
-            return Result.Failure<IReadOnlyList<UserSearchResultDto>>(SocialErrors.MissingUserContext);
+            return Result.Failure<UserSearchResultPagedResultDto>(SocialErrors.MissingUserContext);
 
         var normalizedKeyword = (query.Keyword ?? string.Empty).Trim();
         if (normalizedKeyword.Length < 2)
-            return Result.Failure<IReadOnlyList<UserSearchResultDto>>(
+            return Result.Failure<UserSearchResultPagedResultDto>(
                 SocialErrors.InvalidRequest(new[] { "Từ khóa tìm kiếm phải có ít nhất 2 ký tự." }));
 
         var page = PageRequest.Normalize(query.PageNumber, query.PageSize);
@@ -49,7 +49,8 @@ public sealed class SearchUsersHandler
             normalizedKeyword,
             page.PageNumber,
             page.PageSize);
-        var cached = await _cache.GetAsync<IReadOnlyList<UserSearchResultDto>>(cacheKey, cancellationToken);
+
+        var cached = await _cache.GetAsync<UserSearchResultPagedResultDto>(cacheKey, cancellationToken);
         if (cached is not null)
             return Result.Success(cached);
 
@@ -60,8 +61,19 @@ public sealed class SearchUsersHandler
             page.PageSize,
             cancellationToken);
 
-        await _cache.SetAsync(cacheKey, items, SearchCacheTtl, cancellationToken);
-        return Result.Success(items);
-    }
+        var totalCount = await _friendshipRepository.CountSearchUsersAsync(
+            currentUserId,
+            normalizedKeyword,
+            cancellationToken);
 
+        var dto = new UserSearchResultPagedResultDto(
+            items,
+            page.PageNumber,
+            page.PageSize,
+            totalCount,
+            PageRequest.CalculateTotalPages(totalCount, page.PageSize));
+
+        await _cache.SetAsync(cacheKey, dto, SearchCacheTtl, cancellationToken);
+        return Result.Success(dto);
+    }
 }

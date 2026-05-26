@@ -51,5 +51,31 @@ public sealed record UserProfilePageDto(
     string FriendshipStatus,
     int FriendCount,
     IReadOnlyList<ProfileWorkspaceDto> Workspaces,
+    int WorkspacePageNumber,
+    int WorkspacePageSize,
+    int WorkspaceTotalCount,
+    int WorkspaceTotalPages,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);
+
+public sealed record UserSearchResultPagedResultDto(
+    IReadOnlyList<UserSearchResultDto> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+
+public sealed record FriendRequestPagedResultDto(
+    IReadOnlyList<FriendRequestDto> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+
+public sealed record FriendPagedResultDto(
+    IReadOnlyList<FriendDto> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+

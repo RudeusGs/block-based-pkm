@@ -1,5 +1,6 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Pagination;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Documents.Models;
@@ -9,6 +10,9 @@ namespace Pkm.Application.Features.Documents.Queries.ListPageBlocks;
 
 public sealed class ListPageBlocksHandler : IQueryHandler<ListPageBlocksQuery, PageDocumentDto>
 {
+    private const int DefaultBlockPageSize = 50;
+    private const int MaxBlockPageSize = 200;
+
     private readonly ICurrentUser _currentUser;
     private readonly IPageReadRepository _pageRepository;
     private readonly IBlockReadRepository _blockRepository;
@@ -47,15 +51,29 @@ public sealed class ListPageBlocksHandler : IQueryHandler<ListPageBlocksQuery, P
         if (!access.CanRead)
             return Result.Failure<PageDocumentDto>(DocumentErrors.PageForbidden);
 
-        var page = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
-        if (page is null)
+        var pageEntity = await _pageRepository.GetByIdAsync(request.PageId, cancellationToken);
+        if (pageEntity is null)
             return Result.Failure<PageDocumentDto>(DocumentErrors.PageNotFound);
 
-        var blocks = await _blockRepository.ListByPageAsync(request.PageId, cancellationToken);
+        var page = PageRequest.Normalize(request.PageNumber, request.PageSize, DefaultBlockPageSize, MaxBlockPageSize);
+
+        var blocks = await _blockRepository.ListByPageAsync(
+            request.PageId,
+            page.PageNumber,
+            page.PageSize,
+            cancellationToken);
+
+        var totalCount = await _blockRepository.CountByPageAsync(
+            request.PageId,
+            cancellationToken);
 
         return Result.Success(new PageDocumentDto(
-            page.Id,
-            page.CurrentRevision,
-            blocks.Select(x => x.ToDto()).ToArray()));
+            pageEntity.Id,
+            pageEntity.CurrentRevision,
+            blocks.Select(x => x.ToDto()).ToArray(),
+            page.PageNumber,
+            page.PageSize,
+            totalCount,
+            PageRequest.CalculateTotalPages(totalCount, page.PageSize)));
     }
 }

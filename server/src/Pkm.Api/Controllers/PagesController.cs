@@ -153,20 +153,22 @@ public sealed class PagesController : BaseController
     }
 
     [HttpGet("api/v1/pages/{pageId:guid}/subpages")]
-    [ProducesResponseType(typeof(ApiResult<IReadOnlyList<PageResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<PagePagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 400)]
     [ProducesResponseType(typeof(ApiResult), 401)]
     [ProducesResponseType(typeof(ApiResult), 403)]
     [ProducesResponseType(typeof(ApiResult), 404)]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<PageResponse>>>> GetSubPages(
+    public async Task<ActionResult<ApiResult<PagePagedResultResponse>>> GetSubPages(
         [FromRoute] Guid pageId,
-        CancellationToken cancellationToken)
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync<ListSubPagesQuery, IReadOnlyList<PageDto>>(
-            new ListSubPagesQuery(pageId),
+        var result = await QueryAsync<ListSubPagesQuery, PagePagedResultDto>(
+            new ListSubPagesQuery(pageId, pageNumber, pageSize),
             cancellationToken);
 
-        return HandleResult(result, x => (IReadOnlyList<PageResponse>)x.Select(y => y.ToResponse()).ToArray());
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpGet("api/v1/workspaces/{workspaceId:guid}/pages:search")]

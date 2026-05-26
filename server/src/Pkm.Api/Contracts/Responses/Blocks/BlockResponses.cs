@@ -33,4 +33,8 @@ public sealed record BlockMutationResponse(
 public sealed record PageDocumentResponse(
     Guid PageId,
     long CurrentRevision,
-    IReadOnlyList<BlockResponse> Blocks);
+    IReadOnlyList<BlockResponse> Blocks,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);

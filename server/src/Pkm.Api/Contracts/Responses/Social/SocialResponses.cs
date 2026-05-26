@@ -30,6 +30,28 @@ public sealed record FriendResponse(
     string? AvatarUrl,
     DateTimeOffset FriendsSinceUtc);
 
+public sealed record UserSearchResultPagedResultResponse(
+    IReadOnlyList<UserSearchResultResponse> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+
+public sealed record FriendRequestPagedResultResponse(
+    IReadOnlyList<FriendRequestResponse> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+
+public sealed record FriendPagedResultResponse(
+    IReadOnlyList<FriendResponse> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+
+
 public sealed record ProfileWorkspaceResponse(
     Guid Id,
     string Name,
@@ -48,5 +70,9 @@ public sealed record UserProfilePageResponse(
     string FriendshipStatus,
     int FriendCount,
     IReadOnlyList<ProfileWorkspaceResponse> Workspaces,
+    int WorkspacePageNumber,
+    int WorkspacePageSize,
+    int WorkspaceTotalCount,
+    int WorkspaceTotalPages,
     DateTimeOffset CreatedDate,
     DateTimeOffset? UpdatedDate);

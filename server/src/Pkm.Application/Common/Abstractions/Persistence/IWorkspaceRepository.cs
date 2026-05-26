@@ -39,14 +39,22 @@ public interface IWorkspaceRepository
         int pageSize,
         CancellationToken cancellationToken = default);
 
+    Task<int> CountByUserAsync(
+        Guid userId,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<ProfileWorkspaceDto>> ListProfileWorkspacesAsync(
         Guid ownerUserId,
         Guid viewerUserId,
         bool includePrivate,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken = default);
 
-    Task<int> CountByUserAsync(
-        Guid userId,
+    Task<int> CountProfileWorkspacesAsync(
+        Guid ownerUserId,
+        Guid viewerUserId,
+        bool includePrivate,
         CancellationToken cancellationToken = default);
 
     void Add(Workspace workspace);

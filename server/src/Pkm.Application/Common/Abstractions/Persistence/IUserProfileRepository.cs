@@ -9,7 +9,15 @@ public interface IUserProfileRepository
 
     Task<UserProfilePage?> GetByUserIdForUpdateAsync(Guid userId, CancellationToken cancellationToken = default);
 
-    Task<UserProfilePageDto?> GetProfileAsync(Guid viewedUserId, Guid viewerUserId, IReadOnlyList<ProfileWorkspaceDto> workspaces, CancellationToken cancellationToken = default);
+    Task<UserProfilePageDto?> GetProfileAsync(
+        Guid viewedUserId,
+        Guid viewerUserId,
+        IReadOnlyList<ProfileWorkspaceDto> workspaces,
+        int workspacePageNumber,
+        int workspacePageSize,
+        int workspaceTotalCount,
+        int workspaceTotalPages,
+        CancellationToken cancellationToken = default);
 
     void Add(UserProfilePage profile);
 

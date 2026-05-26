@@ -58,10 +58,7 @@ internal sealed class FriendshipRepository : IFriendshipRepository
         var skip = (pageNumber - 1) * pageSize;
         keyword = (keyword ?? string.Empty).Trim();
 
-        return await _context.Users
-            .AsNoTracking()
-            .Where(x => x.Status == UserStatus.Active)
-            .Where(x => EF.Functions.ILike(x.FullName, $"%{keyword}%") || EF.Functions.ILike(x.UserName, $"%{keyword}%"))
+        return await ApplyUserSearch(keyword)
             .OrderBy(x => x.FullName)
             .ThenBy(x => x.UserName)
             .Skip(skip)
@@ -90,6 +87,15 @@ internal sealed class FriendshipRepository : IFriendshipRepository
                                 ? "request_received"
                                 : "none"))
             .ToListAsync(cancellationToken);
+    }
+
+    public Task<int> CountSearchUsersAsync(
+        Guid viewerUserId,
+        string keyword,
+        CancellationToken cancellationToken = default)
+    {
+        keyword = (keyword ?? string.Empty).Trim();
+        return ApplyUserSearch(keyword).CountAsync(cancellationToken);
     }
 
     public async Task<IReadOnlyList<FriendDto>> ListFriendsAsync(
@@ -145,8 +151,14 @@ internal sealed class FriendshipRepository : IFriendshipRepository
     public Task<IReadOnlyList<FriendRequestDto>> ListIncomingRequestsAsync(Guid addresseeId, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
         => ListRequestsAsync(addresseeId, incoming: true, pageNumber, pageSize, cancellationToken);
 
+    public Task<int> CountIncomingRequestsAsync(Guid addresseeId, CancellationToken cancellationToken = default)
+        => CountRequestsAsync(addresseeId, incoming: true, cancellationToken);
+
     public Task<IReadOnlyList<FriendRequestDto>> ListOutgoingRequestsAsync(Guid requesterId, int pageNumber, int pageSize, CancellationToken cancellationToken = default)
         => ListRequestsAsync(requesterId, incoming: false, pageNumber, pageSize, cancellationToken);
+
+    public Task<int> CountOutgoingRequestsAsync(Guid requesterId, CancellationToken cancellationToken = default)
+        => CountRequestsAsync(requesterId, incoming: false, cancellationToken);
 
     public void AddRequest(FriendRequest request) => _context.FriendRequests.Add(request);
 
@@ -155,6 +167,16 @@ internal sealed class FriendshipRepository : IFriendshipRepository
     public void UpdateRequest(FriendRequest request) => _context.FriendRequests.Update(request);
 
     public void RemoveFriendship(Friendship friendship) => _context.Friendships.Remove(friendship);
+
+    private IQueryable<User> ApplyUserSearch(string keyword)
+    {
+        keyword = (keyword ?? string.Empty).Trim();
+
+        return _context.Users
+            .AsNoTracking()
+            .Where(x => x.Status == UserStatus.Active)
+            .Where(x => EF.Functions.ILike(x.FullName, $"%{keyword}%") || EF.Functions.ILike(x.UserName, $"%{keyword}%"));
+    }
 
     private async Task<IReadOnlyList<FriendRequestDto>> ListRequestsAsync(
         Guid userId,
@@ -167,15 +189,7 @@ internal sealed class FriendshipRepository : IFriendshipRepository
         pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
         var skip = (pageNumber - 1) * pageSize;
 
-        var query = _context.FriendRequests
-            .AsNoTracking()
-            .Where(x => x.Status == FriendRequestStatus.Pending);
-
-        query = incoming
-            ? query.Where(x => x.AddresseeId == userId)
-            : query.Where(x => x.RequesterId == userId);
-
-        return await query
+        return await ApplyRequestDirection(userId, incoming)
             .OrderByDescending(x => x.CreatedDate)
             .Skip(skip)
             .Take(pageSize)
@@ -192,5 +206,24 @@ internal sealed class FriendshipRepository : IFriendshipRepository
                     request.CreatedDate,
                     request.RespondedAtUtc))
             .ToListAsync(cancellationToken);
+    }
+
+    private Task<int> CountRequestsAsync(
+        Guid userId,
+        bool incoming,
+        CancellationToken cancellationToken)
+    {
+        return ApplyRequestDirection(userId, incoming).CountAsync(cancellationToken);
+    }
+
+    private IQueryable<FriendRequest> ApplyRequestDirection(Guid userId, bool incoming)
+    {
+        var query = _context.FriendRequests
+            .AsNoTracking()
+            .Where(x => x.Status == FriendRequestStatus.Pending);
+
+        return incoming
+            ? query.Where(x => x.AddresseeId == userId)
+            : query.Where(x => x.RequesterId == userId);
     }
 }

@@ -1,5 +1,6 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Pagination;
 using Pkm.Application.Common.Abstractions.Time;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
@@ -75,7 +76,17 @@ public sealed class UpdateMyProfilePageHandler
         Guid currentUserId,
         CancellationToken cancellationToken)
     {
+        var page = PageRequest.Normalize(1, 20);
+
         var workspaces = await _workspaceRepository.ListProfileWorkspacesAsync(
+            currentUserId,
+            currentUserId,
+            includePrivate: true,
+            page.PageNumber,
+            page.PageSize,
+            cancellationToken);
+
+        var totalCount = await _workspaceRepository.CountProfileWorkspacesAsync(
             currentUserId,
             currentUserId,
             includePrivate: true,
@@ -85,6 +96,10 @@ public sealed class UpdateMyProfilePageHandler
             currentUserId,
             currentUserId,
             workspaces,
+            page.PageNumber,
+            page.PageSize,
+            totalCount,
+            PageRequest.CalculateTotalPages(totalCount, page.PageSize),
             cancellationToken);
 
         return profile is null

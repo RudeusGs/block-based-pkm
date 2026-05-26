@@ -3,4 +3,8 @@
 public sealed record PageDocumentDto(
     Guid PageId,
     long CurrentRevision,
-    IReadOnlyList<BlockDto> Blocks);
+    IReadOnlyList<BlockDto> Blocks,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);

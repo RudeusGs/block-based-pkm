@@ -25,6 +25,10 @@ internal sealed class UserProfileRepository : IUserProfileRepository
         Guid viewedUserId,
         Guid viewerUserId,
         IReadOnlyList<ProfileWorkspaceDto> workspaces,
+        int workspacePageNumber,
+        int workspacePageSize,
+        int workspaceTotalCount,
+        int workspaceTotalPages,
         CancellationToken cancellationToken = default)
     {
         var data = await (
@@ -81,6 +85,10 @@ internal sealed class UserProfileRepository : IUserProfileRepository
             friendshipStatus,
             friendCount,
             workspaces,
+            workspacePageNumber,
+            workspacePageSize,
+            workspaceTotalCount,
+            workspaceTotalPages,
             data.CreatedDate,
             data.UpdatedDate);
     }

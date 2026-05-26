@@ -1,5 +1,6 @@
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Common.Pagination;
 using Pkm.Application.Common.Results;
 using Pkm.Application.Common.UseCases;
 using Pkm.Application.Features.Social.Models;
@@ -37,16 +38,31 @@ public sealed class GetProfileHandler
         if (target is null)
             return Result.Failure<UserProfilePageDto>(SocialErrors.UserNotFound);
 
+        var page = PageRequest.Normalize(query.WorkspacePageNumber, query.WorkspacePageSize);
+        var includePrivate = query.UserId == currentUserId;
+
         var workspaces = await _workspaceRepository.ListProfileWorkspacesAsync(
             query.UserId,
             currentUserId,
-            includePrivate: query.UserId == currentUserId,
+            includePrivate,
+            page.PageNumber,
+            page.PageSize,
+            cancellationToken);
+
+        var totalCount = await _workspaceRepository.CountProfileWorkspacesAsync(
+            query.UserId,
+            currentUserId,
+            includePrivate,
             cancellationToken);
 
         var profile = await _profileRepository.GetProfileAsync(
             query.UserId,
             currentUserId,
             workspaces,
+            page.PageNumber,
+            page.PageSize,
+            totalCount,
+            PageRequest.CalculateTotalPages(totalCount, page.PageSize),
             cancellationToken);
 
         return profile is null

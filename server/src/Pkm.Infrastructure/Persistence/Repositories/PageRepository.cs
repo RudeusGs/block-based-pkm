@@ -38,7 +38,7 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
         CancellationToken cancellationToken = default)
     {
         pageNumber = pageNumber <= 0 ? 1 : pageNumber;
-        pageSize = pageSize <= 0 ? 20 : pageSize;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 
         return await _dataContext.Pages
             .AsNoTracking()
@@ -62,11 +62,33 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
         Guid parentPageId,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.Pages
-            .AsNoTracking()
-            .Where(x => x.ParentPageId == parentPageId && !x.IsArchived)
+        return await ApplySubPagesFilter(parentPageId)
             .OrderByDescending(x => x.CreatedDate)
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<Page>> ListSubPagesAsync(
+        Guid parentPageId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+
+        return await ApplySubPagesFilter(parentPageId)
+            .OrderByDescending(x => x.CreatedDate)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountSubPagesAsync(
+        Guid parentPageId,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplySubPagesFilter(parentPageId)
+            .CountAsync(cancellationToken);
     }
 
 
@@ -77,7 +99,7 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
         CancellationToken cancellationToken = default)
     {
         pageNumber = pageNumber <= 0 ? 1 : pageNumber;
-        pageSize = pageSize <= 0 ? 20 : pageSize;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
 
         return await _dataContext.Pages
             .AsNoTracking()
@@ -104,7 +126,7 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
         CancellationToken cancellationToken = default)
     {
         pageNumber = pageNumber <= 0 ? 1 : pageNumber;
-        pageSize = pageSize <= 0 ? 20 : pageSize;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
         keyword = (keyword ?? string.Empty).Trim();
 
         return await _dataContext.Pages
@@ -157,6 +179,13 @@ internal sealed class PageRepository : IPageReadRepository, IPageWriteRepository
                  workspace.Visibility,
                  page.IsArchived))
             .FirstOrDefaultAsync(cancellationToken);
+    }
+
+    private IQueryable<Page> ApplySubPagesFilter(Guid parentPageId)
+    {
+        return _dataContext.Pages
+            .AsNoTracking()
+            .Where(x => x.ParentPageId == parentPageId && !x.IsArchived);
     }
 
     public void Add(Page page) => _dataContext.Pages.Add(page);

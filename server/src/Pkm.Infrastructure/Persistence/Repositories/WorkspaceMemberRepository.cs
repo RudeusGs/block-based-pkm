@@ -23,7 +23,8 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
             .FirstOrDefaultAsync(
                 member =>
                     member.WorkspaceId == workspaceId &&
-                    member.UserId == userId,
+                    member.UserId == userId &&
+                    !member.IsDeleted,
                 cancellationToken);
     }
 
@@ -36,7 +37,8 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
             .AsNoTracking()
             .Where(member =>
                 member.WorkspaceId == workspaceId &&
-                member.UserId == userId)
+                member.UserId == userId &&
+                !member.IsDeleted)
             .Join(
                 _context.Users.AsNoTracking(),
                 member => member.UserId,
@@ -60,9 +62,69 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
         Guid workspaceId,
         CancellationToken cancellationToken = default)
     {
+        return await BuildWorkspaceMemberQuery(workspaceId)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<WorkspaceMemberReadModel>> ListByWorkspacePagedAsync(
+        Guid workspaceId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+
+        return await BuildWorkspaceMemberQuery(workspaceId)
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default)
+    {
         return await _context.WorkspaceMembers
             .AsNoTracking()
-            .Where(member => member.WorkspaceId == workspaceId)
+            .CountAsync(member => member.WorkspaceId == workspaceId && !member.IsDeleted, cancellationToken);
+    }
+
+    public async Task<bool> ExistsAsync(
+        Guid workspaceId,
+        Guid userId,
+        CancellationToken cancellationToken = default)
+    {
+        return await _context.WorkspaceMembers
+            .AsNoTracking()
+            .AnyAsync(
+                member =>
+                    member.WorkspaceId == workspaceId &&
+                    member.UserId == userId &&
+                    !member.IsDeleted,
+                cancellationToken);
+    }
+
+    public void Add(WorkspaceMember member)
+    {
+        _context.WorkspaceMembers.Add(member);
+    }
+
+    public void Update(WorkspaceMember member)
+    {
+        _context.WorkspaceMembers.Update(member);
+    }
+
+    public void Remove(WorkspaceMember member)
+    {
+        _context.WorkspaceMembers.Remove(member);
+    }
+
+    private IQueryable<WorkspaceMemberReadModel> BuildWorkspaceMemberQuery(Guid workspaceId)
+    {
+        return _context.WorkspaceMembers
+            .AsNoTracking()
+            .Where(member => member.WorkspaceId == workspaceId && !member.IsDeleted)
             .Join(
                 _context.Users.AsNoTracking(),
                 member => member.UserId,
@@ -87,36 +149,6 @@ internal sealed class WorkspaceMemberRepository : IWorkspaceMemberRepository
                 x.Member.Role,
                 x.Member.Role == WorkspaceRole.Owner,
                 x.Member.CreatedDate,
-                x.Member.UpdatedDate))
-            .ToListAsync(cancellationToken);
-    }
-
-    public async Task<bool> ExistsAsync(
-        Guid workspaceId,
-        Guid userId,
-        CancellationToken cancellationToken = default)
-    {
-        return await _context.WorkspaceMembers
-            .AsNoTracking()
-            .AnyAsync(
-                member =>
-                    member.WorkspaceId == workspaceId &&
-                    member.UserId == userId,
-                cancellationToken);
-    }
-
-    public void Add(WorkspaceMember member)
-    {
-        _context.WorkspaceMembers.Add(member);
-    }
-
-    public void Update(WorkspaceMember member)
-    {
-        _context.WorkspaceMembers.Update(member);
-    }
-
-    public void Remove(WorkspaceMember member)
-    {
-        _context.WorkspaceMembers.Remove(member);
+                x.Member.UpdatedDate));
     }
 }

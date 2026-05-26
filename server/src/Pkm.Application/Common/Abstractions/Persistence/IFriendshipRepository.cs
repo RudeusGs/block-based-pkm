@@ -15,13 +15,19 @@ public interface IFriendshipRepository
 
     Task<IReadOnlyList<UserSearchResultDto>> SearchUsersAsync(Guid viewerUserId, string keyword, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
+    Task<int> CountSearchUsersAsync(Guid viewerUserId, string keyword, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<FriendDto>> ListFriendsAsync(Guid userId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
     Task<int> CountFriendsAsync(Guid userId, CancellationToken cancellationToken = default);
 
     Task<IReadOnlyList<FriendRequestDto>> ListIncomingRequestsAsync(Guid addresseeId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
 
+    Task<int> CountIncomingRequestsAsync(Guid addresseeId, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<FriendRequestDto>> ListOutgoingRequestsAsync(Guid requesterId, int pageNumber, int pageSize, CancellationToken cancellationToken = default);
+
+    Task<int> CountOutgoingRequestsAsync(Guid requesterId, CancellationToken cancellationToken = default);
 
     void AddRequest(FriendRequest request);
 

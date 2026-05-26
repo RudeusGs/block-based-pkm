@@ -16,3 +16,11 @@ public sealed record WorkspaceMemberDto(
     bool IsCurrentUser,
     DateTimeOffset JoinedAt,
     DateTimeOffset? UpdatedDate);
+
+public sealed record WorkspaceMemberPagedResultDto(
+    IReadOnlyList<WorkspaceMemberDto> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+

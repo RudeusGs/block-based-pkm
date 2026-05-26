@@ -38,6 +38,13 @@ public sealed record WorkspaceMemberResponse(
     DateTimeOffset JoinedAt,
     DateTimeOffset? UpdatedDate);
 
+public sealed record WorkspaceMemberPagedResultResponse(
+    IReadOnlyList<WorkspaceMemberResponse> Items,
+    int PageNumber,
+    int PageSize,
+    int TotalCount,
+    int TotalPages);
+
 public sealed record WorkspaceInvitationResponse(
     Guid Id,
     Guid WorkspaceId,

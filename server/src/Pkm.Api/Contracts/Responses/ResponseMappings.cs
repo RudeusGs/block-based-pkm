@@ -71,7 +71,11 @@ public static class ResponseMappings
         => new(
             dto.PageId,
             dto.CurrentRevision,
-            dto.Blocks.Select(x => x.ToResponse()).ToArray());
+            dto.Blocks.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
 
 
     public static PageQuickAccessResponse ToResponse(this AppPages.PageQuickAccessDto dto)
@@ -204,6 +208,14 @@ public static class ResponseMappings
             dto.IsCurrentUser,
             dto.JoinedAt,
             dto.UpdatedDate);
+
+    public static WorkspaceMemberPagedResultResponse ToResponse(this AppWorkspaces.WorkspaceMemberPagedResultDto dto)
+        => new(
+            dto.Items.Select(x => x.ToResponse()).ToArray(),
+            dto.PageNumber,
+            dto.PageSize,
+            dto.TotalCount,
+            dto.TotalPages);
 
     public static WorkspaceInvitationResponse ToResponse(this AppWorkspaces.WorkspaceInvitationDto dto)
         => new(

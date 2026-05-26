@@ -19,6 +19,16 @@ public interface IWorkspaceMemberRepository
         Guid workspaceId,
         CancellationToken cancellationToken = default);
 
+    Task<IReadOnlyList<WorkspaceMemberReadModel>> ListByWorkspacePagedAsync(
+        Guid workspaceId,
+        int pageNumber,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<int> CountByWorkspaceAsync(
+        Guid workspaceId,
+        CancellationToken cancellationToken = default);
+
     Task<bool> ExistsAsync(
         Guid workspaceId,
         Guid userId,

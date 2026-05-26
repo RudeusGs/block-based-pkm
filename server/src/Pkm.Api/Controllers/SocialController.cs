@@ -26,20 +26,20 @@ public sealed class SocialController : BaseController
     }
 
     [HttpGet("users/search")]
-    [ProducesResponseType(typeof(ApiResult<IReadOnlyList<UserSearchResultResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<UserSearchResultPagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 400)]
     [ProducesResponseType(typeof(ApiResult), 401)]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<UserSearchResultResponse>>>> SearchUsers(
+    public async Task<ActionResult<ApiResult<UserSearchResultPagedResultResponse>>> SearchUsers(
         [FromQuery] string? keyword,
-        [FromQuery] int pageNumber,
-        [FromQuery] int pageSize,
-        CancellationToken cancellationToken)
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>(
+        var result = await QueryAsync<SearchUsersQuery, UserSearchResultPagedResultDto>(
             new SearchUsersQuery(keyword ?? string.Empty, pageNumber, pageSize),
             cancellationToken);
 
-        return HandleResult(result, x => (IReadOnlyList<UserSearchResultResponse>)x.Select(y => y.ToResponse()).ToArray());
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpGet("users/{userId:guid}/profile")]
@@ -48,10 +48,12 @@ public sealed class SocialController : BaseController
     [ProducesResponseType(typeof(ApiResult), 404)]
     public async Task<ActionResult<ApiResult<UserProfilePageResponse>>> GetProfile(
         [FromRoute] Guid userId,
-        CancellationToken cancellationToken)
+        [FromQuery] int workspacePageNumber = 1,
+        [FromQuery] int workspacePageSize = 20,
+        CancellationToken cancellationToken = default)
     {
         var result = await QueryAsync<GetProfileQuery, UserProfilePageDto>(
-            new GetProfileQuery(userId),
+            new GetProfileQuery(userId, workspacePageNumber, workspacePageSize),
             cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
@@ -121,33 +123,33 @@ public sealed class SocialController : BaseController
     }
 
     [HttpGet("friend-requests/incoming")]
-    [ProducesResponseType(typeof(ApiResult<IReadOnlyList<FriendRequestResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<FriendRequestPagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 401)]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<FriendRequestResponse>>>> ListIncomingRequests(
-        [FromQuery] int pageNumber,
-        [FromQuery] int pageSize,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResult<FriendRequestPagedResultResponse>>> ListIncomingRequests(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync<ListIncomingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
+        var result = await QueryAsync<ListIncomingFriendRequestsQuery, FriendRequestPagedResultDto>(
             new ListIncomingFriendRequestsQuery(pageNumber, pageSize),
             cancellationToken);
 
-        return HandleResult(result, x => (IReadOnlyList<FriendRequestResponse>)x.Select(y => y.ToResponse()).ToArray());
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpGet("friend-requests/outgoing")]
-    [ProducesResponseType(typeof(ApiResult<IReadOnlyList<FriendRequestResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<FriendRequestPagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 401)]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<FriendRequestResponse>>>> ListOutgoingRequests(
-        [FromQuery] int pageNumber,
-        [FromQuery] int pageSize,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResult<FriendRequestPagedResultResponse>>> ListOutgoingRequests(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync<ListOutgoingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
+        var result = await QueryAsync<ListOutgoingFriendRequestsQuery, FriendRequestPagedResultDto>(
             new ListOutgoingFriendRequestsQuery(pageNumber, pageSize),
             cancellationToken);
 
-        return HandleResult(result, x => (IReadOnlyList<FriendRequestResponse>)x.Select(y => y.ToResponse()).ToArray());
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpPost("friend-requests/{requestId:guid}/accept")]
@@ -199,18 +201,18 @@ public sealed class SocialController : BaseController
     }
 
     [HttpGet("friends")]
-    [ProducesResponseType(typeof(ApiResult<IReadOnlyList<FriendResponse>>), 200)]
+    [ProducesResponseType(typeof(ApiResult<FriendPagedResultResponse>), 200)]
     [ProducesResponseType(typeof(ApiResult), 401)]
-    public async Task<ActionResult<ApiResult<IReadOnlyList<FriendResponse>>>> ListFriends(
-        [FromQuery] int pageNumber,
-        [FromQuery] int pageSize,
-        CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResult<FriendPagedResultResponse>>> ListFriends(
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 20,
+        CancellationToken cancellationToken = default)
     {
-        var result = await QueryAsync<ListFriendsQuery, IReadOnlyList<FriendDto>>(
+        var result = await QueryAsync<ListFriendsQuery, FriendPagedResultDto>(
             new ListFriendsQuery(pageNumber, pageSize),
             cancellationToken);
 
-        return HandleResult(result, x => (IReadOnlyList<FriendResponse>)x.Select(y => y.ToResponse()).ToArray());
+        return HandleResult(result, x => x.ToResponse());
     }
 
     [HttpDelete("friends/{friendUserId:guid}")]

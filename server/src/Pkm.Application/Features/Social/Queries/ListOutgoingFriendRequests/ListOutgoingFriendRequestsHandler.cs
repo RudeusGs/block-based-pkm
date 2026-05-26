@@ -8,7 +8,7 @@ using Pkm.Application.Features.Social.Models;
 namespace Pkm.Application.Features.Social.Queries;
 
 public sealed class ListOutgoingFriendRequestsHandler
-    : IQueryHandler<ListOutgoingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>
+    : IQueryHandler<ListOutgoingFriendRequestsQuery, FriendRequestPagedResultDto>
 {
     private readonly ICurrentUser _currentUser;
     private readonly IFriendshipRepository _friendshipRepository;
@@ -21,21 +21,32 @@ public sealed class ListOutgoingFriendRequestsHandler
         _friendshipRepository = friendshipRepository;
     }
 
-    public async Task<Result<IReadOnlyList<FriendRequestDto>>> HandleAsync(
+    public async Task<Result<FriendRequestPagedResultDto>> HandleAsync(
         ListOutgoingFriendRequestsQuery query,
         CancellationToken cancellationToken = default)
     {
         if (!_currentUser.TryGetUserId(out var currentUserId))
-            return Result.Failure<IReadOnlyList<FriendRequestDto>>(SocialErrors.MissingUserContext);
+            return Result.Failure<FriendRequestPagedResultDto>(SocialErrors.MissingUserContext);
 
         var page = PageRequest.Normalize(query.PageNumber, query.PageSize);
 
-        var result = await _friendshipRepository.ListOutgoingRequestsAsync(
+        var items = await _friendshipRepository.ListOutgoingRequestsAsync(
             currentUserId,
             page.PageNumber,
             page.PageSize,
             cancellationToken);
 
-        return Result.Success(result);
+        var totalCount = await _friendshipRepository.CountOutgoingRequestsAsync(
+            currentUserId,
+            cancellationToken);
+
+        var dto = new FriendRequestPagedResultDto(
+            items,
+            page.PageNumber,
+            page.PageSize,
+            totalCount,
+            PageRequest.CalculateTotalPages(totalCount, page.PageSize));
+
+        return Result.Success(dto);
     }
 }

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Pkm.Application.Common.Abstractions.Persistence;
+using Pkm.Application.Features.Social.Models;
 using Pkm.Application.Features.Workspaces.Models;
 using Pkm.Domain.Workspaces;
 
@@ -17,13 +18,13 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
     public async Task<bool> ExistsAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dataContext.Workspaces
-            .AnyAsync(x => x.Id == id, cancellationToken);
+            .AnyAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
     }
 
     public async Task<Workspace?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         return await _dataContext.Workspaces
-            .FirstOrDefaultAsync(x => x.Id == id, cancellationToken);
+            .FirstOrDefaultAsync(x => x.Id == id && !x.IsDeleted, cancellationToken);
     }
 
     public async Task<WorkspaceMember?> GetMemberAsync(
@@ -34,7 +35,9 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
         return await _dataContext.WorkspaceMembers
             .AsNoTracking()
             .FirstOrDefaultAsync(
-                x => x.WorkspaceId == workspaceId && x.UserId == userId,
+                x => x.WorkspaceId == workspaceId &&
+                     x.UserId == userId &&
+                     !x.IsDeleted,
                 cancellationToken);
     }
 
@@ -44,7 +47,11 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
         CancellationToken cancellationToken = default)
     {
         return await _dataContext.Workspaces
-            .AnyAsync(x => x.Id == workspaceId && x.OwnerId == userId, cancellationToken);
+            .AnyAsync(
+                x => x.Id == workspaceId &&
+                     x.OwnerId == userId &&
+                     !x.IsDeleted,
+                cancellationToken);
     }
 
     public async Task<int> CountMembersAsync(
@@ -53,7 +60,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
     {
         return await _dataContext.WorkspaceMembers
             .AsNoTracking()
-            .CountAsync(x => x.WorkspaceId == workspaceId, cancellationToken);
+            .CountAsync(x => x.WorkspaceId == workspaceId && !x.IsDeleted, cancellationToken);
     }
 
     public async Task<WorkspaceAccessReadModel?> GetAccessContextAsync(
@@ -63,7 +70,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
     {
         return await _dataContext.Workspaces
             .AsNoTracking()
-            .Where(x => x.Id == workspaceId)
+            .Where(x => x.Id == workspaceId && !x.IsDeleted)
             .Select(w => new WorkspaceAccessReadModel(
                 w.Id,
                 w.OwnerId,
@@ -71,7 +78,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                     ? WorkspaceRole.Owner
                     : _dataContext.WorkspaceMembers
                         .AsNoTracking()
-                        .Where(m => m.WorkspaceId == w.Id && m.UserId == userId)
+                        .Where(m => m.WorkspaceId == w.Id && m.UserId == userId && !m.IsDeleted)
                         .Select(m => (WorkspaceRole?)m.Role)
                         .FirstOrDefault(),
                 w.Visibility))
@@ -84,7 +91,7 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
     {
         return await _dataContext.Workspaces
             .AsNoTracking()
-            .Where(x => x.Id == workspaceId)
+            .Where(x => x.Id == workspaceId && !x.IsDeleted)
             .Select(x => new WorkspaceDetailReadModel(
                 x.Id,
                 x.Name,
@@ -104,14 +111,14 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
         CancellationToken cancellationToken = default)
     {
         var safePageNumber = pageNumber <= 0 ? 1 : pageNumber;
-        var safePageSize = pageSize <= 0 ? 20 : pageSize;
+        var safePageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
         var skip = (safePageNumber - 1) * safePageSize;
 
         return await _dataContext.WorkspaceMembers
             .AsNoTracking()
-            .Where(m => m.UserId == userId)
+            .Where(m => m.UserId == userId && !m.IsDeleted)
             .Join(
-                _dataContext.Workspaces.AsNoTracking(),
+                _dataContext.Workspaces.AsNoTracking().Where(w => !w.IsDeleted),
                 member => member.WorkspaceId,
                 workspace => workspace.Id,
                 (member, workspace) => new
@@ -140,25 +147,31 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
     {
         return await _dataContext.WorkspaceMembers
             .AsNoTracking()
-            .CountAsync(x => x.UserId == userId, cancellationToken);
+            .Where(x => x.UserId == userId && !x.IsDeleted)
+            .Join(
+                _dataContext.Workspaces.AsNoTracking().Where(w => !w.IsDeleted),
+                member => member.WorkspaceId,
+                workspace => workspace.Id,
+                (_, _) => 1)
+            .CountAsync(cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Pkm.Application.Features.Social.Models.ProfileWorkspaceDto>> ListProfileWorkspacesAsync(
+    public async Task<IReadOnlyList<ProfileWorkspaceDto>> ListProfileWorkspacesAsync(
         Guid ownerUserId,
         Guid viewerUserId,
         bool includePrivate,
+        int pageNumber,
+        int pageSize,
         CancellationToken cancellationToken = default)
     {
-        return await _dataContext.Workspaces
-            .AsNoTracking()
-            .Where(x => x.OwnerId == ownerUserId)
-            .Where(x => includePrivate ||
-                x.Visibility == WorkspaceVisibility.Public ||
-                _dataContext.WorkspaceMembers.Any(m =>
-                    m.WorkspaceId == x.Id &&
-                    m.UserId == viewerUserId))
+        pageNumber = pageNumber <= 0 ? 1 : pageNumber;
+        pageSize = pageSize <= 0 ? 20 : Math.Min(pageSize, 100);
+
+        return await ApplyProfileWorkspaceAccess(ownerUserId, viewerUserId, includePrivate)
             .OrderByDescending(x => x.UpdatedDate ?? x.CreatedDate)
-            .Select(x => new Pkm.Application.Features.Social.Models.ProfileWorkspaceDto(
+            .Skip((pageNumber - 1) * pageSize)
+            .Take(pageSize)
+            .Select(x => new ProfileWorkspaceDto(
                 x.Id,
                 x.Name,
                 x.Description,
@@ -166,6 +179,16 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
                 x.CreatedDate,
                 x.UpdatedDate))
             .ToListAsync(cancellationToken);
+    }
+
+    public async Task<int> CountProfileWorkspacesAsync(
+        Guid ownerUserId,
+        Guid viewerUserId,
+        bool includePrivate,
+        CancellationToken cancellationToken = default)
+    {
+        return await ApplyProfileWorkspaceAccess(ownerUserId, viewerUserId, includePrivate)
+            .CountAsync(cancellationToken);
     }
 
     public void Add(Workspace workspace)
@@ -176,5 +199,21 @@ internal sealed class WorkspaceRepository : IWorkspaceRepository
     public void Update(Workspace workspace)
     {
         _dataContext.Workspaces.Update(workspace);
+    }
+
+    private IQueryable<Workspace> ApplyProfileWorkspaceAccess(
+        Guid ownerUserId,
+        Guid viewerUserId,
+        bool includePrivate)
+    {
+        return _dataContext.Workspaces
+            .AsNoTracking()
+            .Where(x => x.OwnerId == ownerUserId && !x.IsDeleted)
+            .Where(x => includePrivate ||
+                x.Visibility == WorkspaceVisibility.Public ||
+                _dataContext.WorkspaceMembers.Any(m =>
+                    m.WorkspaceId == x.Id &&
+                    m.UserId == viewerUserId &&
+                    !m.IsDeleted));
     }
 }
