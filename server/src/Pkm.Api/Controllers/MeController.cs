@@ -27,14 +27,11 @@ namespace Pkm.Api.Controllers;
 [Route("api/v1/me")]
 public sealed class MeController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public MeController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpGet]
@@ -44,7 +41,7 @@ public sealed class MeController : BaseController
     public async Task<ActionResult<ApiResult<UserProfileResponse>>> GetMyProfile(
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetMyProfileQuery, UserProfileDto>(
+        var result = await QueryAsync<GetMyProfileQuery, UserProfileDto>(
             new GetMyProfileQuery(),
             cancellationToken);
 
@@ -61,7 +58,7 @@ public sealed class MeController : BaseController
         [FromBody] UpdateMyProfileRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<UpdateMyProfileCommand, UserProfileDto>(
+        var result = await ExecuteAsync<UpdateMyProfileCommand, UserProfileDto>(
             new UpdateMyProfileCommand(
                 request.FullName,
                 request.AvatarUrl),
@@ -81,7 +78,7 @@ public sealed class MeController : BaseController
         [FromBody] ChangeMyPasswordRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new ChangeMyPasswordCommand(
                 request.CurrentPassword,
                 request.NewPassword,
@@ -105,7 +102,7 @@ public sealed class MeController : BaseController
                     AuthenticationErrors.MissingUserContext));
         }
 
-        var result = await _dispatcher.QueryAsync<GetUserRolesQuery, IEnumerable<string>>(
+        var result = await QueryAsync<GetUserRolesQuery, IEnumerable<string>>(
             new GetUserRolesQuery(currentUserId),
             cancellationToken);
 
@@ -120,7 +117,7 @@ public sealed class MeController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListMyWorkspacesQuery, WorkspacePagedResultDto>(
+        var result = await QueryAsync<ListMyWorkspacesQuery, WorkspacePagedResultDto>(
             new ListMyWorkspacesQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -164,7 +161,7 @@ public sealed class MeController : BaseController
                     })));
         }
 
-        var result = await _dispatcher.QueryAsync<ListMyAssignedTasksQuery, WorkTaskPagedResultDto>(
+        var result = await QueryAsync<ListMyAssignedTasksQuery, WorkTaskPagedResultDto>(
             new ListMyAssignedTasksQuery(
                 workspaceId,
                 keyword,

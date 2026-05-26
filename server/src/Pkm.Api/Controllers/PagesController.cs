@@ -29,14 +29,11 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class PagesController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public PagesController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/workspaces/{workspaceId:guid}/pages")]
@@ -58,7 +55,7 @@ public sealed class PagesController : BaseController
             request.Icon,
             request.CoverImage);
 
-        var result = await _dispatcher.ExecuteAsync<CreatePageCommand, PageDto>(command, cancellationToken);
+        var result = await ExecuteAsync<CreatePageCommand, PageDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -81,7 +78,7 @@ public sealed class PagesController : BaseController
                 request.Icon,
                 request.CoverImage);
 
-        var result = await _dispatcher.ExecuteAsync<UpdatePageMetadataCommand, PageDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UpdatePageMetadataCommand, PageDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -95,7 +92,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new DeletePageCommand(pageId),
             cancellationToken);
 
@@ -112,7 +109,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetPageQuery, PageDto>(
+        var result = await QueryAsync<GetPageQuery, PageDto>(
             new GetPageQuery(pageId),
             cancellationToken);
 
@@ -129,7 +126,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetPagePresenceQuery, PagePresenceDto>(
+        var result = await QueryAsync<GetPagePresenceQuery, PagePresenceDto>(
             new GetPagePresenceQuery(pageId),
             cancellationToken);
 
@@ -148,7 +145,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListWorkspacePagesQuery, PagePagedResultDto>(
+        var result = await QueryAsync<ListWorkspacePagesQuery, PagePagedResultDto>(
             new ListWorkspacePagesQuery(workspaceId, pageNumber, pageSize),
             cancellationToken);
 
@@ -165,7 +162,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<ListSubPagesQuery, IReadOnlyList<PageDto>>(
+        var result = await QueryAsync<ListSubPagesQuery, IReadOnlyList<PageDto>>(
             new ListSubPagesQuery(pageId),
             cancellationToken);
 
@@ -185,7 +182,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<SearchPagesQuery, PagePagedResultDto>(
+        var result = await QueryAsync<SearchPagesQuery, PagePagedResultDto>(
             new SearchPagesQuery(workspaceId, keyword, pageNumber, pageSize),
             cancellationToken);
 
@@ -199,7 +196,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListFavoritePagesQuery, PageQuickAccessPagedResultDto>(
+        var result = await QueryAsync<ListFavoritePagesQuery, PageQuickAccessPagedResultDto>(
             new ListFavoritePagesQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -214,7 +211,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListRecentPagesQuery, PageQuickAccessPagedResultDto>(
+        var result = await QueryAsync<ListRecentPagesQuery, PageQuickAccessPagedResultDto>(
             new ListRecentPagesQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -232,7 +229,7 @@ public sealed class PagesController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListArchivedPagesQuery, PagePagedResultDto>(
+        var result = await QueryAsync<ListArchivedPagesQuery, PagePagedResultDto>(
             new ListArchivedPagesQuery(workspaceId, pageNumber, pageSize),
             cancellationToken);
 
@@ -248,7 +245,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<FavoritePageCommand, PageDto>(
+        var result = await ExecuteAsync<FavoritePageCommand, PageDto>(
             new FavoritePageCommand(pageId),
             cancellationToken);
 
@@ -264,7 +261,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new UnfavoritePageCommand(pageId),
             cancellationToken);
 
@@ -281,7 +278,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<DuplicatePageCommand, PageDto>(
+        var result = await ExecuteAsync<DuplicatePageCommand, PageDto>(
             new DuplicatePageCommand(pageId),
             cancellationToken);
 
@@ -298,7 +295,7 @@ public sealed class PagesController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<RestorePageCommand, PageDto>(
+        var result = await ExecuteAsync<RestorePageCommand, PageDto>(
             new RestorePageCommand(pageId),
             cancellationToken);
 

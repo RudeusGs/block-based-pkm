@@ -18,14 +18,11 @@ namespace Pkm.Api.Controllers;
 [Route("api/v1/notifications")]
 public sealed class NotificationsController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public NotificationsController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpGet]
@@ -39,7 +36,7 @@ public sealed class NotificationsController : BaseController
         [FromQuery] int pageSize = 20,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListNotificationsQuery, NotificationPagedResultDto>(
+        var result = await QueryAsync<ListNotificationsQuery, NotificationPagedResultDto>(
             new ListNotificationsQuery(
                 workspaceId,
                 unreadOnly,
@@ -58,7 +55,7 @@ public sealed class NotificationsController : BaseController
         [FromQuery] Guid? workspaceId = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<GetUnreadNotificationCountQuery, NotificationUnreadCountDto>(
+        var result = await QueryAsync<GetUnreadNotificationCountQuery, NotificationUnreadCountDto>(
             new GetUnreadNotificationCountQuery(workspaceId),
             cancellationToken);
 
@@ -74,7 +71,7 @@ public sealed class NotificationsController : BaseController
         [FromRoute] Guid notificationId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<MarkNotificationAsReadCommand, NotificationDto>(
+        var result = await ExecuteAsync<MarkNotificationAsReadCommand, NotificationDto>(
             new MarkNotificationAsReadCommand(notificationId),
             cancellationToken);
 
@@ -90,7 +87,7 @@ public sealed class NotificationsController : BaseController
         [FromRoute] Guid notificationId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<MarkNotificationAsUnreadCommand, NotificationDto>(
+        var result = await ExecuteAsync<MarkNotificationAsUnreadCommand, NotificationDto>(
             new MarkNotificationAsUnreadCommand(notificationId),
             cancellationToken);
 
@@ -105,7 +102,7 @@ public sealed class NotificationsController : BaseController
         [FromQuery] Guid? workspaceId = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.ExecuteAsync<MarkAllNotificationsAsReadCommand, NotificationUnreadCountDto>(
+        var result = await ExecuteAsync<MarkAllNotificationsAsReadCommand, NotificationUnreadCountDto>(
             new MarkAllNotificationsAsReadCommand(workspaceId),
             cancellationToken);
 
@@ -121,7 +118,7 @@ public sealed class NotificationsController : BaseController
         [FromRoute] Guid notificationId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new DeleteNotificationCommand(notificationId),
             cancellationToken);
 

@@ -23,14 +23,11 @@ public sealed class FilesController : BaseController
 {
     private const long MaxRequestBodySizeBytes = 10 * 1024 * 1024;
 
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public FilesController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/files/images")]
@@ -59,7 +56,7 @@ public sealed class FilesController : BaseController
             stream,
             request.Purpose);
 
-        var result = await _dispatcher.ExecuteAsync<UploadImageCommand, StoredFileDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UploadImageCommand, StoredFileDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -88,7 +85,7 @@ public sealed class FilesController : BaseController
             file.Length,
             stream);
 
-        var result = await _dispatcher.ExecuteAsync<UploadMyAvatarImageCommand, UserProfileDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UploadMyAvatarImageCommand, UserProfileDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -122,7 +119,7 @@ public sealed class FilesController : BaseController
             file.Length,
             stream);
 
-        var result = await _dispatcher.ExecuteAsync<UploadPageCoverImageCommand, PageDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UploadPageCoverImageCommand, PageDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 

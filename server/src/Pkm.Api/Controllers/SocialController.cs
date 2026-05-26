@@ -18,14 +18,11 @@ public sealed class SocialController : BaseController
 {
     private const long MaxRequestBodySizeBytes = 10 * 1024 * 1024;
 
-    private readonly IUseCaseDispatcher _useCaseDispatcher;
-
     public SocialController(
         ICurrentUser currentUser,
         IUseCaseDispatcher useCaseDispatcher)
-        : base(currentUser)
+        : base(currentUser, useCaseDispatcher)
     {
-        _useCaseDispatcher = useCaseDispatcher;
     }
 
     [HttpGet("users/search")]
@@ -38,7 +35,7 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>(
+        var result = await QueryAsync<SearchUsersQuery, IReadOnlyList<UserSearchResultDto>>(
             new SearchUsersQuery(keyword ?? string.Empty, pageNumber, pageSize),
             cancellationToken);
 
@@ -53,7 +50,7 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid userId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<GetProfileQuery, UserProfilePageDto>(
+        var result = await QueryAsync<GetProfileQuery, UserProfilePageDto>(
             new GetProfileQuery(userId),
             cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -68,7 +65,7 @@ public sealed class SocialController : BaseController
         [FromBody] UpdateMyProfilePageRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<UpdateMyProfilePageCommand, UserProfilePageDto>(
+        var result = await ExecuteAsync<UpdateMyProfilePageCommand, UserProfilePageDto>(
             new UpdateMyProfilePageCommand(request.Bio, request.CoverImageUrl),
             cancellationToken);
 
@@ -94,7 +91,7 @@ public sealed class SocialController : BaseController
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _useCaseDispatcher.ExecuteAsync<UploadMyProfileCoverImageCommand, UserProfilePageDto>(
+        var result = await ExecuteAsync<UploadMyProfileCoverImageCommand, UserProfilePageDto>(
             new UploadMyProfileCoverImageCommand(
                 file.FileName,
                 FileUploadRequestMapper.ResolveContentType(file),
@@ -116,7 +113,7 @@ public sealed class SocialController : BaseController
         [FromBody] SendFriendRequestRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<SendFriendRequestCommand, FriendRequestDto>(
+        var result = await ExecuteAsync<SendFriendRequestCommand, FriendRequestDto>(
             new SendFriendRequestCommand(request.AddresseeUserId),
             cancellationToken);
 
@@ -131,7 +128,7 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<ListIncomingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
+        var result = await QueryAsync<ListIncomingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
             new ListIncomingFriendRequestsQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -146,7 +143,7 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<ListOutgoingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
+        var result = await QueryAsync<ListOutgoingFriendRequestsQuery, IReadOnlyList<FriendRequestDto>>(
             new ListOutgoingFriendRequestsQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -163,7 +160,7 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid requestId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<AcceptFriendRequestCommand, FriendRequestDto>(
+        var result = await ExecuteAsync<AcceptFriendRequestCommand, FriendRequestDto>(
             new AcceptFriendRequestCommand(requestId),
             cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -179,7 +176,7 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid requestId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<RejectFriendRequestCommand, FriendRequestDto>(
+        var result = await ExecuteAsync<RejectFriendRequestCommand, FriendRequestDto>(
             new RejectFriendRequestCommand(requestId),
             cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -195,7 +192,7 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid requestId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<CancelFriendRequestCommand, FriendRequestDto>(
+        var result = await ExecuteAsync<CancelFriendRequestCommand, FriendRequestDto>(
             new CancelFriendRequestCommand(requestId),
             cancellationToken);
         return HandleResult(result, x => x.ToResponse());
@@ -209,7 +206,7 @@ public sealed class SocialController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<ListFriendsQuery, IReadOnlyList<FriendDto>>(
+        var result = await QueryAsync<ListFriendsQuery, IReadOnlyList<FriendDto>>(
             new ListFriendsQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -224,7 +221,7 @@ public sealed class SocialController : BaseController
         [FromRoute] Guid friendUserId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new RemoveFriendCommand(friendUserId),
             cancellationToken);
         return HandleResult(result);

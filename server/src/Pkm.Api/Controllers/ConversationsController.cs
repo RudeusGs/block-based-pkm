@@ -21,14 +21,11 @@ public sealed class ConversationsController : BaseController
 {
     private const long MaxRequestBodySizeBytes = 10 * 1024 * 1024;
 
-    private readonly IUseCaseDispatcher _useCaseDispatcher;
-
     public ConversationsController(
         ICurrentUser currentUser,
         IUseCaseDispatcher useCaseDispatcher)
-        : base(currentUser)
+        : base(currentUser, useCaseDispatcher)
     {
-        _useCaseDispatcher = useCaseDispatcher;
     }
 
     [HttpPost("direct")]
@@ -42,7 +39,7 @@ public sealed class ConversationsController : BaseController
         [FromBody] CreateDirectConversationRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<CreateDirectConversationCommand, ConversationDto>(
+        var result = await ExecuteAsync<CreateDirectConversationCommand, ConversationDto>(
             new CreateDirectConversationCommand(request.RecipientUserId),
             cancellationToken);
 
@@ -57,7 +54,7 @@ public sealed class ConversationsController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<ListConversationsQuery, ConversationPagedResultDto>(
+        var result = await QueryAsync<ListConversationsQuery, ConversationPagedResultDto>(
             new ListConversationsQuery(pageNumber, pageSize),
             cancellationToken);
 
@@ -74,7 +71,7 @@ public sealed class ConversationsController : BaseController
         [FromQuery] int pageSize,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.QueryAsync<ListMessagesQuery, MessagePagedResultDto>(
+        var result = await QueryAsync<ListMessagesQuery, MessagePagedResultDto>(
             new ListMessagesQuery(conversationId, pageNumber, pageSize),
             cancellationToken);
 
@@ -92,7 +89,7 @@ public sealed class ConversationsController : BaseController
         [FromBody] SendTextMessageRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<SendTextMessageCommand, MessageDto>(
+        var result = await ExecuteAsync<SendTextMessageCommand, MessageDto>(
             new SendTextMessageCommand(conversationId, request.Body),
             cancellationToken);
 
@@ -111,7 +108,7 @@ public sealed class ConversationsController : BaseController
         [FromBody] SendWorkspaceShareMessageRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<SendWorkspaceShareMessageCommand, MessageDto>(
+        var result = await ExecuteAsync<SendWorkspaceShareMessageCommand, MessageDto>(
             new SendWorkspaceShareMessageCommand(
                 conversationId,
                 request.WorkspaceId,
@@ -132,7 +129,7 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid messageId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<AcceptWorkspaceShareCommand, WorkspaceDto>(
+        var result = await ExecuteAsync<AcceptWorkspaceShareCommand, WorkspaceDto>(
             new AcceptWorkspaceShareCommand(messageId),
             cancellationToken);
 
@@ -148,7 +145,7 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid messageId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new DeleteMessageForEveryoneCommand(messageId),
             cancellationToken);
 
@@ -167,7 +164,7 @@ public sealed class ConversationsController : BaseController
         [FromBody] SetMessageReactionRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<ToggleMessageReactionCommand, MessageDto>(
+        var result = await ExecuteAsync<ToggleMessageReactionCommand, MessageDto>(
             new ToggleMessageReactionCommand(messageId, request.Emoji),
             cancellationToken);
 
@@ -183,7 +180,7 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid messageId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<PinMessageCommand, MessageDto>(
+        var result = await ExecuteAsync<PinMessageCommand, MessageDto>(
             new PinMessageCommand(messageId),
             cancellationToken);
 
@@ -199,7 +196,7 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid messageId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync<UnpinMessageCommand, MessageDto>(
+        var result = await ExecuteAsync<UnpinMessageCommand, MessageDto>(
             new UnpinMessageCommand(messageId),
             cancellationToken);
 
@@ -227,7 +224,7 @@ public sealed class ConversationsController : BaseController
 
         await using var stream = file.OpenReadStream();
 
-        var result = await _useCaseDispatcher.ExecuteAsync<SendImageMessageCommand, MessageDto>(
+        var result = await ExecuteAsync<SendImageMessageCommand, MessageDto>(
             new SendImageMessageCommand(
                 conversationId,
                 request.Caption,
@@ -248,7 +245,7 @@ public sealed class ConversationsController : BaseController
         [FromRoute] Guid conversationId,
         CancellationToken cancellationToken)
     {
-        var result = await _useCaseDispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new MarkConversationReadCommand(conversationId),
             cancellationToken);
 

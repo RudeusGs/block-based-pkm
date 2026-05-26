@@ -17,14 +17,11 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class TaskCommentsController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public TaskCommentsController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpGet("api/v1/tasks/{taskId:guid}/comments")]
@@ -40,7 +37,7 @@ public sealed class TaskCommentsController : BaseController
         [FromQuery] bool includeDeleted = true,
         CancellationToken cancellationToken = default)
     {
-        var result = await _dispatcher.QueryAsync<ListTaskCommentsQuery, TaskCommentPagedResultDto>(
+        var result = await QueryAsync<ListTaskCommentsQuery, TaskCommentPagedResultDto>(
             new ListTaskCommentsQuery(
                 taskId,
                 pageNumber,
@@ -63,7 +60,7 @@ public sealed class TaskCommentsController : BaseController
         [FromBody] CreateTaskCommentRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<CreateTaskCommentCommand, TaskCommentDto>(
+        var result = await ExecuteAsync<CreateTaskCommentCommand, TaskCommentDto>(
             new CreateTaskCommentCommand(
                 taskId,
                 request.Content,
@@ -85,7 +82,7 @@ public sealed class TaskCommentsController : BaseController
         [FromBody] UpdateTaskCommentRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<UpdateTaskCommentCommand, TaskCommentDto>(
+        var result = await ExecuteAsync<UpdateTaskCommentCommand, TaskCommentDto>(
             new UpdateTaskCommentCommand(
                 commentId,
                 request.Content),
@@ -105,7 +102,7 @@ public sealed class TaskCommentsController : BaseController
         [FromRoute] Guid commentId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<DeleteTaskCommentCommand, TaskCommentDto>(
+        var result = await ExecuteAsync<DeleteTaskCommentCommand, TaskCommentDto>(
             new DeleteTaskCommentCommand(commentId),
             cancellationToken);
 
@@ -123,7 +120,7 @@ public sealed class TaskCommentsController : BaseController
         [FromRoute] Guid commentId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<RestoreTaskCommentCommand, TaskCommentDto>(
+        var result = await ExecuteAsync<RestoreTaskCommentCommand, TaskCommentDto>(
             new RestoreTaskCommentCommand(commentId),
             cancellationToken);
 

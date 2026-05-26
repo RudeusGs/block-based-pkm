@@ -3,6 +3,7 @@ using Pkm.Api.Common.Errors;
 using Pkm.Api.Contracts.Common;
 using Pkm.Application.Common.Abstractions.Authentication;
 using Pkm.Application.Common.Results;
+using Pkm.Application.Common.UseCases;
 
 namespace Pkm.Api.Controllers;
 
@@ -10,11 +11,33 @@ namespace Pkm.Api.Controllers;
 public abstract class BaseController : ControllerBase
 {
     private readonly ICurrentUser _currentUser;
+    private readonly IUseCaseDispatcher _dispatcher;
 
-    protected BaseController(ICurrentUser currentUser)
+    protected BaseController(
+        ICurrentUser currentUser,
+        IUseCaseDispatcher dispatcher)
     {
         _currentUser = currentUser;
+        _dispatcher = dispatcher;
     }
+
+    protected Task<Result> ExecuteAsync<TCommand>(
+        TCommand command,
+        CancellationToken cancellationToken = default)
+        where TCommand : ICommand
+        => _dispatcher.ExecuteAsync(command, cancellationToken);
+
+    protected Task<Result<TResponse>> ExecuteAsync<TCommand, TResponse>(
+        TCommand command,
+        CancellationToken cancellationToken = default)
+        where TCommand : ICommand<TResponse>
+        => _dispatcher.ExecuteAsync<TCommand, TResponse>(command, cancellationToken);
+
+    protected Task<Result<TResponse>> QueryAsync<TQuery, TResponse>(
+        TQuery query,
+        CancellationToken cancellationToken = default)
+        where TQuery : IQuery<TResponse>
+        => _dispatcher.QueryAsync<TQuery, TResponse>(query, cancellationToken);
 
     protected ActionResult<ApiResult> HandleResult(Result result)
     {

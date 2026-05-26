@@ -22,14 +22,11 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class RecommendationsController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public RecommendationsController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/workspaces/{workspaceId:guid}/task-recommendations:generate")]
@@ -44,7 +41,7 @@ public sealed class RecommendationsController : BaseController
         [FromBody] GenerateTaskRecommendationsRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<GenerateTaskRecommendationsCommand, IReadOnlyList<TaskRecommendationDto>>(
+        var result = await ExecuteAsync<GenerateTaskRecommendationsCommand, IReadOnlyList<TaskRecommendationDto>>(
             new GenerateTaskRecommendationsCommand(
                 workspaceId,
                 request.PageId,
@@ -78,7 +75,7 @@ public sealed class RecommendationsController : BaseController
                     })));
         }
 
-        var result = await _dispatcher.QueryAsync<ListTaskRecommendationsQuery, TaskRecommendationPagedResultDto>(
+        var result = await QueryAsync<ListTaskRecommendationsQuery, TaskRecommendationPagedResultDto>(
             new ListTaskRecommendationsQuery(
                 workspaceId,
                 parsedStatus,
@@ -100,7 +97,7 @@ public sealed class RecommendationsController : BaseController
         [FromRoute] Guid recommendationId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<AcceptTaskRecommendationCommand, TaskRecommendationDto>(
+        var result = await ExecuteAsync<AcceptTaskRecommendationCommand, TaskRecommendationDto>(
             new AcceptTaskRecommendationCommand(recommendationId),
             cancellationToken);
 
@@ -118,7 +115,7 @@ public sealed class RecommendationsController : BaseController
         [FromRoute] Guid recommendationId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<RejectTaskRecommendationCommand, TaskRecommendationDto>(
+        var result = await ExecuteAsync<RejectTaskRecommendationCommand, TaskRecommendationDto>(
             new RejectTaskRecommendationCommand(recommendationId),
             cancellationToken);
 
@@ -137,7 +134,7 @@ public sealed class RecommendationsController : BaseController
         [FromBody] CompleteTaskRecommendationRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<CompleteTaskRecommendationCommand, TaskRecommendationDto>(
+        var result = await ExecuteAsync<CompleteTaskRecommendationCommand, TaskRecommendationDto>(
             new CompleteTaskRecommendationCommand(
                 recommendationId,
                 request.Notes),
@@ -155,7 +152,7 @@ public sealed class RecommendationsController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetUserTaskPreferenceQuery, UserTaskPreferenceDto>(
+        var result = await QueryAsync<GetUserTaskPreferenceQuery, UserTaskPreferenceDto>(
             new GetUserTaskPreferenceQuery(workspaceId),
             cancellationToken);
 
@@ -184,7 +181,7 @@ public sealed class RecommendationsController : BaseController
                     })));
         }
 
-        var result = await _dispatcher.ExecuteAsync<UpdateUserTaskPreferenceCommand, UserTaskPreferenceDto>(
+        var result = await ExecuteAsync<UpdateUserTaskPreferenceCommand, UserTaskPreferenceDto>(
             new UpdateUserTaskPreferenceCommand(
                 workspaceId,
                 request.WorkDayStartHour,

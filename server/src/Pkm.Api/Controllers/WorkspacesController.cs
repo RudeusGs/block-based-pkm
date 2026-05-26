@@ -29,14 +29,11 @@ namespace Pkm.Api.Controllers;
 [Route("api/v1/workspaces")]
 public sealed class WorkspacesController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public WorkspacesController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpPost]
@@ -63,7 +60,7 @@ public sealed class WorkspacesController : BaseController
             request.Description,
             EnumRequestParsers.WorkspaceVisibilityOrDefault(visibility));
 
-        var result = await _dispatcher.ExecuteAsync<CreateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
+        var result = await ExecuteAsync<CreateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -94,7 +91,7 @@ public sealed class WorkspacesController : BaseController
             request.Description,
             visibility);
 
-        var result = await _dispatcher.ExecuteAsync<UpdateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UpdateWorkspaceCommand, WorkspaceDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -106,7 +103,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new DeleteWorkspaceCommand(workspaceId),
             cancellationToken);
 
@@ -121,7 +118,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetWorkspaceByIdQuery, WorkspaceDto>(
+        var result = await QueryAsync<GetWorkspaceByIdQuery, WorkspaceDto>(
             new GetWorkspaceByIdQuery(workspaceId),
             cancellationToken);
 
@@ -136,7 +133,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<ListWorkspaceMembersQuery, IReadOnlyList<WorkspaceMemberDto>>(
+        var result = await QueryAsync<ListWorkspaceMembersQuery, IReadOnlyList<WorkspaceMemberDto>>(
             new ListWorkspaceMembersQuery(workspaceId),
             cancellationToken);
 
@@ -170,7 +167,7 @@ public sealed class WorkspacesController : BaseController
             request.Email,
             role);
 
-        var result = await _dispatcher.ExecuteAsync<AddWorkspaceMemberCommand, WorkspaceInvitationDto>(command, cancellationToken);
+        var result = await ExecuteAsync<AddWorkspaceMemberCommand, WorkspaceInvitationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -185,7 +182,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<JoinPublicWorkspaceAsViewerCommand, WorkspaceDto>(
+        var result = await ExecuteAsync<JoinPublicWorkspaceAsViewerCommand, WorkspaceDto>(
             new JoinPublicWorkspaceAsViewerCommand(workspaceId),
             cancellationToken);
 
@@ -201,7 +198,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid workspaceId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new LeaveWorkspaceCommand(workspaceId),
             cancellationToken);
 
@@ -220,7 +217,7 @@ public sealed class WorkspacesController : BaseController
         [FromBody] TransferWorkspaceOwnershipRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<TransferWorkspaceOwnershipCommand, WorkspaceDto>(
+        var result = await ExecuteAsync<TransferWorkspaceOwnershipCommand, WorkspaceDto>(
             new TransferWorkspaceOwnershipCommand(workspaceId, request.NewOwnerUserId),
             cancellationToken);
 
@@ -239,7 +236,7 @@ public sealed class WorkspacesController : BaseController
         [FromQuery] string token,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<AcceptWorkspaceInvitationCommand, WorkspaceMemberDto>(
+        var result = await ExecuteAsync<AcceptWorkspaceInvitationCommand, WorkspaceMemberDto>(
             new AcceptWorkspaceInvitationCommand(token),
             cancellationToken);
 
@@ -273,7 +270,7 @@ public sealed class WorkspacesController : BaseController
             userId,
             role);
 
-        var result = await _dispatcher.ExecuteAsync<ChangeWorkspaceMemberRoleCommand, WorkspaceMemberDto>(command, cancellationToken);
+        var result = await ExecuteAsync<ChangeWorkspaceMemberRoleCommand, WorkspaceMemberDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -287,7 +284,7 @@ public sealed class WorkspacesController : BaseController
         [FromRoute] Guid userId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new RemoveWorkspaceMemberCommand(workspaceId, userId),
             cancellationToken);
 

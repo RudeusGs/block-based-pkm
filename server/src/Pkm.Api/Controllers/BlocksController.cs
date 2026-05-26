@@ -25,14 +25,11 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class BlocksController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public BlocksController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpGet("api/v1/blocks/{blockId:guid}")]
@@ -45,7 +42,7 @@ public sealed class BlocksController : BaseController
         [FromRoute] Guid blockId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetBlockQuery, BlockDto>(
+        var result = await QueryAsync<GetBlockQuery, BlockDto>(
             new GetBlockQuery(blockId),
             cancellationToken);
 
@@ -62,7 +59,7 @@ public sealed class BlocksController : BaseController
         [FromRoute] Guid blockId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetBlockLeaseQuery, BlockLeaseDto>(
+        var result = await QueryAsync<GetBlockLeaseQuery, BlockLeaseDto>(
             new GetBlockLeaseQuery(blockId),
             cancellationToken);
 
@@ -81,7 +78,7 @@ public sealed class BlocksController : BaseController
         [FromBody] AcquireBlockLeaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<AcquireBlockLeaseCommand, BlockLeaseDto>(
+        var result = await ExecuteAsync<AcquireBlockLeaseCommand, BlockLeaseDto>(
             new AcquireBlockLeaseCommand(
                 blockId,
                 request.EditorSessionId,
@@ -103,7 +100,7 @@ public sealed class BlocksController : BaseController
         [FromBody] RenewBlockLeaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<RenewBlockLeaseCommand, BlockLeaseDto>(
+        var result = await ExecuteAsync<RenewBlockLeaseCommand, BlockLeaseDto>(
             new RenewBlockLeaseCommand(
                 blockId,
                 request.EditorSessionId),
@@ -124,7 +121,7 @@ public sealed class BlocksController : BaseController
         [FromBody] ReleaseBlockLeaseRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<ReleaseBlockLeaseCommand, BlockLeaseDto>(
+        var result = await ExecuteAsync<ReleaseBlockLeaseCommand, BlockLeaseDto>(
             new ReleaseBlockLeaseCommand(
                 blockId,
                 request.EditorSessionId),
@@ -143,7 +140,7 @@ public sealed class BlocksController : BaseController
         [FromRoute] Guid pageId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<ListPageBlocksQuery, PageDocumentDto>(
+        var result = await QueryAsync<ListPageBlocksQuery, PageDocumentDto>(
             new ListPageBlocksQuery(pageId),
             cancellationToken);
 
@@ -174,7 +171,7 @@ public sealed class BlocksController : BaseController
             request.NextBlockId,
             request.SchemaVersion);
 
-        var result = await _dispatcher.ExecuteAsync<CreateBlockCommand, BlockMutationDto>(command, cancellationToken);
+        var result = await ExecuteAsync<CreateBlockCommand, BlockMutationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -199,7 +196,7 @@ public sealed class BlocksController : BaseController
             request.PropsJson,
             request.Type);
 
-        var result = await _dispatcher.ExecuteAsync<UpdateBlockCommand, BlockMutationDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UpdateBlockCommand, BlockMutationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -224,7 +221,7 @@ public sealed class BlocksController : BaseController
             request.PreviousBlockId,
             request.NextBlockId);
 
-        var result = await _dispatcher.ExecuteAsync<MoveBlockCommand, BlockMutationDto>(command, cancellationToken);
+        var result = await ExecuteAsync<MoveBlockCommand, BlockMutationDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -243,7 +240,7 @@ public sealed class BlocksController : BaseController
         [FromHeader(Name = "X-Editor-Session-Id")] string? editorSessionId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<DeleteBlockCommand, BlockMutationDto>(
+        var result = await ExecuteAsync<DeleteBlockCommand, BlockMutationDto>(
             new DeleteBlockCommand(
                 blockId,
                 expectedRevision,

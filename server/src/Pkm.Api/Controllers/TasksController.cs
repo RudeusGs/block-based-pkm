@@ -25,14 +25,11 @@ namespace Pkm.Api.Controllers;
 [Authorize]
 public sealed class TasksController : BaseController
 {
-    private readonly IUseCaseDispatcher _dispatcher;
-
     public TasksController(
         ICurrentUser currentUser,
         IUseCaseDispatcher dispatcher)
-        : base(currentUser)
+        : base(currentUser, dispatcher)
     {
-        _dispatcher = dispatcher;
     }
 
     [HttpPost("api/v1/pages/{pageId:guid}/tasks")]
@@ -66,7 +63,7 @@ public sealed class TasksController : BaseController
             request.DueDate,
             request.AssigneeUserIds);
 
-        var result = await _dispatcher.ExecuteAsync<CreateWorkTaskCommand, WorkTaskDto>(command, cancellationToken);
+        var result = await ExecuteAsync<CreateWorkTaskCommand, WorkTaskDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -100,7 +97,7 @@ public sealed class TasksController : BaseController
             priority,
             request.DueDate);
 
-        var result = await _dispatcher.ExecuteAsync<UpdateWorkTaskCommand, WorkTaskDto>(command, cancellationToken);
+        var result = await ExecuteAsync<UpdateWorkTaskCommand, WorkTaskDto>(command, cancellationToken);
         return HandleResult(result, x => x.ToResponse());
     }
 
@@ -114,7 +111,7 @@ public sealed class TasksController : BaseController
         [FromRoute] Guid taskId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync(
+        var result = await ExecuteAsync(
             new DeleteWorkTaskCommand(taskId),
             cancellationToken);
 
@@ -131,7 +128,7 @@ public sealed class TasksController : BaseController
         [FromRoute] Guid taskId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.QueryAsync<GetWorkTaskByIdQuery, WorkTaskDto>(
+        var result = await QueryAsync<GetWorkTaskByIdQuery, WorkTaskDto>(
             new GetWorkTaskByIdQuery(taskId),
             cancellationToken);
 
@@ -177,7 +174,7 @@ public sealed class TasksController : BaseController
                     })));
         }
 
-        var result = await _dispatcher.QueryAsync<ListPageTasksQuery, WorkTaskPagedResultDto>(
+        var result = await QueryAsync<ListPageTasksQuery, WorkTaskPagedResultDto>(
             new ListPageTasksQuery(
                 pageId,
                 keyword,
@@ -233,7 +230,7 @@ public sealed class TasksController : BaseController
                     })));
         }
 
-        var result = await _dispatcher.QueryAsync<ListWorkspaceTasksQuery, WorkTaskPagedResultDto>(
+        var result = await QueryAsync<ListWorkspaceTasksQuery, WorkTaskPagedResultDto>(
             new ListWorkspaceTasksQuery(
                 workspaceId,
                 keyword,
@@ -263,7 +260,7 @@ public sealed class TasksController : BaseController
         [FromBody] AssignWorkTaskRequest request,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<AssignTaskCommand, WorkTaskDto>(
+        var result = await ExecuteAsync<AssignTaskCommand, WorkTaskDto>(
             new AssignTaskCommand(taskId, request.UserId),
             cancellationToken);
 
@@ -281,7 +278,7 @@ public sealed class TasksController : BaseController
         [FromRoute] Guid userId,
         CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.ExecuteAsync<UnassignTaskCommand, WorkTaskDto>(
+        var result = await ExecuteAsync<UnassignTaskCommand, WorkTaskDto>(
             new UnassignTaskCommand(taskId, userId),
             cancellationToken);
 
@@ -310,7 +307,7 @@ public sealed class TasksController : BaseController
                     })));
         }
 
-        var result = await _dispatcher.ExecuteAsync<ChangeWorkTaskStatusCommand, WorkTaskDto>(
+        var result = await ExecuteAsync<ChangeWorkTaskStatusCommand, WorkTaskDto>(
             new ChangeWorkTaskStatusCommand(taskId, status),
             cancellationToken);
 
